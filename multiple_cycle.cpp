@@ -27,7 +27,7 @@
 #include <vector>
 
 #include "moteus.h"
-#include "pi3hat_moteus_transport.h"
+// #include "pi3hat_moteus_transport.h"
 
 // A simple way to get the current time accurately as a double.
 static double GetNow() {

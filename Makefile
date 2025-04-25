@@ -1,5 +1,9 @@
-multiple_cycle:
-	g++ -Imjbots/moteus -Imjbots/pi3hat multiple_cycle.cpp  -o run
+run: motor.o moteus_pi3hat.o  
+	g++ motor.o mjbots/pi3hat/moteus_pi3hat.o -o run
 
-clear:
-	rm -f run
+motor.o: motor.cpp
+	g++ -c -Imjbots/pi3hat -Imjbots/moteus -Wall -Werror -o motor.o 
+
+clean:
+    rm -f *.o program
+
