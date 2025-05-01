@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
 
   // Stop everything to clear faults.
 
-  ::printf("Stopping Motor Now......");
+  ::printf("Stopping Motor Now......\n");
   for (const auto& pair : controllers) {
     pair.second->SetStop();
   }
