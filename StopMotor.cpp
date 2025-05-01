@@ -33,33 +33,42 @@
 int main(int argc, char** argv) {
   using namespace mjbots;
 
-  int servo_count = 4;
-
   // This shows how you could construct a runtime number of controller
   // instances.
   std::map<int, std::shared_ptr<moteus::Controller>> controllers;
   std::map<int, moteus::Query::Result> servo_data;
 
   pi3hat::Pi3HatMoteusTransport::Options toptions; // Mapping out the servo maps 
-  toptions.servo_map[1] = 1;
-  toptions.servo_map[2] = 2;
-  toptions.servo_map[3] = 3;
-  toptions.servo_map[4] = 4;
+  toptions.servo_map = {
+    {1, 1},  // bus 1, servo ID 1
+    {1, 4},  // bus 1, servo ID 4
+    {2, 2},  // bus 2, servo ID 2
+    {2, 3},  // bus 2, servo ID 3
+  };
 
+    moteus::Controller::Options opt1;
+    opt1.id = 1;
+    opt1.bus = 1;
+    opt1.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
+    controllers[1] = std::make_shared<moteus::Controller>(opt1);
 
-  for (int i = 1; i <= servo_count; i++) {
-    moteus::Controller::Options options;
-    options.id = i;
-    options.bus = i;
-    options.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
+    moteus::Controller::Options opt2;
+    opt2.id = 2;
+    opt2.bus = 2;
+    opt2.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
+    controllers[2] = std::make_shared<moteus::Controller>(opt2);
 
-    // If the intended transport supported multiple busses, you would
-    // configure them here as well.
-    //
-    // options.bus = foo;
+    moteus::Controller::Options opt3;
+    opt3.id = 3;
+    opt3.bus = 2;
+    opt3.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
+    controllers[3] = std::make_shared<moteus::Controller>(opt3);
 
-    controllers[i] = std::make_shared<moteus::Controller>(options);
-  }
+    moteus::Controller::Options opt4;
+    opt4.id = 4;
+    opt4.bus = 1;
+    opt4.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
+    controllers[4] = std::make_shared<moteus::Controller>(opt4);
 
   // Stop everything to clear faults.
 

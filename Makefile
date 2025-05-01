@@ -25,7 +25,6 @@ build: pi3hat run
 	make pi3hat
 	make run
 	make motor_stopper 
-	make clean
 
 clean:
 	rm -f *.o mjbots/pi3hat/*.o program
