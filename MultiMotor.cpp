@@ -40,26 +40,14 @@ static double GetNow() {
 int main(int argc, char** argv) {
   using namespace mjbots;
 
-  // We are going to do some simple argument processing ourselves, so
-  // we will use the std::vector overload of DefaultArgProcess.
-  // std::vector<std::string> args;
-  // for (int i = 0; i < argc; i++) { args.push_back(argv[i]); }
-  // moteus::Controller::DefaultArgProcess(args);
-
   int servo_count = 4;
-  // {
-  //   auto it = std::find(args.begin(), args.end(), "--count");
-  //   if (it != args.end() && (it + 1) != args.end()) {
-  //     servo_count = std::stol(*(it + 1));
-  //   }
-  // }
 
   // This shows how you could construct a runtime number of controller
   // instances.
   std::map<int, std::shared_ptr<moteus::Controller>> controllers;
   std::map<int, moteus::Query::Result> servo_data;
 
-  pi3hat::Pi3HatMoteusTransport::Options toptions;
+  pi3hat::Pi3HatMoteusTransport::Options toptions; // Mapping out the servo maps 
   toptions.servo_map[1] = 1;
   toptions.servo_map[2] = 2;
   toptions.servo_map[3] = 3;
@@ -85,15 +73,13 @@ int main(int argc, char** argv) {
     pair.second->SetStop();
   }
 
-  // We did not specify a transport so the default one was used when
-  // constructing our Controller instances.  We need to get access to
-  // that in order to send commands simultaneously to multiple servos.
+  // Getting the Pi3hat Transpot insatnces, to use for the Cycle
   auto transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
 
   while (true) {
     const auto now = GetNow();
     std::vector<moteus::CanFdFrame> command_frames;
-
+   
     // Accumulate all of our command CAN frames.
     for (const auto& pair : controllers) {
       moteus::PositionMode::Command position_command;
