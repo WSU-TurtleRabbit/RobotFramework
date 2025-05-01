@@ -42,40 +42,42 @@ int main(int argc, char** argv) {
 
   // We are going to do some simple argument processing ourselves, so
   // we will use the std::vector overload of DefaultArgProcess.
-  std::vector<std::string> args;
-  for (int i = 0; i < argc; i++) { args.push_back(argv[i]); }
-  moteus::Controller::DefaultArgProcess(args);
+  // std::vector<std::string> args;
+  // for (int i = 0; i < argc; i++) { args.push_back(argv[i]); }
+  // moteus::Controller::DefaultArgProcess(args);
 
-  int servo_count = 2;
-  {
-    auto it = std::find(args.begin(), args.end(), "--count");
-    if (it != args.end() && (it + 1) != args.end()) {
-      servo_count = std::stol(*(it + 1));
-    }
-  }
+  int servo_count = 4;
+  // {
+  //   auto it = std::find(args.begin(), args.end(), "--count");
+  //   if (it != args.end() && (it + 1) != args.end()) {
+  //     servo_count = std::stol(*(it + 1));
+  //   }
+  // }
 
   // This shows how you could construct a runtime number of controller
   // instances.
   std::map<int, std::shared_ptr<moteus::Controller>> controllers;
   std::map<int, moteus::Query::Result> servo_data;
 
-  using Transport = pi3hat::Pi3HatMoteusTransport;
+  pi3hat::Pi3HatMoteusTransport::Options toptions;
+  toptions.servo_map[1] = 1;
+  toptions.servo_map[2] = 2;
+  toptions.servo_map[3] = 3;
+  toptions.servo_map[4] = 4;
 
-  Transport::Options toptions;
 
-
-  for (int i = 1; i <= 4; i++) {
+  for (int i = 1; i <= servo_count; i++) {
     moteus::Controller::Options options;
     options.id = i;
     options.bus = i;
-    toptions.servo_map[i] = i;
     options.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
+
     // If the intended transport supported multiple busses, you would
     // configure them here as well.
     //
     // options.bus = foo;
 
-    controllers[i] = std::make_shared<Transport>(toptions);
+    controllers[i] = std::make_shared<moteus::Controller>(options);
   }
 
   // Stop everything to clear faults.
@@ -86,7 +88,7 @@ int main(int argc, char** argv) {
   // We did not specify a transport so the default one was used when
   // constructing our Controller instances.  We need to get access to
   // that in order to send commands simultaneously to multiple servos.
-  auto transport = moteus::Controller::MakeSingletonTransport({});
+  auto transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
 
   while (true) {
     const auto now = GetNow();
@@ -96,7 +98,7 @@ int main(int argc, char** argv) {
     for (const auto& pair : controllers) {
       moteus::PositionMode::Command position_command;
       position_command.position = NaN;
-      position_command.velocity = 0.1 * std::sin(now + pair.first);
+      position_command.velocity = 3;
       command_frames.push_back(pair.second->MakePosition(position_command));
     }
 
