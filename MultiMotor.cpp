@@ -46,36 +46,26 @@ int main(int argc, char** argv) {
   std::map<int, moteus::Query::Result> servo_data;
 
   pi3hat::Pi3HatMoteusTransport::Options toptions; // Mapping out the servo maps 
-  toptions.servo_map = {
+  std::vector<std::vector<int>> servo_map = { 
+  //Made a map of motor controller and
+  //and matching bus pair 
+
     {1, 1},  // bus 1, servo ID 1
-    {1, 4},  // bus 1, servo ID 4
-    {2, 2},  // bus 2, servo ID 2
-    {2, 3},  // bus 2, servo ID 3
+    {1, 4},  // bus 2, servo ID 2
+    {2, 2},  // bus 3, servo ID 3
+    {2, 3},  // bus 4, servo ID 4
   };
+  toptions.servo_map = servo_map; 
 
-    moteus::Controller::Options opt1;
-    opt1.id = 1;
-    opt1.bus = 1;
-    opt1.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
-    controllers[1] = std::make_shared<moteus::Controller>(opt1);
-
-    moteus::Controller::Options opt2;
-    opt2.id = 2;
-    opt2.bus = 2;
-    opt2.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
-    controllers[2] = std::make_shared<moteus::Controller>(opt2);
-
-    moteus::Controller::Options opt3;
-    opt3.id = 3;
-    opt3.bus = 2;
-    opt3.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
-    controllers[3] = std::make_shared<moteus::Controller>(opt3);
-
-    moteus::Controller::Options opt4;
-    opt4.id = 4;
-    opt4.bus = 1;
-    opt4.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
-    controllers[4] = std::make_shared<moteus::Controller>(opt4);
+  //Simple for loop to go though the map and create the matching ID and BUS pair
+    for(int i= 1, i < servo_map.size()+1, i++){
+      std::vector<int> controller_pairs = servo_map[i-1];
+      moteus::Controller::Options opts;
+      opts.id = controller_pairs[0];
+      opts.bus = controller_pairs[1];
+      opts.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
+      controllers[i] = std::make_shared<moteus::Controller>(opts);
+    }
 
   // Stop everything to clear faults.
   for (const auto& pair : controllers) {
