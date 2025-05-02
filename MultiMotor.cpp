@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
   std::map<int, moteus::Query::Result> servo_data;
 
   pi3hat::Pi3HatMoteusTransport::Options toptions; // Mapping out the servo maps 
-  std::vector<std::vector<int>> servo_map = { 
+  std::map <int, int> servo_map = { 
   //Made a map of motor controller and
   //and matching bus pair 
 
@@ -56,15 +56,16 @@ int main(int argc, char** argv) {
     {2, 3},  // bus 4, servo ID 4
   };
   toptions.servo_map = servo_map; 
+  int count = 1;
 
   //Simple for loop to go though the map and create the matching ID and BUS pair
-    for(int i= 1, i < servo_map.size()+1, i++){
-      std::vector<int> controller_pairs = servo_map[i-1];
+    for(auto& pairs : servo_map){
       moteus::Controller::Options opts;
-      opts.id = controller_pairs[0];
-      opts.bus = controller_pairs[1];
+      opts.id = paris.second;
+      opts.bus = paris.frist;
       opts.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
-      controllers[i] = std::make_shared<moteus::Controller>(opts);
+      controllers[count] = std::make_shared<moteus::Controller>(opts);
+      count++;
     }
 
   // Stop everything to clear faults.
