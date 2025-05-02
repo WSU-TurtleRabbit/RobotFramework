@@ -28,4 +28,3 @@ build: pi3hat run
 
 clean:
 	rm -f *.o mjbots/pi3hat/*.o program
-
