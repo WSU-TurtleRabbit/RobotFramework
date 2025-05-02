@@ -76,10 +76,10 @@ int main(int argc, char** argv) {
   // Getting the Pi3hat Transpot insatnces, to use for the Cycle
   auto transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
 
-  double velocity_1;
-  double velocity_2;
-  double velocity_3;
-  double velocity_4;
+  double velocity_1 = 1;
+  double velocity_2 = 2;
+  double velocity_3 = 3;
+  double velocity_4 = 2.5;
 
   while (true) {
     const auto now = GetNow();
