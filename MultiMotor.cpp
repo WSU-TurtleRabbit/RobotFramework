@@ -50,10 +50,10 @@ int main(int argc, char** argv) {
   //Made a map of motor controller and
   //and matching bus pair 
 
-    {1, 1},  // bus 1, servo ID 1
-    {1, 4},  // bus 2, servo ID 2
-    {2, 2},  // bus 3, servo ID 3
-    {2, 3},  // bus 4, servo ID 4
+    {1, 1},  // Motor ID 1 mapped to BUS 1
+    {1, 4},  // Motor ID 4 mapped to BUS 1 
+    {2, 2},  // Motor ID 2 mapped to BUS 2
+    {2, 3},  // Motor ID 3 mapped to BUS 2
   };
   toptions.servo_map = servo_map; 
   int count = 1;
@@ -61,8 +61,8 @@ int main(int argc, char** argv) {
   //Simple for loop to go though the map and create the matching ID and BUS pair
     for(auto& pairs : servo_map){
       moteus::Controller::Options opts;
-      opts.id = paris.second;
-      opts.bus = paris.frist;
+      opts.id = pairs.second;
+      opts.bus = pairs.first;
       opts.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
       controllers[count] = std::make_shared<moteus::Controller>(opts);
       count++;
@@ -76,6 +76,11 @@ int main(int argc, char** argv) {
   // Getting the Pi3hat Transpot insatnces, to use for the Cycle
   auto transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
 
+  double velocity_1;
+  double velocity_2;
+  double velocity_3;
+  double velocity_4;
+
   while (true) {
     const auto now = GetNow();
     std::vector<moteus::CanFdFrame> command_frames;
@@ -84,7 +89,23 @@ int main(int argc, char** argv) {
     for (const auto& pair : controllers) {
       moteus::PositionMode::Command position_command;
       position_command.position = NaN;
-      position_command.velocity = 3;
+
+      if(pair.first == 1){
+        position_command.position = velocity_1;
+      }
+      else if (pair.first == 2){
+      position_command.position = velocity_2;
+      }
+      else if (pair.first == 3){
+      position_command.position = velocity_3;
+      }
+      else if (pair.first == 4){
+      position_command.position = velocity_4;
+      }
+      else{
+      ::printf("velocity is not mapped");
+      }
+
       command_frames.push_back(pair.second->MakePosition(position_command));
     }
 
