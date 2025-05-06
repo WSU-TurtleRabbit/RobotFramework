@@ -34,8 +34,8 @@ int main() {
 
     std::cout << "Received: " << buffer << std::endl;
 
-    const char* reply = "Hi my name is Ali";
-    sendto(sockfd, reply, strlen(reply), 0, (struct sockaddr*)&client_addr, len);
+    // const char* reply = "Hi my name is Ali";
+    // sendto(sockfd, reply, strlen(reply), 0, (struct sockaddr*)&client_addr, len);
 
     }
 

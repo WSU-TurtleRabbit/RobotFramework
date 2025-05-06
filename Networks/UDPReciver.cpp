@@ -8,6 +8,7 @@
 #include <sys/socket.h> 
 #include <arpa/inet.h> 
 #include <netinet/in.h> 
+#include <sstream>
 
 
 class Reciver{
@@ -60,5 +61,8 @@ int main(){
     r.clear_buffer();
     msg = r.recive();
     std::cout<< msg << std::endl;
+    cmdDecoder cmd;
+
+
   }
 }
