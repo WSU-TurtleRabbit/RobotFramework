@@ -61,8 +61,8 @@ int main(int argc, char** argv) {
   //Simple for loop to go though the map and create the matching ID and BUS pair
     for(auto& pairs : servo_map){
       moteus::Controller::Options opts;
-      opts.id = pairs.second;
-      opts.bus = pairs.first;
+      opts.id = pairs.first;
+      opts.bus = pairs.second;
       opts.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
       controllers[count] = std::make_shared<moteus::Controller>(opts);
       count++;
@@ -77,37 +77,37 @@ int main(int argc, char** argv) {
   auto transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
 
   double velocity_1 = 1;
-  double velocity_2 = 2;
-  double velocity_3 = 3;
-  double velocity_4 = 2.5;
+  double velocity_2 = 1;
+  double velocity_3 = 1;
+  double velocity_4 = 4;
 
   while (true) {
     const auto now = GetNow();
     std::vector<moteus::CanFdFrame> command_frames;
    
     // Accumulate all of our command CAN frames.
-    for (const auto& pair : controllers) {
-      moteus::PositionMode::Command position_command;
-      position_command.position = NaN;
+      for (const auto& pair : controllers) {
+        moteus::PositionMode::Command position_command;
+        position_command.position = NaN;
 
       if(pair.first == 1){
-        position_command.position = velocity_1;
+        position_command.velocity = velocity_1;
       }
       else if (pair.first == 2){
-      position_command.position = velocity_2;
+      position_command.velocity= velocity_2;
       }
       else if (pair.first == 3){
-      position_command.position = velocity_3;
+      position_command.velocity = velocity_3;
       }
       else if (pair.first == 4){
-      position_command.position = velocity_4;
+      position_command.velocity = velocity_4;
       }
       else{
       ::printf("velocity is not mapped");
       }
 
       command_frames.push_back(pair.second->MakePosition(position_command));
-    }
+      }
 
     // Now send them in a single call to Transport::Cycle.
     std::vector<moteus::CanFdFrame> replies;

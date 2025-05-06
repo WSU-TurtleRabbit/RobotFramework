@@ -38,26 +38,28 @@ int main(int argc, char** argv) {
   std::map<int, std::shared_ptr<moteus::Controller>> controllers;
   std::map<int, moteus::Query::Result> servo_data;
 
-  std::vector<std::vector<int>> servo_map = { 
-    //Made a map of motor controller and
-    //and matching bus pair 
-  
-      {1, 1},  // bus 1, servo ID 1
-      {1, 4},  // bus 2, servo ID 2
-      {2, 2},  // bus 3, servo ID 3
-      {2, 3},  // bus 4, servo ID 4
-    };
-    toptions.servo_map = servo_map; 
-  
-    //Simple for loop to go though the map and create the matching ID and BUS pair
-      for(int i= 1, i < servo_map.size()+1, i++){
-        std::vector<int> controller_pairs = servo_map[i-1];
-        moteus::Controller::Options opts;
-        opts.id = controller_pairs[0];
-        opts.bus = controller_pairs[1];
-        opts.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
-        controllers[i] = std::make_shared<moteus::Controller>(opts);
-      }
+  pi3hat::Pi3HatMoteusTransport::Options toptions; // Mapping out the servo maps 
+  std::map <int, int> servo_map = { 
+  //Made a map of motor controller and
+  //and matching bus pair 
+
+    {1, 1},  // Motor ID 1 mapped to BUS 1
+    {4, 1},  // Motor ID 4 mapped to BUS 1 
+    {2, 2},  // Motor ID 2 mapped to BUS 2
+    {3, 2},  // Motor ID 3 mapped to BUS 2 
+  };
+  toptions.servo_map = servo_map; 
+  int count = 1;
+
+  //Simple for loop to go though the map and create the matching ID and BUS pair
+    for(auto& pairs : servo_map){
+      moteus::Controller::Options opts;
+      opts.id = pairs.first;
+      opts.bus = pairs.second;
+      opts.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
+      controllers[count] = std::make_shared<moteus::Controller>(opts);
+      count++;
+    }
       
   ::printf("Stopping Motor Now......\n");
   for (const auto& pair : controllers) {
