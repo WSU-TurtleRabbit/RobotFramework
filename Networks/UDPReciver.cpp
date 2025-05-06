@@ -13,15 +13,20 @@
 class Reciver{
     private:
     static const int buffer_size = 1024;
-    static const int r_port = 5014;
-    struct sockaddr_in server_addr, client_addr;
-    char buffer[buffer_size];
-    socklen_t len; 
+    static const int r_port = 50514;
     int sockfd;
+    char buffer[buffer_size];
+    socklen_t len;
+    // sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    struct sockaddr_in server_addr, client_addr;
+
+
+
 
     public:
     Reciver(){
-        char buffer[buffer_size];
+        // int sockfd;
+        // char buffer[BUFFER_SIZE];
         sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 
         server_addr.sin_family = AF_INET;
@@ -34,13 +39,26 @@ class Reciver{
     }
 
     std::string recive(){
-        int n = recvfrom(sockfd, buffer, buffer_size, 0, (struct sockaddr*)&client_addr, &len);
-        buffer[n] = '\0';
+
+        int latest_msg  = recvfrom(sockfd, buffer, buffer_size, 0, (struct sockaddr*)&client_addr, &len);
+        buffer[latest_msg] = '\0';
         return buffer;
+    }
+
+    void clear_buffer(){
+        int discard_msg;
+        do{
+        discard_msg = recvfrom(sockfd, buffer, buffer_size, MSG_DONTWAIT, (struct sockaddr*)&client_addr, &len);
+            
+        }while(discard_msg > 0); 
     }
 };
 int main(){
   Reciver r;
-  message
-  r.recive()
+  std::string msg;
+  while(true){
+    r.clear_buffer();
+    msg = r.recive();
+    std::cout<< msg << std::endl;
+  }
 }
