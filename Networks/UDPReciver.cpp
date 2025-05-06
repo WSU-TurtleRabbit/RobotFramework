@@ -9,7 +9,7 @@
 #include <arpa/inet.h> 
 #include <netinet/in.h> 
 #include <sstream>
-
+#include "decode.h"
 
 class Reciver{
     private:
@@ -57,12 +57,11 @@ class Reciver{
 int main(){
   Reciver r;
   std::string msg;
+  cmdDecoder cmd;
   while(true){
     r.clear_buffer();
     msg = r.recive();
-    std::cout<< msg << std::endl;
-    cmdDecoder cmd;
-
-
+    cmd.decode_cmd(msg);
+    std::cout<< "Velocity_x" << cmd.velocity_w<< "Velocity_y" << cmd.velocity_y << "Velocity_w" << cmd.velocity_w << std::endl;
   }
 }
