@@ -10,6 +10,7 @@
 #include <netinet/in.h> 
 #include <sstream>
 #include "decode.h"
+#include "wheel_math.h"
 
 class Reciver{
     private:
@@ -20,9 +21,6 @@ class Reciver{
     socklen_t len;
     // sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     struct sockaddr_in server_addr, client_addr;
-
-
-
 
     public:
     Reciver(){
@@ -56,12 +54,17 @@ class Reciver{
 };
 int main(){
   Reciver r;
+  Wheel_math m;
   std::string msg;
   cmdDecoder cmd;
+  std::vector <double> vel;
   while(true){
     r.clear_buffer();
     msg = r.recive();
     cmd.decode_cmd(msg);
-    std::cout<< "Velocity_x" << cmd.velocity_w<< "Velocity_y" << cmd.velocity_y << "Velocity_w" << cmd.velocity_w << std::endl;
+    vel = {m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w)};
+
+    std::cout << "Wheel input velocity is " << " x: "<< cmd.velocity_x << " y: "<< cmd.velocity_y << " w :" << cmd.velocity_w << std::endl;
+    std::cout << "Wheel one is :" << vel[0] << " Wheel 2 is :" << vel[1] << " Wheel 3 is :" << vel[2] << " Wheel 4 is :" << vel[3] << std::endl; 
   }
 }

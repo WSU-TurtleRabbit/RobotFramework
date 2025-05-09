@@ -7,6 +7,8 @@ Sender: Socket_sender.cpp
 UDP: UDPReciver.cpp
 	g++ UDPReciver.cpp -o UDP
 
+UDP_test: ../Math/Wheel_velocity.cpp Decoder.cpp
+	g++ ../Math/Wheel_velocity.cpp Decoder.cpp UDPReciver.cpp -I../Math/ -o UDP_test 
 
 clean:
 	rm -f *.o program

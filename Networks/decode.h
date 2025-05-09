@@ -6,6 +6,7 @@
 
 class cmdDecoder{
     public:
+    int id;
     double velocity_x;
     double velocity_y;
     double velocity_w;
