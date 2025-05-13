@@ -20,12 +20,12 @@
 /// fdcanusb and pi3hat.
 
 #include <unistd.h>
-
+#include "unistd.h"
 #include <cmath>
 #include <iostream>
 #include <map>
 #include <vector>
-#include <crono>
+#include <chrono>
 #include "moteus.h"
 #include "pi3hat_moteus_transport.h"
 #include "wheel_math.h"
@@ -91,9 +91,10 @@ int main(int argc, char** argv) {
 
 
   while(true){
+  std::cout << "Listening to port" << std::endl;
   r.clear_buffer();
   msg = r.recive();
-    // ::printf(msg);
+  std::cout << msg <<std::endl;
   cmd.decode_cmd(msg);
   wheel_velocity = {m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w)};
 
@@ -104,7 +105,7 @@ int main(int argc, char** argv) {
   double velocity_4 = wheel_velocity[3];
 
   auto start_time = std::chrono::high_resolution_clock::now();
-  auto interval_duration = std::chrono::seconds(0.04);
+  auto interval_duration = std::chrono::milliseconds(200);
 
     while (std::chrono::high_resolution_clock::now() - start_time < interval_duration){
       const auto now = GetNow();
@@ -174,7 +175,8 @@ int main(int argc, char** argv) {
       // CAN, there is a watchdog which requires commands to be sent at
       // least every 100ms or the controller will enter a latched fault
       // state.
-      :usleep(20000);
+      ::usleep(20000);
+      std::this_thread::sleep_for(std::chrono::seconds(1));
     }
   };
 };

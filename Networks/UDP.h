@@ -1,4 +1,7 @@
 
+#ifndef UDP_H
+#define UDP_H
+
 #include <iostream>
 #include <cstring>
 #include <bits/stdc++.h> 
@@ -10,9 +13,6 @@
 #include <arpa/inet.h> 
 #include <netinet/in.h> 
 #include <sstream>
-#ifndef UDP_H
-#define UDP_H
-
 
 
 class Reciver{
