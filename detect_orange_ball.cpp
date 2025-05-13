@@ -56,7 +56,7 @@ int main() {
             }
         }
          
-        std::cout << "Ball Detected: " << (ball_detected ? "true" : "false") << std::endl
+        std::cout << "Ball Detected: " << (ball_detected ? "true" : "false") << std::endl;
         
         cv::imshow("Camera Feed", frame);
         cv::imshow("Orange Mask", mask);
