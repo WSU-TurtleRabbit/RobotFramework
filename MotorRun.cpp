@@ -89,27 +89,28 @@ int main(int argc, char** argv) {
 
 
 
-
   while(true){
   std::cout << "Listening to port" << std::endl;
   r.clear_buffer();
   msg = r.recive();
   std::cout << msg <<std::endl;
   cmd.decode_cmd(msg);
-  wheel_velocity = {m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w)};
-
+  wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
+      std::cout << "Wheel 1 : " << wheel_velocity[0] << "Wheel 2 : " << wheel_velocity[1] << "Wheel 3 : " << wheel_velocity[2] << "Wheel 4 : " << wheel_velocity[3] << std::endl;
+  // start_time = std::chrono::high_resolution_clock::now();
 
   double velocity_1 = wheel_velocity[0];
   double velocity_2 = wheel_velocity[1];
   double velocity_3 = wheel_velocity[2];
   double velocity_4 = wheel_velocity[3];
 
-  auto start_time = std::chrono::high_resolution_clock::now();
-  auto interval_duration = std::chrono::milliseconds(200);
 
-    while (std::chrono::high_resolution_clock::now() - start_time < interval_duration){
+
+    for(int i = 0; i < 10; i++ ){
       const auto now = GetNow();
       std::vector<moteus::CanFdFrame> command_frames;
+
+      // std::cout << "Doing" << std::endl;
     
       // Accumulate all of our command CAN frames.
         for (const auto& pair : controllers) {
@@ -157,26 +158,25 @@ int main(int argc, char** argv) {
         servo_data[frame.source] = moteus::Query::Parse(frame.data, frame.size);
       }
 
-      for (const auto& pair : servo_data) {
-        const auto r = pair.second;
-        ::snprintf(buf, sizeof(buf) - 1,
-                  "%2d %3d p/v/t=(%7.3f,%7.3f,%7.3f)  ",
-                  pair.first,
-                  static_cast<int>(r.mode),
-                  r.position,
-                  r.velocity,
-                  r.torque);
-        status_line += buf;
-      }
-      ::printf("%s  \r", status_line.c_str());
-      ::fflush(::stdout);
+      // for (const auto& pair : servo_data) {
+      //   const auto r = pair.second;
+      //   ::snprintf(buf, sizeof(buf) - 1,
+      //             "%2d %3d p/v/t=(%7.3f,%7.3f,%7.3f)  ",
+      //             pair.first,
+      //             static_cast<int>(r.mode),
+      //             r.position,
+      //             r.velocity,
+      //             r.torque);
+      //   status_line += buf;
+      // }
+      // ::printf("%s  \r", status_line.c_str());
+      // ::fflush(::stdout);
 
       // Sleep 20ms between iterations.  By default, when commanded over
       // CAN, there is a watchdog which requires commands to be sent at
       // least every 100ms or the controller will enter a latched fault
       // state.
-      ::usleep(20000);
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+      ::usleep(10000);
     }
-  };
+  }
 };
