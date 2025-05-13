@@ -3,9 +3,10 @@ CXXFLAGS :=  -std=c++17 -Wall -Werror -Imjbots/pi3hat -Imjbots/moteus
 LIBFLAGS := -L/usr/include -lbcm_host
 PI3HAT_PATH := mjbots/pi3hat/pi3hat.o 
 
+
 RUNFILE1 := MultiMotorRun
 RUNFILE2 := StopMotor
-
+RUNFILEMAIN := MotorRun
 
 
 
@@ -15,13 +16,19 @@ MultiMotor.o: MultiMotor.cpp
 StopMotor.o: StopMotor.cpp
 	$(CXX) -c StopMotor.cpp $(CXXFLAGS) -o StopMotor.o 
 
-
+MotorRun.o: MotorRun.cpp
+	$(CXX) -c MotorRun.cpp $(CXXFLAGS) -o MotorRun.o 
 
 $(RUNFILE1): $(PI3HAT_PATH) MultiMotor.o
 	$(CXX) MultiMotor.o $(PI3HAT_PATH) $(LIBFLAGS) -o $(RUNFILE1)
 
+$(RUNFILEMAIN): $(PI3HAT_PATH) MultiMotor.o
+	$(CXX) MultiMotor.o $(PI3HAT_PATH) $(LIBFLAGS) -o $(RUNFILEMAIN)
+
 $(RUNFILE2): $(PI3HAT_PATH) StopMotor.o
 	$(CXX) StopMotor.o $(PI3HAT_PATH) $(LIBFLAGS) -o $(RUNFILE2)
+
+
 
 run:$(RUNFILE1)
 	sudo ./$(RUNFILE1)
