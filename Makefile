@@ -6,6 +6,8 @@ PI3HAT_PATH := mjbots/pi3hat/pi3hat.o
 RUNFILE1 := MultiMotorRun
 RUNFILE2 := StopMotor
 
+detect_orange_ball: detect_orange_ball.cpp
+	g++ detect_orange_ball.cpp -o detect_orange_ball `pkg-config --cflags --libs opencv4`
 
 
 
