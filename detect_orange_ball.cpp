@@ -1,8 +1,17 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <cstring>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+#define PORT 50514
+#define ROBOT_IP "192.168.220.56"
+#define BUFFER_SIZE 1024
 
 int main() {
-    // Open the default camera (usually /dev/video0)
+    // Open camera
     cv::VideoCapture cap(0);
     if (!cap.isOpened()) {
         std::cerr << "Error: Could not open camera\n";
@@ -10,29 +19,43 @@ int main() {
     }
 
     // Define HSV range for detecting orange
-    // Tune as needed for your lighting conditions
     cv::Scalar lower_orange(5, 100, 100);
     cv::Scalar upper_orange(15, 255, 255);
+
+    
+    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd < 0) {
+        std::cerr << "Error creating UDP socket\n";
+        return -1;
+    }
+
+    struct sockaddr_in robot_addr{};
+    robot_addr.sin_family = AF_INET;
+    robot_addr.sin_port = htons(PORT);
+    inet_pton(AF_INET, ROBOT_IP, &robot_addr.sin_addr);
 
     while (true) {
         cv::Mat frame, hsv, mask;
         cap >> frame;
-
         if (frame.empty()) {
             std::cerr << "Error: Empty frame\n";
             break;
         }
 
-        // Convert to HSV color space
+        // Convert to HSV and threshold for orange
         cv::cvtColor(frame, hsv, cv::COLOR_BGR2HSV);
-
-        // Threshold the HSV image to get only orange colors
         cv::inRange(hsv, lower_orange, upper_orange, mask);
 
         std::vector<std::vector<cv::Point>> contours;
         cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
-        bool ball_detected = false;
+        // bool ball_detected = false;
+        bool ball_detected = !contours.empty();
+
+        const char* message = ball_detected ? "true" : "false";
+        sendto(sockfd, message, strlen(message), 0,
+               (struct sockaddr*)&robot_addr, sizeof(robot_addr));
+        std::cout << "Ball Detected: " << message << std::endl;
 
         if (!contours.empty()) {
             
@@ -67,6 +90,13 @@ int main() {
     }
 
     cap.release();
+    close(sockfd);
     cv::destroyAllWindows();
     return 0;
 }
+
+
+
+          // True if *any* contour found
+
+   
