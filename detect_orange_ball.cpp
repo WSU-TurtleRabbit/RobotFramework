@@ -29,9 +29,10 @@ int main() {
         // Threshold the HSV image to get only orange colors
         cv::inRange(hsv, lower_orange, upper_orange, mask);
 
-        
         std::vector<std::vector<cv::Point>> contours;
         cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+        bool ball_detected = false;
 
         if (!contours.empty()) {
             
@@ -54,7 +55,8 @@ int main() {
                 cv::circle(frame, center, 5, cv::Scalar(255, 0, 0), -1);
             }
         }
-
+         
+        std::cout << "Ball Detected: " << (ball_detected ? "true" : "false") << std::endl
         
         cv::imshow("Camera Feed", frame);
         cv::imshow("Orange Mask", mask);
