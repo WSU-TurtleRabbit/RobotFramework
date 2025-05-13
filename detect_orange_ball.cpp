@@ -49,9 +49,14 @@ int main() {
         std::vector<std::vector<cv::Point>> contours;
         cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
-        // bool ball_detected = false;
-        bool ball_detected = !contours.empty();
-
+        bool ball_detected = false;
+        for (const auto& contour : contours) {
+            double area = cv::contourArea(contour);
+            if (area > 300) { // Adjust this threshold as needed
+                ball_detected = true;
+                break;
+    }
+}
         const char* message = ball_detected ? "true" : "false";
         sendto(sockfd, message, strlen(message), 0,
                (struct sockaddr*)&robot_addr, sizeof(robot_addr));
