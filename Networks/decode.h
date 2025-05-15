@@ -1,5 +1,5 @@
-#ifndef DECODE_H
-#define DECODE_H
+#pragma once
+
 #include <sstream>
 #include <string>
 
@@ -18,4 +18,3 @@ class cmdDecoder{
     void decode_cmd(std::string message);
 };
 
-#endif
