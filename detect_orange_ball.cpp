@@ -86,12 +86,12 @@ int main() {
          
         std::cout << "Ball Detected: " << (ball_detected ? "true" : "false") << std::endl;
         
-        cv::imshow("Camera Feed", frame);
+        // cv::imshow("Camera Feed", frame);
         // cv::imshow("Orange Mask", mask);
 
-        if (cv::waitKey(1) == 27) {
-            break;
-        }
+        // if (cv::waitKey(1) == 27) {
+        //     break;
+        // }
     }
 
     cap.release();
