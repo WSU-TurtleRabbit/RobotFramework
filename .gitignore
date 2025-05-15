@@ -1,8 +1,6 @@
 # Prerequisites
 *.d
 
-#json files
-*.json
 # Compiled Object files
 *.slo
 *.lo
@@ -32,3 +30,5 @@
 *.exe
 *.out
 *.app
+
+*.json
