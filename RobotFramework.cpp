@@ -31,6 +31,7 @@
 #include "wheel_math.h"
 #include "decode.h"
 #include "UDP.h"
+#include "detect_ball.h"
 
 // A simple way to get the current time accurately as a double.
 static double GetNow() {
@@ -44,12 +45,14 @@ int main(int argc, char** argv) {
 
   using namespace mjbots;
 
-
+  
+  BallDetection detect;
   Reciver r;
   Wheel_math m;
   std::string msg;
   cmdDecoder cmd;
   std::vector <double> wheel_velocity;
+  bool ball_detected;
 
   // This shows how you could construct a runtime number of controller
   // instances.
@@ -105,12 +108,13 @@ int main(int argc, char** argv) {
   double velocity_4 = wheel_velocity[3];
 
 
+  ball_detected = detect.find_ball()
 
-    for(int i = 0; i < 10; i++ ){
+    for(int i = 0; i < 15; i++ ){
       const auto now = GetNow();
       std::vector<moteus::CanFdFrame> command_frames;
 
-      // std::cout << "Doing" << std::endl;
+      std::cout << "Doing" << std::endl;
     
       // Accumulate all of our command CAN frames.
         for (const auto& pair : controllers) {

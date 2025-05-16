@@ -14,10 +14,7 @@
 
 /// @file
 ///
-/// This example shows how multiple controllers can be commanded using
-/// the Cycle method.  This approach can result in lower overall
-/// latency and improved performance with some transports, such as the
-/// fdcanusb and pi3hat.
+/// this code is to properly shut down all the motors 
 
 #include <unistd.h>
 

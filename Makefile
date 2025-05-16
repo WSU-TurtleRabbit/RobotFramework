@@ -1,40 +1,42 @@
 CXX := g++
-CXXFLAGS :=  -std=c++17 -Wall -Werror -Imjbots/pi3hat -Imjbots/moteus -INetworks -IMath
+CXXFLAGS :=  -std=c++17 -Wall -Werror -Imjbots/pi3hat -Imjbots/moteus -INetworks -IMath -IBallDetection
 LIBFLAGS := -L/usr/include -lbcm_host
 PI3HAT_PATH := mjbots/pi3hat/pi3hat.o 
-NETWORK_PATH := Networks/UDP.o Networks/decode.o
+NETWORK_PATH := objectFiles/UDP.o objectFiles/decode.o
 MATH_PATH := Math/wheel_velocity.o
+DETECT_BALL_PATH := objectFiles/detect_ball.o
+
 
 RUNFILE1 := MultiMotorRun
 RUNFILE2 := StopMotor
-RUNFILEMAIN := MotorRun
+RUNFILEMAIN := RobotFramework
 
-detect_orange_ball: detect_orange_ball.cpp
-	g++ detect_orange_ball.cpp -o detect_orange_ball `pkg-config --cflags --libs opencv4`
+objectFiles/detect_ball.o: BallDetection/detect_ball.cpp
+	$(CXX) -c BallDetection/detect_ball.cpp $(CXXFLAGS) -o objectFiles/detect_ball.o
 
-Networks/UDP.o: Networks/UDP.cpp
-	$(CXX) -c Networks/UDP.cpp $(CXXFLAGS) -o Networks/UDP.o
+objectFiles/UDP.o: Networks/UDP.cpp
+	$(CXX) -c Networks/UDP.cpp $(CXXFLAGS) -o objectFiles/UDP.o
 
-Networks/decode.o: Networks/decode.cpp 
-	$(CXX) -c Networks/decode.cpp $(CXXFLAGS) -o Networks/decode.o
+objectFiles/decode.o: Networks/decode.cpp 
+	$(CXX) -c Networks/decode.cpp $(CXXFLAGS) -o objectFiles/decode.o
 
-MultiMotor.o: MultiMotor.cpp
-	$(CXX) -c MultiMotor.cpp $(CXXFLAGS) -o MultiMotor.o 
+objectFiles/MultiMotor.o: MultiMotor.cpp
+	$(CXX) -c MultiMotor.cpp $(CXXFLAGS) -o objectFiles/MultiMotor.o 
 
-StopMotor.o: StopMotor.cpp
-	$(CXX) -c StopMotor.cpp $(CXXFLAGS) -o StopMotor.o 
+objectFiles/StopMotor.o: StopMotor.cpp
+	$(CXX) -c StopMotor.cpp $(CXXFLAGS) -o objectFiles/StopMotor.o 
 
-MotorRun.o: MotorRun.cpp
-	$(CXX) -c MotorRun.cpp $(CXXFLAGS) -o MotorRun.o 
+objectFiles/RobotFramework.o: RobotFramework.cpp
+	$(CXX) -c RobotFramework.cpp $(CXXFLAGS) -o objectFiles/RobotFramework.o 
 
 $(RUNFILE1): $(PI3HAT_PATH) MultiMotor.o
 	$(CXX) MultiMotor.o $(PI3HAT_PATH) $(LIBFLAGS) -o $(RUNFILE1)
 
-$(RUNFILEMAIN): $(PI3HAT_PATH) MotorRun.o $(NETWORK_PATH) $(MATH_PATH)
-	$(CXX) MotorRun.o $(PI3HAT_PATH) $(LIBFLAGS) $(NETWORK_PATH) $(MATH_PATH) -o $(RUNFILEMAIN)
+$(RUNFILEMAIN): $(PI3HAT_PATH) objectFiles/RobotFramework.o $(NETWORK_PATH) $(MATH_PATH)
+	$(CXX) objectFiles/RobotFramework.o $(PI3HAT_PATH) $(LIBFLAGS) $(DETECT_BALL_PATH) $(NETWORK_PATH) $(MATH_PATH) -o $(RUNFILEMAIN)
 
-$(RUNFILE2): $(PI3HAT_PATH) StopMotor.o
-	$(CXX) StopMotor.o $(PI3HAT_PATH) $(LIBFLAGS) -o $(RUNFILE2)
+$(RUNFILE2): $(PI3HAT_PATH) objectFiles/StopMotor.o
+	$(CXX) objectFiles/StopMotor.o $(PI3HAT_PATH) $(LIBFLAGS) -o $(RUNFILE2)
 
 
 
