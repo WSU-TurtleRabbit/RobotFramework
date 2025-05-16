@@ -64,4 +64,4 @@ build: pi3hat $(RUNFILE2) $(RUNFILEMAIN)
 remove:
 	rm $(RUNFILE1) $(RUNFILE2) $(RUNFILEMAIN)
 clean:
-	rm -f *.o mjbots/pi3hat/*.o Math/*.o Networks/*.o program
+	rm -f *.o mjbots/pi3hat/*.o Math/*.o Networks/*.o objectFiles/*.o program
