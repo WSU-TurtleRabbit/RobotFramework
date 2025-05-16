@@ -94,25 +94,32 @@ int main(int argc, char** argv) {
 
 
   while(true){
-  std::cout << "Listening to port" << std::endl;
+  // std::cout << "Listening to port" << std::endl;
+  auto start_time = std::chrono::high_resolution_clock::now();
   r.clear_buffer();
   msg = r.recive();
   // std::cout << msg <<std::endl;
   cmd.decode_cmd(msg);
-  wheel_velocity = m.calculate(1, 1, 1);
+  // wheel_velocity = m.calculate(1, 1, 1);
+  wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w); 
+  bool ball_detected = detect.find_ball();
+  std::cout<< ball_detected << std::endl;
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+  if (duration > std::chrono::microseconds(100000)) {
+    for (const auto& pair : controllers) {
+        pair.second->SetStop();
+    }
+  }
       // std::cout << "Wheel 1 : " << wheel_velocity[0] << "Wheel 2 : " << wheel_velocity[1] << "Wheel 3 : " << wheel_velocity[2] << "Wheel 4 : " << wheel_velocity[3] << std::endl;
   // start_time = std::chrono::high_resolution_clock::now();
 
-  double velocity_1 = wheel_velocity[0];
-  double velocity_2 = wheel_velocity[1];
-  double velocity_3 = wheel_velocity[2];
-  double velocity_4 = wheel_velocity[3];
 
+    for(int i = 0; i < 10; i++ ){
 
-  bool ball_detected = detect.find_ball();
-  std::cout<< ball_detected << std::endl;
+      // std::cout << "Wheel 1 : " << wheel_velocity[0] << "Wheel 2 : " << wheel_velocity[1] << "Wheel 3 : " << wheel_velocity[2] << "Wheel 4 : " << wheel_velocity[3] << std::endl;
+  // start_time = std::chrono::high_resolution_clock::now();
 
-    for(int i = 0; i < 15; i++ ){
       const auto now = GetNow();
       std::vector<moteus::CanFdFrame> command_frames;
 
@@ -124,16 +131,16 @@ int main(int argc, char** argv) {
           position_command.position = NaN;
 
         if(pair.first == 1){
-          position_command.velocity = velocity_1;
+          position_command.velocity = wheel_velocity[0];
         }
         else if (pair.first == 2){
-        position_command.velocity= velocity_2;
+        position_command.velocity= wheel_velocity[0];
         }
         else if (pair.first == 3){
-        position_command.velocity = velocity_3;
+        position_command.velocity = wheel_velocity[0];
         }
         else if (pair.first == 4){
-        position_command.velocity = velocity_4;
+        position_command.velocity = wheel_velocity[0];
         }
         else{
         ::printf("velocity is not mapped");
@@ -184,5 +191,6 @@ int main(int argc, char** argv) {
       // state.
       ::usleep(20000);
     }
+
   }
 };
