@@ -1,6 +1,6 @@
 
-#ifndef UDP_H
-#define UDP_H
+#pragma once
+
 
 #include <iostream>
 #include <cstring>
@@ -33,4 +33,3 @@ class Reciver{
 
 
 
-#endif
