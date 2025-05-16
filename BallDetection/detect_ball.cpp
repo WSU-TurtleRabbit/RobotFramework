@@ -41,6 +41,5 @@ bool BallDetection::find_ball(){
                 break;
             }
         }
-
         return ball_detected;
 }

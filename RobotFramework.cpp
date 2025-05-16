@@ -52,7 +52,8 @@ int main(int argc, char** argv) {
   std::string msg;
   cmdDecoder cmd;
   std::vector <double> wheel_velocity;
-  bool ball_detected;
+  
+  
 
   // This shows how you could construct a runtime number of controller
   // instances.
@@ -96,10 +97,10 @@ int main(int argc, char** argv) {
   std::cout << "Listening to port" << std::endl;
   r.clear_buffer();
   msg = r.recive();
-  std::cout << msg <<std::endl;
+  // std::cout << msg <<std::endl;
   cmd.decode_cmd(msg);
-  wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
-      std::cout << "Wheel 1 : " << wheel_velocity[0] << "Wheel 2 : " << wheel_velocity[1] << "Wheel 3 : " << wheel_velocity[2] << "Wheel 4 : " << wheel_velocity[3] << std::endl;
+  wheel_velocity = m.calculate(1, 1, 1);
+      // std::cout << "Wheel 1 : " << wheel_velocity[0] << "Wheel 2 : " << wheel_velocity[1] << "Wheel 3 : " << wheel_velocity[2] << "Wheel 4 : " << wheel_velocity[3] << std::endl;
   // start_time = std::chrono::high_resolution_clock::now();
 
   double velocity_1 = wheel_velocity[0];
@@ -108,13 +109,14 @@ int main(int argc, char** argv) {
   double velocity_4 = wheel_velocity[3];
 
 
-  ball_detected = detect.find_ball()
+  bool ball_detected = detect.find_ball();
+  std::cout<< ball_detected << std::endl;
 
     for(int i = 0; i < 15; i++ ){
       const auto now = GetNow();
       std::vector<moteus::CanFdFrame> command_frames;
 
-      std::cout << "Doing" << std::endl;
+      // std::cout << "Doing" << std::endl;
     
       // Accumulate all of our command CAN frames.
         for (const auto& pair : controllers) {
