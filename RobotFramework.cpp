@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
       // CAN, there is a watchdog which requires commands to be sent at
       // least every 100ms or the controller will enter a latched fault
       // state.
-      ::usleep(10000);
+      ::usleep(20000);
     }
   }
 };
