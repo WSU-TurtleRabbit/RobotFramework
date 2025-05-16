@@ -19,7 +19,7 @@ int main() {
     }
 
     // Define HSV range for detecting orange
-    cv::Scalar lower_orange(5, 100, 100);
+    cv::Scalar lower_orange(0, 150, 80);
     cv::Scalar upper_orange(15, 255, 255);
 
     
@@ -37,13 +37,23 @@ int main() {
     while (true) {
         cv::Mat frame, hsv, mask;
         cap >> frame;
+        // Define ROI – center 50% of the frame
+        int roi_width = frame.cols / 2;
+        int roi_height = frame.rows / 2;
+        int roi_x = (frame.cols - roi_width) / 2;
+        int roi_y = (frame.rows - roi_height) / 2;
+        cv::Rect roi(roi_x, roi_y, roi_width, roi_height);
+
+        // Only use cropped area for detection
+        cv::Mat detection_region = frame(roi);
+
         if (frame.empty()) {
             std::cerr << "Error: Empty frame\n";
             break;
         }
 
         // Convert to HSV and threshold for orange
-        cv::cvtColor(frame, hsv, cv::COLOR_BGR2HSV);
+        cv::cvtColor(detection_region, hsv, cv::COLOR_BGR2HSV);
         cv::inRange(hsv, lower_orange, upper_orange, mask);
 
         std::vector<std::vector<cv::Point>> contours;
@@ -79,6 +89,9 @@ int main() {
             float radius;
             cv::minEnclosingCircle(contours[largest_index], center, radius);
             if (radius > 10) {  
+                // Offset contour center from ROI to full frame
+                center.x += roi_x;
+                center.y += roi_y;
                 cv::circle(frame, center, static_cast<int>(radius), cv::Scalar(0, 255, 0), 2);
                 cv::circle(frame, center, 5, cv::Scalar(255, 0, 0), -1);
             }
@@ -86,22 +99,16 @@ int main() {
          
         std::cout << "Ball Detected: " << (ball_detected ? "true" : "false") << std::endl;
         
-        // cv::imshow("Camera Feed", frame);
-        // cv::imshow("Orange Mask", mask);
+        cv::imshow("Camera Feed", frame);
+        cv::imshow("Orange Mask", mask);
 
-        // if (cv::waitKey(1) == 27) {
-        //     break;
-        // }
+        if (cv::waitKey(1) == 27) {
+             break;
+        }
     }
 
     cap.release();
     close(sockfd);
     cv::destroyAllWindows();
     return 0;
-}
-
-
-
-          // True if *any* contour found
-
-   
+} 
