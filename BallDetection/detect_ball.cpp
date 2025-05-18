@@ -1,10 +1,3 @@
-#include <opencv2/opencv.hpp>
-#include <iostream>
-#include <cstring>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
 #include "detect_ball.h"
 
 BallDetection::BallDetection(){
@@ -21,25 +14,25 @@ BallDetection::BallDetection(){
     upper_orange = cv::Scalar(15, 255, 255);
 }
 
-bool BallDetection::find_ball(){
+bool BallDetection::find_ball() {
     cv::Mat frame, hsv, mask;
-        capture >> frame;
-        if (frame.empty()) {
-            std::cerr << "Error: Empty frame\n";
-        }
+    capture >> frame;
+    if (frame.empty()) {
+        std::cerr << "Error: Empty frame\n";
+    }
 
-        // Convert to HSV and threshold for orange
-        cv::cvtColor(frame, hsv, cv::COLOR_BGR2HSV);
-        cv::inRange(hsv, lower_orange, upper_orange, mask);
-        cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    // Convert to HSV and threshold for orange
+    cv::cvtColor(frame, hsv, cv::COLOR_BGR2HSV);
+    cv::inRange(hsv, lower_orange, upper_orange, mask);
+    cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
-        ball_detected = false;
-        for (const auto& contour : contours) {
-            double area = cv::contourArea(contour);
-            if (area > 300) { // Adjust this threshold as needed
-                ball_detected = true;
-                break;
-            }
+    ball_detected = false;
+    for (const auto& contour : contours) {
+        double area = cv::contourArea(contour);
+        if (area > 300) { // Adjust this threshold as needed
+            ball_detected = true;
+            break;
         }
-        return ball_detected;
+    }
+    return ball_detected;
 }
