@@ -45,9 +45,6 @@ int main(int argc, char** argv) {
 
   using namespace mjbots;
 
-  static auto UDP_interval = std::chrono::milliseconds(5);
-  static auto CameraInterval = std::chrono::milliseconds(300);
-  static auto MotorInterval = std::chrono::milliseconds(20); 
   
   BallDetection detect;
   Reciver r;
@@ -95,56 +92,70 @@ int main(int argc, char** argv) {
   auto transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
 
 
-  
+
   while(true){
-
-  auto current_time = std::chrono::steady_clock::now();
-  static auto last_UDP_time = current_time;
-  static auto last_motor_time = current_time;
-  static auto last_camera_time = current_time;
-
-  if (current_time - last_UDP_time >= UDP_interval){
+  // std::cout << "Listening to port" << std::endl;
+  //Starts timer 
+  auto start_time = std::chrono::high_resolution_clock::now();
   r.clear_buffer();
   msg = r.recive();
+  // std::cout << msg <<std::endl;
   cmd.decode_cmd(msg);
+  // wheel_velocity = m.calculate(1, 1, 1);
   wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
-  last_UDP_time = current_time;
-  };
+  //The goes into the camera frame and checks if thier is a ball. 
+  bool ball_detected = detect.find_ball();
+  std::cout<< ball_detected << std::endl;
 
-  if (current_time - last_camera_time >= CameraInterval){
-    bool ball_dected = detect.find_ball();
-    last_camera_time = current_time;
-  };
+  // Ends Timer 
+  auto end_time = std::chrono::high_resolution_clock::now();
+  
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
 
-  if (current_time - last_motor_time >= MotorInterval){
+  //this check how long the length of the loop, once this section exceeds 100ms it will
+  //reset the faults caused by the watch dog timer. 
+  // 
+  if (duration > std::chrono::microseconds(100000)) {
+    for (const auto& pair : controllers) {
+        pair.second->SetStop();
+    }
+  }
+      // std::cout << "Wheel 1 : " << wheel_velocity[0] << "Wheel 2 : " << wheel_velocity[1] << "Wheel 3 : " << wheel_velocity[2] << "Wheel 4 : " << wheel_velocity[3] << std::endl;
+  // start_time = std::chrono::high_resolution_clock::now();
 
-    const auto now = GetNow();
-    std::vector<moteus::CanFdFrame> command_frames;
+
+    for(int i = 0; i < 10; i++ ){
+
+      // std::cout << "Wheel 1 : " << wheel_velocity[0] << "Wheel 2 : " << wheel_velocity[1] << "Wheel 3 : " << wheel_velocity[2] << "Wheel 4 : " << wheel_velocity[3] << std::endl;
+  // start_time = std::chrono::high_resolution_clock::now();
+
+      const auto now = GetNow();
+      std::vector<moteus::CanFdFrame> command_frames;
 
       // std::cout << "Doing" << std::endl;
     
       // Accumulate all of our command CAN frames.
-    for (const auto& pair : controllers) {
-        moteus::PositionMode::Command position_command;
+        for (const auto& pair : controllers) {
+          moteus::PositionMode::Command position_command;
           position_command.position = NaN;
 
-      if(pair.first == 1){
+        if(pair.first == 1){
           position_command.velocity = wheel_velocity[0];
         }
-      else if (pair.first == 2){
-        position_command.velocity= wheel_velocity[1];  
+        else if (pair.first == 2){
+        position_command.velocity= wheel_velocity[1];
         }
-      else if (pair.first == 3){
+        else if (pair.first == 3){
         position_command.velocity = wheel_velocity[2];
         }
-      else if (pair.first == 4){
+        else if (pair.first == 4){
         position_command.velocity = wheel_velocity[3];
         }
-      else{
+        else{
         ::printf("velocity is not mapped");
         }
 
-      command_frames.push_back(pair.second->MakePosition(position_command));
+        command_frames.push_back(pair.second->MakePosition(position_command));
         }
 
       // Now send them in a single call to Transport::Cycle.
@@ -187,10 +198,8 @@ int main(int argc, char** argv) {
       // CAN, there is a watchdog which requires commands to be sent at
       // least every 100ms or the controller will enter a latched fault
       // state.
+      ::usleep(20000);
+    }
 
-      last_motor_time = current_time;
-    };
-
-  };
-  
+  }
 };
