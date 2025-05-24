@@ -28,6 +28,7 @@ class Reciver{
         char buffer[buffer_size];
         socklen_t len;
         struct sockaddr_in server_addr, client_addr;
+        struct timeval tv;
     
 
     public:

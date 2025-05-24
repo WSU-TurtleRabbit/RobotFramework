@@ -8,6 +8,10 @@ Reciver::Reciver() {
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(r_port);
 
+    tv.tv_usec = 50000; 
+
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)); 
+
     bind(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr));
     
     len = sizeof(client_addr);
@@ -15,9 +19,13 @@ Reciver::Reciver() {
 
 std::string Reciver::recive() {
 
-    int latest_msg  = recvfrom(sockfd, buffer, buffer_size, 0, (struct sockaddr*)&client_addr, &len);
+    int latest_msg = recvfrom(sockfd, buffer, buffer_size - 1, 0, (struct sockaddr*)&client_addr, &len);
+    if (latest_msg <= 0) {
+    return "";  // Or handle timeout/error
+    }
     buffer[latest_msg] = '\0';
     return buffer;
+
 };
 
 void Reciver::clear_buffer() {
