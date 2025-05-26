@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
   if (current_time - last_camera_time >= CameraInterval){
     bool camera_ball_dected = ball_detected.load(std::memory_order_relaxed);
     std::cout <<camera_ball_dected <<"\n";
-    last_camera_time = current_first;
+    last_camera_time = current_time;
   };
 
   if (current_time - last_motor_time >= MotorInterval){
