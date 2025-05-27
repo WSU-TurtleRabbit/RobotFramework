@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
 
   using namespace mjbots;
 
-  static auto UDP_interval = std::chrono::milliseconds(5);
+  static auto UDP_interval = std::chrono::milliseconds(20);
   static auto CameraInterval = std::chrono::milliseconds(100);
   static auto MotorInterval = std::chrono::milliseconds(20); 
   
@@ -119,7 +119,8 @@ int main(int argc, char** argv) {
   if (current_time - last_UDP_time >= UDP_interval){
   r.clear_buffer();
   msg = r.recive();
-  if(msg == " "){
+  if(msg == "TIMEOUT"){
+    std::cout << msg << "\n";
    velocity_map = {
     {1, 0.0}, 
     {2, 0.0}, 
@@ -154,7 +155,7 @@ int main(int argc, char** argv) {
     const auto now = GetNow();
     std::vector<moteus::CanFdFrame> command_frames;
 
-      // std::cout << "Doing" << std::endl;
+      std::cout << "Doing" << std::endl;
     
       // Accumulate all of our command CAN frames.
     for (const auto& pair : controllers) {
