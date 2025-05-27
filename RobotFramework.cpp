@@ -68,8 +68,11 @@ int main(int argc, char** argv) {
   cmdDecoder cmd;
   std::vector <double> wheel_velocity;
   std::map<int, double> velocity_map;
- 
-  std::thread camera_thread(CameraThread, std::ref(detect)); 
+
+  if(detect.open_cam()>0){
+    std::thread camera_thread(CameraThread, std::ref(detect)); 
+  }
+  
 
   // This shows how you could construct a runtime number of controller
   // instances.

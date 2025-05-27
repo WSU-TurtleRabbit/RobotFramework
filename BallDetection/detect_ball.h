@@ -22,6 +22,7 @@ class BallDetection{
         BallDetection();
         ~BallDetection()=default;
         bool find_ball();
+        int open_cam();
     
 };
     
