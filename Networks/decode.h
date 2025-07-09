@@ -1,5 +1,4 @@
-#ifndef DETECT_BALL_H
-#define DETECT_BALL_H
+
 #pragma once
 
 #include <sstream>
@@ -20,4 +19,3 @@ class cmdDecoder{
         void decode_cmd(std::string message);
 };
 
-#endif // DETECT_BALL_H

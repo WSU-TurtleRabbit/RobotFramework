@@ -20,10 +20,10 @@ class Wheel_math{
 
     //todo - convert to radians
 
-    const int WHEEL_1_RAD = WHEEL_1_ANG/(M_PI/180);
-    const int WHEEL_2_RAD = WHEEL_2_ANG/(M_PI/180);
-    const int WHEEL_3_RAD = WHEEL_3_ANG/(M_PI/180);
-    const int WHEEL_4_RAD = WHEEL_4_ANG/(M_PI/180);
+    const int WHEEL_1_RAD = WHEEL_1_ANG*(M_PI/180);
+    const int WHEEL_2_RAD = WHEEL_2_ANG*(M_PI/180);
+    const int WHEEL_3_RAD = WHEEL_3_ANG*(M_PI/180);
+    const int WHEEL_4_RAD = WHEEL_4_ANG*(M_PI/180);
 
     const double WHEEL_RADIUS = 33.5;
 
