@@ -3,15 +3,30 @@
 #include <libserial/exceptions.h>
 
 int main() {
-  try {
-    serial_port sp("/dev/ttyACM0"); // Replace with your Arduino's port
-    sp.set_baudrate(9600); // Or your desired baud rate
-    sp.open();
+  LibSerial::SerialPort serial_port;
+  serial_port.Open("/dev/ttyUSB0");
 
-    // ... read and write data to/from the serial port ...
-    sp.close();
-  } catch (const serial_exception& e) {
-    std::cerr << "Error: " << e.what() << std::endl;
-  }
+  serial_port.SetBaudRate(LibSerial::BaudRate::BAUD_115200);
+
+  char kick = 'K';
+  char dribble = 'D';
+  char stop = 'S'
+  char command;
+  while true{
+    std::cout<<"What would you like to send, the arduino"<<std::endl;
+    std::cin >> command;
+    if(command == "K")
+    {
+      serial_port.Write(&kick, 1);
+    }
+    else if (command == "D")
+    {
+    serial_port.Write(&dribble, 1);
+    }
+    else{
+    serial_port.Write(&stop, 1);
+    } 
+
   return 0;
+}
 }
