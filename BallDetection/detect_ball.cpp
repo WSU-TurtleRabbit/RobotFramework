@@ -2,16 +2,20 @@
 
 BallDetection::BallDetection(){
 
+    lower_orange = cv::Scalar(5, 100, 100);
+    upper_orange = cv::Scalar(15, 255, 255);
+}
+
+int BallDetection::open_cam(){
     capture.open(0);
     if (!capture.isOpened()) {
         std::cerr << "Error: Could not open camera\n";
+        return -1;
     }
     // capture.set(cv::CAP_PROP_FRAME_WIDTH, 320);
     // capture.set(cv::CAP_PROP_FRAME_HEIGHT, 240);
     capture.set(cv::CAP_PROP_FPS, 30);
-
-    lower_orange = cv::Scalar(5, 100, 100);
-    upper_orange = cv::Scalar(15, 255, 255);
+    return 1;
 }
 
 bool BallDetection::find_ball() {

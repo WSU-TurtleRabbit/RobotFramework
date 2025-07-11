@@ -1,5 +1,3 @@
-#ifndef DETECT_BALL_H
-#define DETECT_BALL_H
 #pragma once
 #include <opencv2/opencv.hpp>
 #include <iostream>
@@ -24,7 +22,7 @@ class BallDetection{
         BallDetection();
         ~BallDetection()=default;
         bool find_ball();
+        int open_cam();
     
 };
     
-#endif // DETECT_BALL_H
