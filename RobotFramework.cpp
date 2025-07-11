@@ -133,6 +133,7 @@ int main(int argc, char** argv) {
     
   }
   else{
+  std::cout << msg << "\n";
   cmd.decode_cmd(msg);
   wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
   velocity_map = {
@@ -158,7 +159,7 @@ int main(int argc, char** argv) {
     const auto now = GetNow();
     std::vector<moteus::CanFdFrame> command_frames;
 
-      std::cout << "Doing" << std::endl;
+      // std::cout << "Doing" << std::endl;
     
       // Accumulate all of our command CAN frames.
     for (const auto& pair : controllers) {
