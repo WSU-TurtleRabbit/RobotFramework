@@ -13,9 +13,9 @@ class Wheel_math{
     const std::vector<double> WHEEL_3 = {-52.14, -52.14};
     const std::vector<double> WHEEL_4 = {-63.86, 36.87};
 
-    const int WHEEL_1_ANG = -120;
+    const int WHEEL_1_ANG = 45;
     const int WHEEL_2_ANG = -45;
-    const int WHEEL_3_ANG = 45;
+    const int WHEEL_3_ANG = -120;
     const int WHEEL_4_ANG = 120;
 
     //todo - convert to radians
