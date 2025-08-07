@@ -41,9 +41,9 @@ int main(int argc, char** argv) {
   //and matching bus pair 
 
     {1, 1},  // Motor ID 1 mapped to BUS 1
-    {4, 1},  // Motor ID 4 mapped to BUS 1 
-    {2, 2},  // Motor ID 2 mapped to BUS 2
-    {3, 2},  // Motor ID 3 mapped to BUS 2 
+    {2, 2},  // Motor ID 4 mapped to BUS 1 
+    {3, 3},  // Motor ID 2 mapped to BUS 2
+    {4, 4},  // Motor ID 3 mapped to BUS 2 
   };
   toptions.servo_map = servo_map; 
   int count = 1;
