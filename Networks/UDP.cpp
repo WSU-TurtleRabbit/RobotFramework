@@ -31,9 +31,33 @@ std::string Reciver::recive() {
 
 void Reciver::clear_buffer() {
     int discard_msg;
-    do{
+    while(discard_msg != 0)
         discard_msg = recvfrom(sockfd, buffer, buffer_size, MSG_DONTWAIT, (struct sockaddr*)&client_addr, &len);
-        
-    } while(discard_msg > 0); 
+    };
 };
 
+void Reciver::close() {
+    close(sockfd);
+}
+
+// Sender junk
+Sender::Sender(const std::string& ip_address, const int& port) {
+
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(port);
+    inet_pton(AF_INET, ip_address.c_str(), &server_addr.sin_addr);
+};
+
+void Sender::send(const std::string& message) {
+    sendto(sockfd, message.c_str(), message.size(), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
+};
+
+void Sender::clear_buffer() {
+    memset(buffer, 0, BUFFER_SIZE);
+}
+
+void Sender::close() {
+    close(sockfd);
+}
