@@ -30,7 +30,7 @@ std::string Reciver::recive() {
 };
 
 void Reciver::clear_buffer() {
-    int discard_msg;
+    int discard_msg = 1;
     while(discard_msg != 0)
     {
         discard_msg = recvfrom(sockfd, buffer, buffer_size, MSG_DONTWAIT, (struct sockaddr*)&client_addr, &len);
