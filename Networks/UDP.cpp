@@ -32,6 +32,7 @@ std::string Reciver::recive() {
 void Reciver::clear_buffer() {
     int discard_msg;
     while(discard_msg != 0)
+    {
         discard_msg = recvfrom(sockfd, buffer, buffer_size, MSG_DONTWAIT, (struct sockaddr*)&client_addr, &len);
     };
 };
@@ -59,5 +60,5 @@ void Sender::clear_buffer() {
 }
 
 void Sender::close_socket() {
-    close();
+    close(this->sockfd);
 }
