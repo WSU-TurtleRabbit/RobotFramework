@@ -36,7 +36,7 @@ void Reciver::clear_buffer() {
     };
 };
 
-void Reciver::close() {
+void Reciver::close_socket() {
     close(this->sockfd);
 }
 
@@ -58,6 +58,6 @@ void Sender::clear_buffer() {
     memset(buffer, 0, BUFFER_SIZE);
 }
 
-void Sender::close() {
-    close(this->sockfd);
+void Sender::close_socket() {
+    close();
 }

@@ -36,7 +36,7 @@ public:
     ~Reciver() = default;
     std::string recive();
     void clear_buffer();
-    void close();
+    void close_socket();
 };
 
 class Sender
@@ -52,7 +52,7 @@ public:
     ~Sender() = default;
     void send(const std::string& message);
     void clear_buffer();
-    void close();
+    void close_socket();
 };
 
 #endif // UDP_H
