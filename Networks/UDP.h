@@ -5,10 +5,10 @@
 
 #include <iostream>
 #include <cstring>
-#include <bits/stdc++.h> 
-#include <stdlib.h> 
-#include <string.h> 
-#include <sys/types.h> 
+#include <bits/stdc++.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
 #include <sstream>
 
 #if defined(__unix__) || defined(__APPLE__)
@@ -20,24 +20,39 @@
 #include <unistd.h>
 #endif
 
-class Reciver{
-    private:
-        static const int buffer_size = 1024;
-        static const int r_port = 50514;
-        int sockfd;
-        char buffer[buffer_size];
-        socklen_t len;
-        struct sockaddr_in server_addr, client_addr;
-        struct timeval tv;
-    
+class Reciver
+{
+private:
+    static const int buffer_size = 1024;
+    static const int r_port = 50514;
+    int sockfd;
+    char buffer[buffer_size];
+    socklen_t len;
+    struct sockaddr_in server_addr, client_addr;
+    struct timeval tv;
 
-    public:
-        Reciver();
-        ~Reciver()=default;
-        std::string recive();
-        void clear_buffer();
+public:
+    Reciver();
+    ~Reciver() = default;
+    std::string recive();
+    void clear_buffer();
+    void close();
+};
+
+class Sender
+{
+private:
+    static const int BUFFER_SIZE = 1024;
+    int sockfd;
+    char buffer[BUFFER_SIZE];
+    struct sockaddr_in server_addr;
+
+public:
+    Sender(const std::string& ip_address, const int& port = 50515);
+    ~Sender() = default;
+    void send(const std::string& message);
+    void clear_buffer();
+    void close();
 };
 
 #endif // UDP_H
-
-
