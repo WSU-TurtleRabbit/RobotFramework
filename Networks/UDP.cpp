@@ -37,7 +37,7 @@ void Reciver::clear_buffer() {
 };
 
 void Reciver::close() {
-    close(sockfd);
+    close(this->sockfd);
 }
 
 // Sender junk
@@ -59,5 +59,5 @@ void Sender::clear_buffer() {
 }
 
 void Sender::close() {
-    close(sockfd);
+    close(this->sockfd);
 }
