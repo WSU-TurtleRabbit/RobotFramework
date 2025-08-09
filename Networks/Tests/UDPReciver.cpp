@@ -27,7 +27,9 @@ int main(){
 
   while(true){
     msg = r.recive();
-    r.clear_buffer();
+    
+    // This clear buffer could completely stops messages from being recieved
+    // r.clear_buffer();
 
     // ::printf(msg);
     cmd.decode_cmd(msg);
