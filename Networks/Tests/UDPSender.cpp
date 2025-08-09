@@ -17,5 +17,8 @@ int main(){
   while(true){
     s.clear_buffer();
     s.send("1 2 3 4 5 6 7");
+
+    std::cout << "Sending: 1 2 3 4 5 6 7 to 127.0.0.1:50514" << std::endl;
+    sleep(1);
   };
 };
