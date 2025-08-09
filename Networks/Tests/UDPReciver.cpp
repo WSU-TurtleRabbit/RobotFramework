@@ -25,7 +25,6 @@ int main(){
 
 
   while(true){
-    r.clear_buffer();
     msg = r.recive();
     // ::printf(msg);
     cmd.decode_cmd(msg);
