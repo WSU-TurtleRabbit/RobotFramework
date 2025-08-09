@@ -9,6 +9,7 @@
 #include <arpa/inet.h> 
 #include <netinet/in.h> 
 #include <sstream>
+#include <random>
 #include "decode.h"
 #include "wheel_math.h"
 #include "UDP.h"
@@ -26,6 +27,8 @@ int main(){
 
   while(true){
     msg = r.recive();
+    r.clear_buffer();
+
     // ::printf(msg);
     cmd.decode_cmd(msg);
     vel = {m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w)};
