@@ -19,6 +19,11 @@ int main(){
   std::string msg;
   cmdDecoder cmd;
   std::vector <double> vel;
+
+  std::cout << "Reciever at 127.0.0.1:50514" << std::endl;
+  std::cout << "GIVE ME MESSAGES!!!" << std::endl;
+
+
   while(true){
     r.clear_buffer();
     msg = r.recive();
