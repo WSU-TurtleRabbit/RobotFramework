@@ -9,13 +9,11 @@
 #include <arpa/inet.h> 
 #include <netinet/in.h> 
 #include <sstream>
-#include "decode.h"
-#include "wheel_math.h"
 #include "UDP.h"
 
 int main(){
   Sender s("127.0.0.1", 50514);
-  
+
   while(true){
     s.clear_buffer();
     s.send("1 2 3 4 5 6 7");
