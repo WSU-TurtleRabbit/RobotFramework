@@ -13,12 +13,20 @@
 
 int main(){
   Sender s("127.0.0.1", 50514);
+  srand(time(0));
 
   while(true){
     s.clear_buffer();
-    s.send("1 2 3 4 5 6 7");
 
-    std::cout << "Sending: 1 2 3 4 5 6 7 to 127.0.0.1:50514" << std::endl;
+    std::string message = "1";
+    for (int i = 0; i < 6; i++)
+    {
+        message += " " + std::to_string(rand() % 100 + 1);
+    }
+
+    s.send(message);
+
+    std::cout << "Sending: " << message << " to 127.0.0.1:50514" << std::endl;
     sleep(1);
   };
 };
