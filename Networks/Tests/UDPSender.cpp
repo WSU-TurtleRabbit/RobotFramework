@@ -27,6 +27,6 @@ int main(){
     s.send(message);
 
     std::cout << "Sending: " << message << " to 127.0.0.1:50514" << std::endl;
-    sleep(1);
+    msleep();
   };
 };

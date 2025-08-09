@@ -31,6 +31,8 @@ int main(){
     // This clear buffer could completely stops messages from being recieved
     // r.clear_buffer();
 
+    msleep(50);
+
     // ::printf(msg);
     cmd.decode_cmd(msg);
     vel = {m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w)};
