@@ -31,7 +31,7 @@ int main(){
     // This clear buffer could completely stops messages from being recieved
     // r.clear_buffer();
 
-    msleep(50);
+    usleep(50000);
 
     // ::printf(msg);
     cmd.decode_cmd(msg);
