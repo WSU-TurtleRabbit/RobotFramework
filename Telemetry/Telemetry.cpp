@@ -2,7 +2,7 @@
 
 namespace moteus {
 
-Telemetry()
+Telemetry::Telemetry()
 {
     this->motorControllers = {1, 2, 3, 4};
 }

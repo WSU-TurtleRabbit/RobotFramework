@@ -194,19 +194,19 @@ int main(int argc, char** argv) {
         servo_data[frame.source] = moteus::Query::Parse(frame.data, frame.size);
       }
 
-      // for (const auto& pair : servo_data) {
-      //   const auto r = pair.second;
-      //   ::snprintf(buf, sizeof(buf) - 1,
-      //             "%2d %3d p/v/t=(%7.3f,%7.3f,%7.3f)  ",
-      //             pair.first,
-      //             static_cast<int>(r.mode),
-      //             r.position,
-      //             r.velocity,
-      //             r.torque);
-      //   status_line += buf;
-      // }
-      // ::printf("%s  \r", status_line.c_str());
-      // ::fflush(::stdout);
+      for (const auto& pair : servo_data) {
+        const auto r = pair.second;
+        ::snprintf(buf, sizeof(buf) - 1,
+                  "%2d %3d temp/velocity/volatge=(%7.3f,%7.3f,%7.3f)  ",
+                  pair.first,
+                  static_cast<int>(r.mode),
+                  r.temperature,
+                  r.velocity,
+                  r.voltage);
+        status_line += buf;
+      }
+      ::printf("%s  \r", status_line.c_str());
+      ::fflush(::stdout);
 
       // Sleep 20ms between iterations.  By default, when commanded over
       // CAN, there is a watchdog which requires commands to be sent at
