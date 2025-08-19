@@ -1,5 +1,5 @@
 CXX := g++
-CXXFLAGS :=  -std=c++17 -Wall -Werror -Imjbots/pi3hat -Imjbots/moteus -INetworks -IMath -IBallDetection
+CXXFLAGS :=  -std=c++17 -Wall -Werror -Imjbots/pi3hat -Imjbots/moteus -INetworks -IMath -IBallDetection -ITetemetry
 LIBFLAGS := -L/usr/include -lbcm_host `pkg-config --cflags --libs opencv4`
 PI3HAT_PATH := mjbots/pi3hat/pi3hat.o 
 NETWORK_PATH := objectFiles/UDP.o objectFiles/decode.o
@@ -17,6 +17,12 @@ objectFiles/detect_ball.o: BallDetection/detect_ball.cpp
 
 objectFiles/UDP.o: Networks/UDP.cpp
 	$(CXX) -c Networks/UDP.cpp $(CXXFLAGS) -o objectFiles/UDP.o
+
+objectFiles/Telemetry.o: Telemetry/Telemetry.cpp
+	$(CXX) -c Telemetry/Telemetry.cpp $(CXXFLAGS) -o objectFiles/Telemetry.o
+
+objectFiles/TelemetryTest.o: Telemetry/TelemetryTest.cpp
+	$(CXX) -c Telemetry/TelemetryTest.cpp $(CXXFLAGS) -o objectFiles/TelemetryTest.o
 
 objectFiles/decode.o: Networks/decode.cpp 
 	$(CXX) -c Networks/decode.cpp $(CXXFLAGS) -o objectFiles/decode.o
@@ -39,6 +45,8 @@ $(RUNFILEMAIN): $(PI3HAT_PATH) objectFiles/RobotFramework.o $(NETWORK_PATH) $(MA
 $(RUNFILE2): $(PI3HAT_PATH) objectFiles/StopMotor.o
 	$(CXX) objectFiles/StopMotor.o $(PI3HAT_PATH) $(LIBFLAGS) -o $(RUNFILE2)
 
+Telemetry: objectFiles/Telemetry.o objectFiles/TelemetryTest.o
+	$(CXX) objectFiles/Telemetry.o objectFiles/TelemetryTest.o $(LIBFLAGS) -o Telemetry
 
 
 run:$(RUNFILE1)
