@@ -1,19 +1,4 @@
-// Copyright 2023 mjbots Robotic Systems, LLC.  info@mjbots.com
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
-/// @file
-///
 /// This example shows how multiple controllers can be commanded using
 /// the Cycle method.  This approach can result in lower overall
 /// latency and improved performance with some transports, such as the
@@ -28,21 +13,7 @@
 #include <chrono>
 #include "moteus.h"
 #include "pi3hat_moteus_transport.h"
-#include "wheel_math.h"
-#include "decode.h"
-#include "UDP.h"
-#include "detect_ball.h"
 #include "thread"
-
-std::atomic<bool> ball_detected{false};
-
-void CameraThread(BallDetection& detector) {
-    while (true) {
-        bool result = detector.find_ball();
-        ball_detected.store(result, std::memory_order_relaxed);
-        std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    }
-}
 
 // A simple way to get the current time accurately as a double.
 static double GetNow() {
@@ -56,22 +27,10 @@ int main(int argc, char** argv) {
 
   using namespace mjbots;
 
-  static auto UDP_interval = std::chrono::milliseconds(20);
-  static auto CameraInterval = std::chrono::milliseconds(100);
   static auto MotorInterval = std::chrono::milliseconds(20); 
   
-
-  BallDetection detect;
-  Reciver r;
-  Wheel_math m;
-  std::string msg;
-  cmdDecoder cmd;
   std::vector <double> wheel_velocity;
   std::map<int, double> velocity_map;
-
-  if(detect.open_cam()>0){
-    std::thread camera_thread(CameraThread, std::ref(detect)); 
-  }
   
 
   // This shows how you could construct a runtime number of controller
@@ -115,60 +74,26 @@ int main(int argc, char** argv) {
   while(true){
 
   auto current_time = std::chrono::steady_clock::now();
-  static auto last_UDP_time = current_time;
-  static auto last_motor_time = current_time;
-  static auto last_camera_time = current_time;
 
-  if (current_time - last_UDP_time >= UDP_interval){
-  r.clear_buffer();
-  msg = r.recive();
-  if(msg == "TIMEOUT"){
-    std::cout << msg << "\n";
+  static auto last_motor_time = current_time;
+// set the velocity as 0 to send a command 
    velocity_map = {
     {1, 0.0}, 
     {2, 0.0}, 
     {3, 0.0}, 
     {4, 0.0}, 
     };
-    
-  }
-  else{
-  std::cout << msg << "\n";
-  cmd.decode_cmd(msg);
-  wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
-  velocity_map = {
-    {1, wheel_velocity[0]}, 
-    {2, wheel_velocity[1]}, 
-    {3, wheel_velocity[2]}, 
-    {4, wheel_velocity[3]}
-  };
-  };
-  last_UDP_time = current_time;
-  }
-
-  
-
-  if (current_time - last_camera_time >= CameraInterval){
-    bool camera_ball_dected = ball_detected.load(std::memory_order_relaxed);
-    std::cout <<camera_ball_dected <<"\n";
-    last_camera_time = current_time;
-  };
 
   if (current_time - last_motor_time >= MotorInterval){
 
     const auto now = GetNow();
     std::vector<moteus::CanFdFrame> command_frames;
-
-      // std::cout << "Doing" << std::endl;
     
       // Accumulate all of our command CAN frames.
     for (const auto& pair : controllers) {
         moteus::PositionMode::Command position_command;
           position_command.position = NaN;
           position_command.velocity = velocity_map[pair.first];
-
-
-
       command_frames.push_back(pair.second->MakePosition(position_command));
         };
 
