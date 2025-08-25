@@ -1,4 +1,5 @@
 #include "moteus.h"
+#include "pi3hat_moteus_transport.h"
 
 class Telemetry {
 public:
