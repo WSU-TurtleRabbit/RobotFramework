@@ -1,4 +1,4 @@
-add_library(wheel_math wheel_math.cpp)
+add_library(wheel_math wheel_velocity.cpp)
 
 target_include_directories(wheel_math 
     INTERFACE
