@@ -4,20 +4,13 @@ project(RobotFramework)
 
 find_package(OpenCV REQUIRED)
 
+# Interface library for common dependencies
 add_library(COMMON_LIBS INTERFACE)
 
-include_directories(${OpenCV_INCLUDE_DIRS})
-
-add_executable(${PROJECT_NAME} RobotFramework.cpp)
-
-target_link_libraries(${PROJECT_NAME} PRIVATE COMMON_LIBS)
-
-add_executable(StopMotor StopMotor.cpp)
-
-target_link_libraries(StopMotor PRIVATE COMMON_LIBS)
-
 target_include_directories(COMMON_LIBS INTERFACE
-    /usr/include)
+    ${OpenCV_INCLUDE_DIRS}
+    /usr/include
+)
 
 target_link_libraries(COMMON_LIBS INTERFACE
     ${OpenCV_LIBS}
@@ -27,15 +20,21 @@ target_link_libraries(COMMON_LIBS INTERFACE
     moteus 
     pi3hat 
     bcm_host 
-    )
+)
 
+# Function to build an executable with common dependencies
+function(build_executable file_name)
+    add_executable(${file_name} ${file_name}.cpp)
+    target_link_libraries(${file_name} PRIVATE COMMON_LIBS)
+endfunction()
+
+# Build the main executable
+build_executable(RobotFramework)
+build_executable(StopMotor)
+
+# Subdirectories
 add_subdirectory(BallDetection)
-
 add_subdirectory(Networks)
-
 add_subdirectory(Math)
-
 add_subdirectory(mjbots/moteus)
-
 add_subdirectory(mjbots/pi3hat)
-
