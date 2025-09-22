@@ -16,10 +16,11 @@ target_link_libraries(COMMON_LIBS INTERFACE
     ${OpenCV_LIBS}
     BallDetection 
     Networks 
-    wheel_math 
+    wheel_math
+    Telemetry
     moteus 
     pi3hat 
-    bcm_host 
+    bcm_host
 )
 
 # Function to build an executable with common dependencies
@@ -36,5 +37,6 @@ build_executable(StopMotor)
 add_subdirectory(BallDetection)
 add_subdirectory(Networks)
 add_subdirectory(Math)
+add_subdirectory(Telemetry)
 add_subdirectory(mjbots/moteus)
 add_subdirectory(mjbots/pi3hat)
