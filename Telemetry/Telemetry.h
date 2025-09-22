@@ -11,8 +11,8 @@
 #include <thread>
 #include <limits>
 
-#include "mjbots/moteus/moteus.h"
-#include "mjbots/pi3hat/pi3hat_moteus_transport.h"
+#include "moteus.h"
+#include "pi3hat_moteus_transport.h"
 
 struct MotorTelemetry
 {
