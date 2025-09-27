@@ -17,10 +17,10 @@ target_link_libraries(COMMON_LIBS INTERFACE
     BallDetection 
     Networks 
     wheel_math
-    Telemetry
     moteus 
     pi3hat 
     bcm_host
+    Telemetry
 )
 
 # Function to build an executable with common dependencies
@@ -43,3 +43,5 @@ add_executable()
 # Build the main executable
 build_executable(RobotFramework)
 build_executable(StopMotor)
+add_executable(Tel_test Telemetry/TelemetryTest.cpp)
+target_link_libraries(Tel_test PRIVATE COMMON_LIBS)

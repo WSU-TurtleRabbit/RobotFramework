@@ -65,7 +65,7 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
         mt.temperature = parsed.temperature;
         mt.voltage = parsed.voltage;
         mt.velocity = parsed.velocity;
-        mt.current = parsed.current;
+        mt.current = parsed.q_current;
         mt.mode = static_cast<int>(parsed.mode);
         servo_data[frame.source] = mt;
     }
