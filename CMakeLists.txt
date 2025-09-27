@@ -4,14 +4,6 @@ project(RobotFramework)
 
 find_package(OpenCV REQUIRED)
 
-# Subdirectories
-add_subdirectory(mjbots/moteus)
-add_subdirectory(mjbots/pi3hat)
-add_subdirectory(BallDetection)
-add_subdirectory(Networks)
-add_subdirectory(Math)
-add_subdirectory(Telemetry)
-
 # Interface library for common dependencies
 add_library(COMMON_LIBS INTERFACE)
 
@@ -36,6 +28,17 @@ function(build_executable file_name)
     add_executable(${file_name} ${file_name}.cpp)
     target_link_libraries(${file_name} PRIVATE COMMON_LIBS)
 endfunction()
+
+# Subdirectories
+add_subdirectory(mjbots/moteus)
+add_subdirectory(mjbots/pi3hat)
+add_subdirectory(BallDetection)
+add_subdirectory(Networks)
+add_subdirectory(Math)
+add_subdirectory(Telemetry)
+
+# Add other executables
+add_executable()
 
 # Build the main executable
 build_executable(RobotFramework)
