@@ -37,9 +37,6 @@ add_subdirectory(Networks)
 add_subdirectory(Math)
 add_subdirectory(Telemetry)
 
-# Add other executables
-add_executable()
-
 # Build the main executable
 build_executable(RobotFramework)
 build_executable(StopMotor)
