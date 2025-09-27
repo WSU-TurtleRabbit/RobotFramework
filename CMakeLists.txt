@@ -40,5 +40,4 @@ add_subdirectory(Telemetry)
 # Build the main executable
 build_executable(RobotFramework)
 build_executable(StopMotor)
-add_executable(Tel_test Telemetry/TelemetryTest.cpp)
 target_link_libraries(Tel_test PRIVATE COMMON_LIBS)
