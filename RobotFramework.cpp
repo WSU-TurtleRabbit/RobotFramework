@@ -37,15 +37,15 @@
 
 std::atomic<bool> ball_detected{false};
 
-void CameraThread(BallDetection &detector)
-{
-  while (true)
-  {
-    bool result = detector.find_ball();
-    ball_detected.store(result, std::memory_order_relaxed);
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
-  }
-}
+// void CameraThread(BallDetection &detector)
+// {
+//   while (true)
+//   {
+//     bool result = detector.find_ball();
+//     ball_detected.store(result, std::memory_order_relaxed);
+//     std::this_thread::sleep_for(std::chrono::milliseconds(300));
+//   }
+// }
 
 // A simple way to get the current time accurately as a double.
 static double GetNow()
@@ -73,10 +73,10 @@ int main(int argc, char **argv)
   std::vector<double> wheel_velocity;
   std::map<int, double> velocity_map;
 
-  if (detect.open_cam() > 0)
-  {
-    std::thread camera_thread(CameraThread, std::ref(detect));
-  }
+  // if (detect.open_cam() > 0)
+  // {
+  //   std::thread camera_thread(CameraThread, std::ref(detect));
+  // }
 
   // // This shows how you could construct a runtime number of controller
   // // instances.
@@ -151,12 +151,12 @@ int main(int argc, char **argv)
       last_UDP_time = current_time;
     }
 
-    if (current_time - last_camera_time >= CameraInterval)
-    {
-      bool camera_ball_dected = ball_detected.load(std::memory_order_relaxed);
-      std::cout << camera_ball_dected << "\n";
-      last_camera_time = current_time;
-    };
+    // if (current_time - last_camera_time >= CameraInterval)
+    // {
+    //   bool camera_ball_dected = ball_detected.load(std::memory_order_relaxed);
+    //   std::cout << camera_ball_dected << "\n";
+    //   last_camera_time = current_time;
+    // };
 
     // if (current_time - last_motor_time >= MotorInterval){
 
