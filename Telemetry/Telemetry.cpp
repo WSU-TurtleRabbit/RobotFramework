@@ -51,6 +51,7 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
 
     // Send all commands in one BlockingCycle and collect replies
     std::vector<mjbots::moteus::CanFdFrame> replies;
+
     if (!command_frames.empty())
     {
         transport->BlockingCycle(command_frames.data(), command_frames.size(), &replies);
@@ -69,6 +70,7 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
         mt.mode = static_cast<int>(parsed.mode);
         servo_data[frame.source] = mt;
     }
+    // std::cout << servo_data << "\n";
 
     return servo_data;
 }

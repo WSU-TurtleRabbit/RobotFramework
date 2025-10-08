@@ -123,33 +123,33 @@ int main(int argc, char **argv)
     static auto last_motor_time = current_time;
     static auto last_camera_time = current_time;
 
-    if (current_time - last_UDP_time >= UDP_interval)
-    {
-      r.clear_buffer();
-      msg = r.recive();
-      if (msg == "TIMEOUT")
-      {
-        std::cout << msg << "\n";
-        velocity_map = {
-            {1, 0.0},
-            {2, 0.0},
-            {3, 0.0},
-            {4, 0.0},
-        };
-      }
-      else
-      {
-        std::cout << msg << "\n";
-        cmd.decode_cmd(msg);
-        wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
-        velocity_map = {
-            {1, wheel_velocity[0]},
-            {2, wheel_velocity[1]},
-            {3, wheel_velocity[2]},
-            {4, wheel_velocity[3]}};
-      };
-      last_UDP_time = current_time;
-    }
+    // if (current_time - last_UDP_time >= UDP_interval)
+    // {
+    //   r.clear_buffer();
+    //   msg = r.recive();
+    //   if (msg == "TIMEOUT")
+    //   {
+    //     std::cout << msg << "\n";
+    //     velocity_map = {
+    //         {1, 0.0},
+    //         {2, 0.0},
+    //         {3, 0.0},
+    //         {4, 0.0},
+    //     };
+    //   }
+    //   else
+    //   {
+    //     std::cout << msg << "\n";
+    //     cmd.decode_cmd(msg);
+    //     wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
+    //     velocity_map = {
+    //         {1, wheel_velocity[0]},
+    //         {2, wheel_velocity[1]},
+    //         {3, wheel_velocity[2]},
+    //         {4, wheel_velocity[3]}};
+    //   };
+    //   last_UDP_time = current_time;
+    // }
 
     // if (current_time - last_camera_time >= CameraInterval)
     // {
@@ -225,7 +225,13 @@ int main(int argc, char **argv)
       const auto now = GetNow();
       // Use Telemetry to send position/velocity commands and collect telemetry in one synchronous cycle.
       const auto start = GetNow();
-      std::map<int, MotorTelemetry> servo_status = telemetry.cycle(velocity_map);
+      velocity_map = {
+            {1, 0.0},
+            {2, 0.0},
+            {3, 0.0},
+            {4, 0.0},
+        };
+      auto servo_status = telemetry.cycle(velocity_map);
       const auto end = GetNow();
       const auto cycle_time = end - start;
 
