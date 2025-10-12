@@ -31,7 +31,7 @@
 #include "decode.h"
 #include "UDP.h"
 #include "detect_ball.h"
-#include "Telemetry.h"
+#include "MotorControl.h"
 #include <thread>
 #include <atomic>
 
@@ -106,14 +106,11 @@ int main(int argc, char **argv)
   //     count++;
   //   }
 
-  // Use the telemetry class
-  Telemetry telemetry;
+  // Use the motor control class
+  MotorControl motorControl;
 
   // Stop everything to clear faults.
-  for (const auto &pair : telemetry.controllers)
-  {
-    pair.second->SetStop();
-  }
+  motorControl.stopAll();
 
   while (true)
   {
@@ -223,7 +220,7 @@ int main(int argc, char **argv)
     {
 
       const auto now = GetNow();
-      // Use Telemetry to send position/velocity commands and collect telemetry in one synchronous cycle.
+      // Use MotorControl to send position/velocity commands and collect motor status in one synchronous cycle.
       const auto start = GetNow();
       velocity_map = {
             {1, 0.0},
@@ -231,17 +228,17 @@ int main(int argc, char **argv)
             {3, 0.0},
             {4, 0.0},
         };
-      auto servo_status = telemetry.cycle(velocity_map);
+      auto motor_status = motorControl.cycle(velocity_map);
       const auto end = GetNow();
       const auto cycle_time = end - start;
 
-      // Print out telemetry like before.
+      // Print out motor status like before.
       char buf[4096] = {};
       std::string status_line;
       ::snprintf(buf, sizeof(buf) - 1, "%10.2f dt=%7.4f) ", now, cycle_time);
       status_line += buf;
 
-      for (const auto &pair : servo_status)
+      for (const auto &pair : motor_status)
       {
         const auto &r = pair.second;
         ::snprintf(buf, sizeof(buf) - 1,

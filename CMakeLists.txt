@@ -20,7 +20,7 @@ target_link_libraries(COMMON_LIBS INTERFACE
     moteus 
     pi3hat 
     bcm_host
-    Telemetry
+    MotorControl
 )
 
 # Function to build an executable with common dependencies
@@ -35,7 +35,7 @@ add_subdirectory(mjbots/pi3hat)
 add_subdirectory(BallDetection)
 add_subdirectory(Networks)
 add_subdirectory(Math)
-add_subdirectory(Telemetry)
+add_subdirectory(MotorControl)
 
 # Build the main executable
 build_executable(RobotFramework)

@@ -1,7 +1,7 @@
-#include "Telemetry.h"
+#include "MotorControl.h"
 #include <limits>
 
-Telemetry::Telemetry()
+MotorControl::MotorControl()
 {
     // Transport configuration for Pi3Hat
     mjbots::pi3hat::Pi3HatMoteusTransport::Options toptions;
@@ -28,13 +28,10 @@ Telemetry::Telemetry()
     }
 
     // Issue a stop command to all controllers (clear faults before starting)
-    for (const auto &pair : controllers)
-    {
-        pair.second->SetStop();
-    }
+    stopAll();
 }
 
-std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velocity_map)
+std::map<int, MotorStatus> MotorControl::cycle(const std::map<int, double> &velocity_map)
 {
     // Build command frames
     std::vector<mjbots::moteus::CanFdFrame> command_frames;
@@ -58,19 +55,26 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
     }
 
     // Parse replies into a map keyed by responding CAN ID (frame.source)
-    std::map<int, MotorTelemetry> servo_data;
+    std::map<int, MotorStatus> motor_status_data;
     for (const auto &frame : replies)
     {
         auto parsed = mjbots::moteus::Query::Parse(frame.data, frame.size);
-        MotorTelemetry mt;
-        mt.temperature = parsed.temperature;
-        mt.voltage = parsed.voltage;
-        mt.velocity = parsed.velocity;
-        mt.current = parsed.q_current;
-        mt.mode = static_cast<int>(parsed.mode);
-        servo_data[frame.source] = mt;
+        MotorStatus ms;
+        ms.temperature = parsed.temperature;
+        ms.voltage = parsed.voltage;
+        ms.velocity = parsed.velocity;
+        ms.current = parsed.q_current;
+        ms.mode = static_cast<int>(parsed.mode);
+        motor_status_data[frame.source] = ms;
     }
-    // std::cout << servo_data << "\n";
 
-    return servo_data;
+    return motor_status_data;
+}
+
+void MotorControl::stopAll()
+{
+    for (const auto &pair : controllers)
+    {
+        pair.second->SetStop();
+    }
 }

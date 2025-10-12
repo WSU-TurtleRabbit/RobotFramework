@@ -1,5 +1,5 @@
-#ifndef TELEMETRY_H
-#define TELEMETRY_H
+#ifndef MOTORCONTROL_H
+#define MOTORCONTROL_H
 
 #include <cmath>
 #include <cstdio>
@@ -14,7 +14,7 @@
 #include "moteus.h"
 #include "pi3hat_moteus_transport.h"
 
-struct MotorTelemetry
+struct MotorStatus
 {
     double temperature;
     double voltage;
@@ -23,13 +23,16 @@ struct MotorTelemetry
     int mode;
 };
 
-class Telemetry
+class MotorControl
 {
 public:
-    Telemetry();
+    MotorControl();
 
-    // Query all telemetry in one cycle (like the example)
-    std::map<int, MotorTelemetry> cycle(const std::map<int, double>& velocity_map);
+    // Execute motor commands and query status in one cycle
+    std::map<int, MotorStatus> cycle(const std::map<int, double>& velocity_map);
+
+    // Stop all motors
+    void stopAll();
 
     // controllers keyed by CAN ID
     std::map<int, std::shared_ptr<mjbots::moteus::Controller>> controllers;
@@ -38,4 +41,4 @@ public:
     std::shared_ptr<mjbots::pi3hat::Pi3HatMoteusTransport> transport;
 };
 
-#endif // TELEMETRY_H
+#endif // MOTORCONTROL_H
