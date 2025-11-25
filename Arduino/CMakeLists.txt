@@ -1,4 +1,4 @@
-add_library(Arduino Arduino.cpp)
+add_library(Arduino arduino.cpp)
 
 find_package(OpenCV REQUIRED)
 
