@@ -32,6 +32,7 @@
 #include "UDP.h"
 #include "detect_ball.h"
 #include "MotorControl.h"
+#include "Arduino.h"
 #include <thread>
 #include <atomic>
 
@@ -64,6 +65,12 @@ int main(int argc, char **argv)
   static auto UDP_interval = std::chrono::milliseconds(20);
   static auto CameraInterval = std::chrono::milliseconds(100);
   static auto MotorInterval = std::chrono::milliseconds(20);
+
+  // Initialize and auto-connect to Arduino
+  Arduino arduino;
+  if (!arduino.findArduino()) {
+    std::cerr << "Warning: Could not find Arduino. Continuing without Arduino support." << std::endl;
+  }
 
   BallDetection detect;
   Reciver r;
@@ -114,6 +121,10 @@ int main(int argc, char **argv)
 
   while (true)
   {
+    if (arduino.isConnected()) 
+    {
+      arduino.sendCommand('K');
+    }
 
     auto current_time = std::chrono::steady_clock::now();
     static auto last_UDP_time = current_time;

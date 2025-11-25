@@ -14,6 +14,7 @@ target_include_directories(COMMON_LIBS INTERFACE
 
 target_link_libraries(COMMON_LIBS INTERFACE
     ${OpenCV_LIBS}
+    Arduino
     BallDetection 
     Networks 
     wheel_math
@@ -32,6 +33,7 @@ endfunction()
 # Subdirectories
 add_subdirectory(mjbots/moteus)
 add_subdirectory(mjbots/pi3hat)
+add_subdirectory(Arduino)
 add_subdirectory(BallDetection)
 add_subdirectory(Networks)
 add_subdirectory(Math)
