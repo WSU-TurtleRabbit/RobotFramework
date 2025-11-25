@@ -32,7 +32,7 @@
 #include "UDP.h"
 #include "detect_ball.h"
 #include "MotorControl.h"
-#include "Arduino.h"
+#include "arduino.h"
 #include <thread>
 #include <atomic>
 

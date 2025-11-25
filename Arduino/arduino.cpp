@@ -1,4 +1,4 @@
-#include "Arduino.h"
+#include "arduino.h"
 #include <filesystem>
 #include <fcntl.h>
 #include <unistd.h>
