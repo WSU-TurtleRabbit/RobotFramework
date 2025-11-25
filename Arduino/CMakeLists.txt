@@ -2,7 +2,7 @@ add_library(Arduino Arduino.cpp)
 
 find_package(OpenCV REQUIRED)
 
-target_include_directories(BallDetection 
+target_include_directories(Arduino 
     INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR})
 
