@@ -42,3 +42,7 @@ add_subdirectory(Telemetry)
 # Build the main executable
 build_executable(RobotFramework)
 build_executable(StopMotor)
+
+# Build ArduinoTest executable
+add_executable(ArduinoTest tests/ArduinoTest.cpp)
+target_link_libraries(ArduinoTest PRIVATE COMMON_LIBS)
