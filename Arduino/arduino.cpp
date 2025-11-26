@@ -1,7 +1,6 @@
 #include "arduino.h"
 #include <filesystem>
 #include <fcntl.h>
-#include <unistd.h>
 
 Arduino::Arduino() : is_connected(false), connected_port("") {}
 
