@@ -31,6 +31,7 @@
 #include "decode.h"
 #include "UDP.h"
 #include "detect_ball.h"
+#include "arduino.h"
 #include "Telemetry.h"
 #include <thread>
 #include <atomic>
