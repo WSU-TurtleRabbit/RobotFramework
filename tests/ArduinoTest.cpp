@@ -1,7 +1,11 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <unistd.h>
+#include <libserial/SerialPort.h>
+#include <libserial/SerialPortConstants.h>
 #include "../Arduino/arduino.h"
+
 
 int main() {
     std::cout << "Starting Arduino Nano detection and LED blink test...\n" << std::endl;
