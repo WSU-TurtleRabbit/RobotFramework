@@ -1,0 +1,11 @@
+Packages:
+cmake
+libopencv-dev
+python3-opencv
+libserial-dev
+libraspberrypi-dev
+pkg-config
+build-essential
+
+Command:
+sudo apt update && sudo apt install -y cmake libopencv-dev python3-opencv libserial-dev libraspberrypi-dev pkg-config build-essential
