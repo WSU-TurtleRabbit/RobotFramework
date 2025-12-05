@@ -20,7 +20,7 @@
 #include <unistd.h>
 #endif
 
-class Reciver
+class UDP
 {
 private:
     static const int buffer_size = 1024;
@@ -28,30 +28,16 @@ private:
     int sockfd;
     char buffer[buffer_size];
     socklen_t len;
-    struct sockaddr_in server_addr, client_addr;
+    struct sockaddr_in server_addr, client_addr, target_addr;
     struct timeval tv;
+    bool Msg_found;
 
 public:
-    Reciver();
-    ~Reciver() = default;
+    UDP();
+    ~UDP() = default;
     std::string recive();
     void clear_buffer();
-    void close_socket();
-};
-
-class Sender
-{
-private:
-    static const int BUFFER_SIZE = 1024;
-    int sockfd;
-    char buffer[BUFFER_SIZE];
-    struct sockaddr_in server_addr;
-
-public:
-    Sender(const std::string& ip_address, const int& port = 50515);
-    ~Sender() = default;
     void send(const std::string& message);
-    void clear_buffer();
     void close_socket();
 };
 
