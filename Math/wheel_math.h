@@ -8,10 +8,10 @@
 class Wheel_math{
     private:
 
-    const std::vector<double> WHEEL_1 = {63.6, 36.87};
-    const std::vector<double> WHEEL_2 = {52.14, -52.14};
-    const std::vector<double> WHEEL_3 = {-52.14, -52.14};
-    const std::vector<double> WHEEL_4 = {-63.86, 36.87};
+    const std::vector<double> WHEEL_1 = {63.6/1000, 36.87/1000};
+    const std::vector<double> WHEEL_2 = {52.14/1000, -52.14/1000};
+    const std::vector<double> WHEEL_3 = {-52.14/1000, -52.14/1000};
+    const std::vector<double> WHEEL_4 = {-63.86/1000, 36.87/1000};
 
     const int WHEEL_1_ANG = 45;
     const int WHEEL_2_ANG = -45;
@@ -27,7 +27,7 @@ class Wheel_math{
     const double WHEEL_3_RAD = WHEEL_3_ANG*(M_PI/180);
     const double WHEEL_4_RAD = WHEEL_4_ANG*(M_PI/180);
 
-    const double WHEEL_RADIUS = 33.5;
+    const double WHEEL_RADIUS = 33.5/1000;
 
     float wheel_dist_1 = sqrt(pow(WHEEL_1[0],2) + pow(WHEEL_1[1],2));
     float wheel_dist_2 = sqrt(pow(WHEEL_2[0],2) + pow(WHEEL_2[1],2));
