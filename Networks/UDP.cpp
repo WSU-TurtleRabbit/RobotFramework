@@ -9,6 +9,12 @@ UDP::UDP() {
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(r_port);
 
+    target_addr.sin_family = AF_INET;
+    target_addr.sin_port = htons(s_port);  // your chosen port
+
+    // Copy the IP from the sender
+    target_addr.sin_addr = client_addr.sin_addr;
+
     tv.tv_usec = 50000; 
     tv.tv_sec = 0;
 
@@ -45,13 +51,6 @@ void UDP::clear_buffer() {
 
 
 void UDP::send(const std::string& message){
-    sockaddr_in target_addr{};
-    target_addr.sin_family = AF_INET;
-    target_addr.sin_port = htons(50513);  // your chosen port
-
-    // Copy the IP from the sender
-    target_addr.sin_addr = client_addr.sin_addr;
-
     sendto(sockfd, message.c_str(), message.size(), 0,
            (struct sockaddr*)&target_addr, sizeof(target_addr));
 }
