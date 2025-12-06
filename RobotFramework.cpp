@@ -13,8 +13,11 @@
 #include "detect_ball.h"
 #include "arduino.h"
 #include "Telemetry.h"
+#include "Arduino.h"
 #include <thread>
 #include <atomic>
+#include <yaml-cpp/yaml.h>
+
 
 std::atomic<bool> ball_detected{false};
 
@@ -38,10 +41,33 @@ int main(int argc, char **argv)
 {
   using namespace mjbots;
 
-  static auto Reciver_interval = std::chrono::milliseconds(20);
-  static auto CameraInterval = std::chrono::milliseconds(200);
-  static auto MotorInterval = std::chrono::milliseconds(20);
-  static auto Sender_interval = std::chrono::milliseconds(1000);
+int interval_reciver, interval_sender, interval_arduino, interval_camera, interval_motor;
+
+try {
+    YAML::Node config = YAML::LoadFile("config/Main.yaml");
+    YAML::Node interval_values = config["intervals"];
+
+    interval_reciver = interval_values["Reciver_interval"].as<int>();
+    interval_sender = interval_values["Sender_interval"].as<int>(); 
+    interval_arduino = interval_values["Arduino_interval"].as<int>(); 
+    interval_camera = interval_values["Camera_interval"].as<int>(); 
+    interval_motor = interval_values["Motor_interval"].as<int>();
+} catch (const std::exception &e) {
+    std::cerr << "Error loading Interval config: " << e.what() << std::endl;
+    // fallback defaults
+    interval_reciver = 20;
+    interval_sender = 1000;
+    interval_arduino = 100;
+    interval_camera = 200;
+    interval_motor = 20;
+}
+
+
+  static auto Reciver_interval = std::chrono::milliseconds(interval_reciver);
+  static auto CameraInterval = std::chrono::milliseconds(interval_camera);
+  static auto MotorInterval = std::chrono::milliseconds(interval_motor);
+  static auto Sender_interval = std::chrono::milliseconds(interval_sender);
+  static auto Arduino_interval = std::chrono::milliseconds(interval_arduino);
 
   BallDetection detect;
   UDP UDP;
@@ -51,16 +77,19 @@ int main(int argc, char **argv)
   std::vector<double> wheel_velocity;
   std::map<int, double> velocity_map;
   Telemetry_msg sender_msg;
+  // Use the telemetry class
+  Telemetry telemetry;
+
+  
+
 
   bool emergency_stop = false; 
 
-  if (detect.open_cam() > 0)
-  {
-    std::thread camera_thread(CameraThread, std::ref(detect));
-  }
-
-  // Use the telemetry class
-  Telemetry telemetry;
+  std::thread camera_thread;
+if (detect.open_cam() > 0) {
+    camera_thread = std::thread(CameraThread, std::ref(detect));
+    camera_thread.detach(); // if you don’t need to join
+}
 
   // Stop everything to clear faults.
   for (const auto &pair : telemetry.controllers)
@@ -76,6 +105,7 @@ int main(int argc, char **argv)
     static auto last_motor_time = current_time;
     static auto last_camera_time = current_time;
     static auto last_sender_time = current_time;
+    static auto last_arduino_time = current_time;
 
     if (current_time - last_reciver_time >= Reciver_interval)
     {
@@ -160,8 +190,18 @@ int main(int argc, char **argv)
       last_sender_time = current_time;
     }
 
+    if (current_time - last_arduino_time >= Arduino_interval){
+      
+    }
+
 
   };
 
+  for (const auto &pair : telemetry.controllers)
+  {
+    pair.second->SetStop();
+  }
+
+  std::cout << "Emergency Stop has been activated" << "\n";
   
 }
