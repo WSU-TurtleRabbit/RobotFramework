@@ -80,7 +80,11 @@ try {
   // Use the telemetry class
   Telemetry telemetry;
 
-  
+  Arduino a;
+  a.findArduino();
+  a.connect();
+
+
 
 
   bool emergency_stop = false; 
@@ -140,9 +144,9 @@ if (detect.open_cam() > 0) {
 
     if (current_time - last_camera_time >= CameraInterval)
     {
-      bool camera_ball_dected = ball_detected.load(std::memory_order_relaxed);
-      std::cout << camera_ball_dected << "\n";
-      sender_msg.ball_present = camera_ball_dected;
+      bool camera_ball_detected = ball_detected.load(std::memory_order_relaxed);
+      std::cout << camera_ball_detected << "\n";
+      sender_msg.ball_present = camera_ball_detected;
 
       last_camera_time = current_time;
     };
@@ -190,8 +194,17 @@ if (detect.open_cam() > 0) {
       last_sender_time = current_time;
     }
 
-    if (current_time - last_arduino_time >= Arduino_interval){
-      
+    if (current_time - last_arduino_time >= Arduino_interval) {
+    if (a.isConnected()) {
+        if (cmd.kick) {
+            a.sendCommand("K");
+        } else if (cmd.dribble) {
+            a.sendCommand("D");
+        } else {
+            a.sendCommand("S");
+        }
+    }
+    last_arduino_time = current_time;
     }
 
 
