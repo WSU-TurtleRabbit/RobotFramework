@@ -22,9 +22,9 @@ private:
     std::vector<double> stop_vel = {0.0, 0.0, 0.0, 0.0};
 
     // Max velocity limits
-    const float X_LIMIT = 0.5;   // m/s
-    const float Y_LIMIT = 0.5;   // m/s
-    const float W_LIMIT = 0.1;   // rad/s
+    const double X_LIMIT;   // m/s
+    const double Y_LIMIT;   // m/s
+    const double W_LIMIT;   // rad/s
 
     // Wheel computed velocities
     std::vector<double> wheel_vel = {0.0, 0.0, 0.0, 0.0};

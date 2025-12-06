@@ -1,19 +1,30 @@
 #include "UDP.h"
+#include <yaml-cpp/yaml.h>
 
 
 UDP::UDP() {
+
+    try {
+    YAML::Node config = YAML::LoadFile("config/Network.yaml");
+    YAML::Node network = config["network"];
+
+    buffer_size   = network["bufferSize"].as<int>();
+    reciver_port  = network["reciver_port"].as<int>();
+    sender_port   = network["sender_port"].as<int>();
+    } catch (const std::exception& e) {
+    std::cerr << "Error loading network config: " << e.what() << std::endl;
+    // Provide fallback defaults
+    buffer_size = 1024;
+    reciver_port = 5005;
+    sender_port = 5006;
+    }
+
     
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(r_port);
-
-    target_addr.sin_family = AF_INET;
-    target_addr.sin_port = htons(s_port);  // your chosen port
-
-    // Copy the IP from the sender
-    target_addr.sin_addr = client_addr.sin_addr;
+    server_addr.sin_port = htons(reciver_port);
 
     tv.tv_usec = 50000; 
     tv.tv_sec = 0;
@@ -53,6 +64,12 @@ void UDP::clear_buffer() {
 void UDP::send(const std::string& message){
     sendto(sockfd, message.c_str(), message.size(), 0,
            (struct sockaddr*)&target_addr, sizeof(target_addr));
+
+    target_addr.sin_family = AF_INET;
+    target_addr.sin_port = htons(sender_port);  
+
+    // Copy the IP from the sender
+    target_addr.sin_addr = client_addr.sin_addr;
 }
 
 

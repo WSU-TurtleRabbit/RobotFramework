@@ -23,9 +23,9 @@
 class UDP
 {
 private:
-    static const int buffer_size = 1024;
-    static const int r_port = 50514;
-    static const int s_port = 50513;
+    static const int buffer_size;
+    static const int reciver_port;
+    static const int sender_port;
     int sockfd;
     char buffer[buffer_size];
     socklen_t len;

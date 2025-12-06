@@ -1,10 +1,23 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <yaml-cpp/yaml.h>
 #include "wheel_math.h"
 
 Wheel_math::Wheel_math() {
+    try{
+    YAML::Node config = LoadFile("config/Safety.yaml");
+    YAML::Node vLimits = config["velocityLimit"];
 
+    X_LIMIT = vLimits["xLimit"].as<double>();   // m/s
+    Y_LIMIT = vLimits["yLimit"].as<double>();   // m/s
+    W_LIMIT = vLimits["wLimit"].as<double>();   // rad/s
+    }catch (const std::exception& e) {
+    std::cerr << "Error loading Velocity Limit config: " << e.what() << std::endl;
+    X_LIMIT = 0.5;
+    Y_LIMIT = 0.5;
+    W_LIMIT = 0.1;
+}
 }
 
 std::vector<double> Wheel_math::calculate(double velocity_x, double velocity_y, double velocity_w) {
