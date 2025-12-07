@@ -47,19 +47,27 @@ int main(int argc, char **argv)
 {
     using namespace mjbots;
 
+    double current_limit;
+    // double temperture_limit;
+
     // --- Interval times (ms) for periodic tasks ---
     int interval_reciver, interval_sender, interval_arduino, interval_camera, interval_motor;
 
-    // --- Load intervals from YAML config ---
+    // --- Load YAML config ---
     try {
-        YAML::Node config = YAML::LoadFile("config/Main.yaml");
+        YAML::Node config = YAML::LoadFile("config/Main.yaml"); //Main control Config file 
+        YAML::Node s_config = YAML::LoadFile("config/Safety.yaml") // Safety Config file 
         YAML::Node interval_values = config["intervals"];
+
+        current_limit = s_config["currentLimit"];
 
         interval_reciver = interval_values["Reciver_interval"].as<int>();
         interval_sender = interval_values["Sender_interval"].as<int>(); 
         interval_arduino = interval_values["Arduino_interval"].as<int>(); 
         interval_camera = interval_values["Camera_interval"].as<int>(); 
         interval_motor = interval_values["Motor_interval"].as<int>();
+
+        
     } catch (const std::exception &e) {
         std::cerr << "Error loading Interval config: " << e.what() << std::endl;
         // Fallback defaults
@@ -68,6 +76,8 @@ int main(int argc, char **argv)
         interval_arduino = 100;
         interval_camera = 200;
         interval_motor = 20;
+
+        current_limit = 5.0;
     }
 
     // --- Convert intervals to chrono durations ---
@@ -99,6 +109,7 @@ int main(int argc, char **argv)
     // --- Start camera detection thread ---
     std::thread camera_thread;
     if (detect.open_cam() > 0) {
+        // I didnt detach this beacsue it wanted to close it later on. 
         camera_thread = std::thread(CameraThread, std::ref(detect));
     }
 
@@ -111,6 +122,7 @@ int main(int argc, char **argv)
     }
 
     // --- Main control loop ---
+ 
     while (!emergency_stop && !manual_stop_flag.load(std::memory_order_relaxed))
     {
         auto current_time = std::chrono::steady_clock::now();
@@ -129,6 +141,7 @@ int main(int argc, char **argv)
             if (msg == "TIMEOUT")
             {
                 std::cout << msg << "\n";
+                telemetry.
                 velocity_map = {{1, 0.0}, {2, 0.0}, {3, 0.0}, {4, 0.0}}; // Stop wheels
             }
             else
@@ -163,7 +176,6 @@ int main(int argc, char **argv)
 
             float voltage[4];
             int i = 0;
-            float current_limit = 5; // Emergency stop threshold
 
             for (const auto &pair : servo_status)
             {

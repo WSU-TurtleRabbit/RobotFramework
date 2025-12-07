@@ -3,4 +3,4 @@ velocityLimit:
   yLimit: 0.5 # m/s
   wLimit: 0.1 # rads/s
 
-currentLimit: 5 # Amps
+currentLimit: 5.0 # Amps
