@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # ROBOTFRAMEWORK SETUP
 
 echo "--------------------------------------------------"
@@ -17,8 +19,6 @@ PACKAGES=(
 )
 
 # Check if the package is installed
-# Asks system about package, search for specific text in status to check if installed
-# Returns 0 for installed and 1 for not installed
 is_package_installed() {
     PACKAGE_NAME=$1
     if dpkg-query --show -f='${Status}' "$PACKAGE_NAME" 2>/dev/null | grep -q "install ok installed"; then
@@ -28,8 +28,7 @@ is_package_installed() {
     fi
 }
 
-# Use is_package_installed to check if package is installed
-# Installs package if it is not already installed
+# Install package if not already installed
 package_installer() {
     TO_BE_CHECKED=$1
     if is_package_installed "$TO_BE_CHECKED"; then
@@ -48,7 +47,7 @@ package_installer() {
     fi
 }
 
-# Choose what you would like to be done
+# Menu
 PS3='What would you like to do? '
 options=(
     "Check Dependencies"
@@ -85,8 +84,7 @@ do
         "Build RobotFramework")
             echo "Building RobotFramework..."
             rm -rf build
-            mkdir build && cd build && cmake ..
-            make
+            mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)
             ;;
 
         "Full Setup")
@@ -95,14 +93,13 @@ do
             for package in "${PACKAGES[@]}"; do
                 package_installer "$package"
             done
-            
+
             echo "Building RobotFramework..."
             rm -rf build
-            mkdir build && cd build && cmake ..
-            make
+            mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)
             echo "Setup complete!"
             ;;
-            
+
         "Quit")
             echo "Laters!"
             break
