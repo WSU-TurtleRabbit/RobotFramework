@@ -1,5 +1,5 @@
 #!/bin/bash
-sed -i 's/\r$//' "$0"
+exec tr -d '\r' < "$0" | bash
 # ROBOTFRAMEWORK SETUP
 echo "--------------------------------------------------"
 echo "     --- WELCOME TO ROBOT FRAMEWORK SETUP ---     "
