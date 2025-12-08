@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+# RUN USING:    bash ./SETUP.sh
+
 echo "--------------------------------------------------"
 echo "     --- WELCOME TO ROBOT FRAMEWORK SETUP ---     "
 echo "--------------------------------------------------"
@@ -65,7 +68,6 @@ do
                 fi
             done
             echo "Check complete!"
-            cd "$(dirname "$0")"
             ;;
         "Install Dependencies")
             echo "Installing dependancies..."
@@ -74,13 +76,12 @@ do
                 package_installer "$package"
             done
             echo "Install complete!"
-            cd "$(dirname "$0")"
             ;;
         "Build RobotFramework")
             echo "Building RobotFramework..."
             rm -rf build
-            mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)
-            cd "$(dirname "$0")"
+            mkdir build && cd build && cmake .. && make
+            cd ..
             ;;
         "Full Setup")
             echo "Installing dependancies..."
@@ -90,8 +91,8 @@ do
             done
             echo "Building RobotFramework..."
             rm -rf build
-            mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)
-            cd "$(dirname "$0")"
+            mkdir build && cd build && cmake .. && make
+            cd ..
             echo "Setup complete!"
             ;;
         "Quit")
