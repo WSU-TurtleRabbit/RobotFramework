@@ -17,11 +17,8 @@ PACKAGES=(
 # Check if the package is installed
 is_package_installed() {
     PACKAGE_NAME=$1
-    if dpkg-query --show -f='${Status}' "$PACKAGE_NAME" 2>/dev/null | grep -q "install ok installed"; then
-        return 0
-    else
-        return 1
-    fi
+    apt list --installed 2>/dev/null | grep -q "^$PACKAGE_NAME/"
+    return $?
 }
 # Install package if not already installed
 package_installer() {
