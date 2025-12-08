@@ -124,7 +124,7 @@ do
             ;;
         "Quit")
             echo "Laters!"
-            break
+            exit 0
             ;;
     esac
 done
