@@ -5,7 +5,7 @@ echo "     --- WELCOME TO ROBOT FRAMEWORK SETUP ---     "
 echo "--------------------------------------------------"
 echo ""
 
-# Package list
+# Package / Dependency list
 PACKAGES=(
     "cmake"
     "libopencv-dev"
@@ -48,6 +48,7 @@ package_installer() {
     fi
 }
 
+# Choose what you would like to be done
 PS3='What would you like to do? '
 options=(
     "Check Dependencies"
@@ -69,12 +70,14 @@ do
                     echo "✗ $package missing"
                 fi
             done
+            echo "Check complete!"
             ;;
         "Install Dependencies")
             echo "Installing dependancies..."
             for package in "${PACKAGES[@]}"; do
                 package_installer "$package"
             done
+            echo "Install complete!"
             ;;
         "Build RobotFramework")
             echo "Building RobotFramework..."
@@ -92,6 +95,7 @@ do
             rm -rf build
             mkdir build && cd build && cmake ..
             make
+            echo "Setup complete!"
             ;;
         "Quit")
             echo "Laters!"
@@ -99,6 +103,3 @@ do
             ;;
     esac
 done
-
-echo ""
-echo "✓ Setup complete!"
