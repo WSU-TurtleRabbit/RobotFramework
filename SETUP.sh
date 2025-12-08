@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-# ROBOTFRAMEWORK SETUP
+
+# HELLO FUTURE EDITORS
+# Make sure that you are using LF line endings when editing this file.
+# Without LF line endings, windows will use \r for new line which Linux can't read
+# Simply add a dependancy by putting it into the packages list.
+
 echo "--------------------------------------------------"
 echo "     --- WELCOME TO ROBOT FRAMEWORK SETUP ---     "
 echo "--------------------------------------------------"
@@ -62,6 +67,7 @@ do
                 fi
             done
             echo "Check complete!"
+            cd "$(dirname "$0")"
             ;;
         "Install Dependencies")
             echo "Installing dependancies..."
@@ -70,11 +76,13 @@ do
                 package_installer "$package"
             done
             echo "Install complete!"
+            cd "$(dirname "$0")"
             ;;
         "Build RobotFramework")
             echo "Building RobotFramework..."
             rm -rf build
             mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)
+            cd "$(dirname "$0")"
             ;;
         "Full Setup")
             echo "Installing dependancies..."
@@ -85,6 +93,7 @@ do
             echo "Building RobotFramework..."
             rm -rf build
             mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)
+            cd "$(dirname "$0")"
             echo "Setup complete!"
             ;;
         "Quit")
