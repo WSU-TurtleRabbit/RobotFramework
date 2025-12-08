@@ -23,15 +23,16 @@
 class UDP
 {
 private:
-    static const int buffer_size;
-    static const int reciver_port;
-    static const int sender_port;
+
+    int buffer_size;
+    int reciver_port; 
+    int sender_port; 
+  
     int sockfd;
-    char buffer[buffer_size];
     socklen_t len;
     struct sockaddr_in server_addr, client_addr, target_addr;
     struct timeval tv;
-    bool Msg_found;
+    std::vector<char> buffer;
 
 public:
     UDP();

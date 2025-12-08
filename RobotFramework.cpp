@@ -15,7 +15,7 @@
 #include "detect_ball.h"
 #include "arduino.h"
 #include "Telemetry.h"
-#include "Arduino.h"
+#include "arduino.h"
 #include <yaml-cpp/yaml.h>
 
 // --- Atomic flags for inter-thread communication ---

@@ -37,7 +37,7 @@ public:
     // shared transport instance used for BlockingCycle
     std::shared_ptr<mjbots::pi3hat::Pi3HatMoteusTransport> transport;
 
-    std::map<int, int> Yamel_Load_MotorMap(const std::string& path);
+    std::map<int,int> YAML_Load_MotorMap(const std::string& path);
 };
 
 #endif // TELEMETRY_H

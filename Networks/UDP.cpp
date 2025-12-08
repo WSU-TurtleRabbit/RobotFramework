@@ -1,5 +1,6 @@
 #include "UDP.h"
 #include <yaml-cpp/yaml.h>
+#include <vector>
 
 
 UDP::UDP() {
@@ -11,6 +12,8 @@ UDP::UDP() {
     buffer_size   = network["bufferSize"].as<int>();
     reciver_port  = network["reciver_port"].as<int>();
     sender_port   = network["sender_port"].as<int>();
+
+
     } catch (const std::exception& e) {
     std::cerr << "Error loading network config: " << e.what() << std::endl;
     // Provide fallback defaults
@@ -18,6 +21,8 @@ UDP::UDP() {
     reciver_port = 5005;
     sender_port = 5006;
     }
+
+    buffer.resize(buffer_size);
 
     
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -40,7 +45,7 @@ UDP::UDP() {
 
 std::string UDP::recive() {
 
-    int latest_msg = recvfrom(sockfd, buffer, buffer_size , 0, (struct sockaddr*)&client_addr, &len);
+    int latest_msg = recvfrom(sockfd, buffer.data(), buffer_size , 0, (struct sockaddr*)&client_addr, &len);
     if (latest_msg < 0) {
         Msg_found = false;
     return "TIMEOUT";  // Or handle timeout/error
@@ -48,7 +53,7 @@ std::string UDP::recive() {
     }
     buffer[latest_msg] = '\0';
     Msg_found = true;
-    return buffer;
+    return std::string(buffer.data());
 
 };
 
@@ -56,7 +61,7 @@ void UDP::clear_buffer() {
     int discard_msg = 1;
     while(discard_msg != 0)
     {
-        discard_msg = recvfrom(sockfd, buffer, buffer_size, MSG_DONTWAIT, (struct sockaddr*)&client_addr, &len);
+        discard_msg = recvfrom(sockfd, buffer.data(), buffer_size, MSG_DONTWAIT, (struct sockaddr*)&client_addr, &len);
     };
 };
 

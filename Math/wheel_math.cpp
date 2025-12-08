@@ -5,8 +5,9 @@
 #include "wheel_math.h"
 
 Wheel_math::Wheel_math() {
+
     try{
-    YAML::Node config = LoadFile("config/Safety.yaml");
+    YAML::Node config = YAML::LoadFile("config/Safety.yaml");
     YAML::Node vLimits = config["velocityLimit"];
 
     X_LIMIT = vLimits["xLimit"].as<double>();   // m/s
@@ -17,7 +18,7 @@ Wheel_math::Wheel_math() {
     X_LIMIT = 0.5;
     Y_LIMIT = 0.5;
     W_LIMIT = 0.1;
-}
+    }
 }
 
 std::vector<double> Wheel_math::calculate(double velocity_x, double velocity_y, double velocity_w) {
@@ -37,20 +38,20 @@ std::vector<double> Wheel_math::calculate(double velocity_x, double velocity_y, 
     }
 
     // ---- Omni Wheel Kinematics ----
-    wheel_vel[0] = ( (velocity_x * std::sin(WHEEL_1_RAD)) +
-                     (velocity_y * std::cos(WHEEL_1_RAD)) +
+    wheel_vel[0] = ( (velocity_x * std::sin(W1_RAD)) +
+                     (velocity_y * std::cos(W1_RAD)) +
                      (velocity_w * wheel_dist_1) ) / WHEEL_RADIUS;
 
-    wheel_vel[1] = ( (velocity_x * std::sin(WHEEL_2_RAD)) +
-                     (velocity_y * std::cos(WHEEL_2_RAD)) +
+    wheel_vel[1] = ( (velocity_x * std::sin(W2_RAD)) +
+                     (velocity_y * std::cos(W2_RAD)) +
                      (velocity_w * wheel_dist_2) ) / WHEEL_RADIUS;
 
-    wheel_vel[2] = ( (velocity_x * std::sin(WHEEL_3_RAD)) +
-                     (velocity_y * std::cos(WHEEL_3_RAD)) +
+    wheel_vel[2] = ( (velocity_x * std::sin(W3_RAD)) +
+                     (velocity_y * std::cos(W3_RAD)) +
                      (velocity_w * wheel_dist_3) ) / WHEEL_RADIUS;
 
-    wheel_vel[3] = ( (velocity_x * std::sin(WHEEL_4_RAD)) +
-                     (velocity_y * std::cos(WHEEL_4_RAD)) +
+    wheel_vel[3] = ( (velocity_x * std::sin(W4_RAD)) +
+                     (velocity_y * std::cos(W4_RAD)) +
                      (velocity_w * wheel_dist_4) ) / WHEEL_RADIUS;
 
     return wheel_vel;

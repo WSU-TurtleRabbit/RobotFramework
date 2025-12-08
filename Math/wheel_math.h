@@ -18,13 +18,13 @@ private:
     const double W3_ANG = -120.0;
     const double W4_ANG = 120.0;
 
+    // Max velocity limits
+    double X_LIMIT;   // m/s
+    double Y_LIMIT;   // m/s
+    double W_LIMIT;   // rad/s
+
     // Stop state
     std::vector<double> stop_vel = {0.0, 0.0, 0.0, 0.0};
-
-    // Max velocity limits
-    const double X_LIMIT;   // m/s
-    const double Y_LIMIT;   // m/s
-    const double W_LIMIT;   // rad/s
 
     // Wheel computed velocities
     std::vector<double> wheel_vel = {0.0, 0.0, 0.0, 0.0};
@@ -45,7 +45,7 @@ private:
     float wheel_dist_4 = std::hypot(WHEEL_4[0], WHEEL_4[1]);
 
 public:
-    Wheel_math() = default;
+    Wheel_math();
     ~Wheel_math() = default;
 
     // Calculate wheel velocities from robot desired motion
