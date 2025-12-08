@@ -47,9 +47,9 @@ int main(int argc, char **argv)
 {
     using namespace mjbots;
     
-    const char kick = "k";
-    const char dribble = "d";
-    const char stop_dribble = "s";
+    char kick = 'k';
+    char dribble = 'd';
+    char stop_dribble = 's';
     
     double current_limit;
     // double temperture_limit;

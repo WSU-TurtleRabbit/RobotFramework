@@ -34,6 +34,8 @@ private:
     struct timeval tv;
     std::vector<char> buffer;
 
+    bool Msg_found;
+
 public:
     UDP();
     ~UDP() = default;
