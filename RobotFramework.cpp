@@ -46,7 +46,11 @@ struct Telemetry_msg{
 int main(int argc, char **argv)
 {
     using namespace mjbots;
-
+    
+    const char kick = "k";
+    const char dribble = "d";
+    const char stop_dribble = "s";
+    
     double current_limit;
     // double temperture_limit;
 
@@ -56,10 +60,10 @@ int main(int argc, char **argv)
     // --- Load YAML config ---
     try {
         YAML::Node config = YAML::LoadFile("config/Main.yaml"); //Main control Config file 
-        YAML::Node s_config = YAML::LoadFile("config/Safety.yaml") // Safety Config file 
+        YAML::Node s_config = YAML::LoadFile("config/Safety.yaml"); // Safety Config file 
         YAML::Node interval_values = config["intervals"];
 
-        current_limit = s_config["currentLimit"];
+        current_limit = s_config["currentLimit"].as<double>();
 
         interval_reciver = interval_values["Reciver_interval"].as<int>();
         interval_sender = interval_values["Sender_interval"].as<int>(); 
@@ -102,7 +106,7 @@ int main(int argc, char **argv)
 
     // --- Initialize Arduino ---
     a.findArduino();
-    a.connect();
+    a.connect(a.getPort());
 
     bool emergency_stop = false; // Flag to stop robot on emergency
 
@@ -141,7 +145,6 @@ int main(int argc, char **argv)
             if (msg == "TIMEOUT")
             {
                 std::cout << msg << "\n";
-                telemetry.
                 velocity_map = {{1, 0.0}, {2, 0.0}, {3, 0.0}, {4, 0.0}}; // Stop wheels
             }
             else
@@ -209,11 +212,11 @@ int main(int argc, char **argv)
         if (current_time - last_arduino_time >= Arduino_interval) {
             if (a.isConnected()) {
                 if (cmd.kick) {
-                    a.sendCommand("K"); // Kick
+                    a.sendCommand(kick); // Kick
                 } else if (cmd.dribble) {
-                    a.sendCommand("D"); // Dribble
+                    a.sendCommand(dribble); // Dribble
                 } else {
-                    a.sendCommand("S"); // Stop
+                    a.sendCommand(stop_dribble); // Stop
                 }
             }
             last_arduino_time = current_time;

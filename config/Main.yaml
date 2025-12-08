@@ -1,5 +1,4 @@
 intervals:
-  # all values in Microseconds 
   Motor_interval: 20
   Arduino_interval: 100
   Reciver_interval: 20
