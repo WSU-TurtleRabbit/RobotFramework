@@ -46,11 +46,30 @@ package_installer() {
     fi
 }
 
+# Uninstall package if not already Uninstalled
+package_uninstaller() {
+    TO_BE_CHECKED=$1
+    if is_package_installed "$TO_BE_CHECKED"; then
+        echo "Dependancy Package: $TO_BE_CHECKED ✗ Dependancy installed"
+        echo "Uninstalling $TO_BE_CHECKED now..."
+        sudo apt remove -y "$TO_BE_CHECKED"
+        if [ $? -eq 0 ]; then
+            echo "✓ $TO_BE_CHECKED uninstalled successfully"
+        else
+            echo "✗ Failed to uninstall $TO_BE_CHECKED"
+            return 1
+        fi
+    else
+        echo "Dependancy Package: $TO_BE_CHECKED ✓ Dependancy already uninstalled"
+    fi
+}
+
 # Menu
 PS3='What would you like to do? '
 options=(
     "Check Dependencies"
     "Install Dependencies"
+    "Uninstall Dependencies"
     "Build RobotFramework"
     "Full Setup"
     "Quit"
@@ -76,6 +95,14 @@ do
                 package_installer "$package"
             done
             echo "Install complete!"
+            ;;
+        "Uninstall Dependencies")
+            echo "Uninstalling dependancies..."
+            sudo apt update
+            for package in "${PACKAGES[@]}"; do
+                package_uninstaller "$package"
+            done
+            echo "Uninstalls complete!"
             ;;
         "Build RobotFramework")
             echo "Building RobotFramework..."
