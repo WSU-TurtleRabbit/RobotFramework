@@ -23,7 +23,6 @@ target_link_libraries(COMMON_LIBS INTERFACE
     bcm_host
     Telemetry
     yaml-cpp
-    cs_signal
 )
 
 # Function to build an executable with common dependencies
