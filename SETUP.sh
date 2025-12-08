@@ -1,5 +1,8 @@
 #!/bin/bash
-(which dos2unix > /dev/null || sudo apt install -y dos2unix) && dos2unix "$0"
+if grep -q $'\r' "$0"; then
+    (which dos2unix > /dev/null || sudo apt install -y dos2unix) && dos2unix "$0" && exec bash "$0"
+    exit $?
+fi
 # ROBOTFRAMEWORK SETUP
 echo "--------------------------------------------------"
 echo "     --- WELCOME TO ROBOT FRAMEWORK SETUP ---     "
