@@ -6,7 +6,7 @@ To use this repository, you will need several dependencies.
 First, install the required packages for building and OpenCV:
 
 ```bash
-sudo apt install build-essential pkg-config libopencv-dev
+sudo apt install build-essential pkg-config libopencv-dev cmake libserial-dev libyaml-cpp-dev
 ```
 
 This will install the required dependencies to run the ball camera detector.  

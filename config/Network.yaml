@@ -1,0 +1,4 @@
+network: 
+  bufferSize: 1024
+  reciver_port: 50514
+  sender_port: 50513

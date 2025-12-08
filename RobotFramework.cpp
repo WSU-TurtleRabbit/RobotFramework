@@ -1,30 +1,12 @@
-// Copyright 2023 mjbots Robotic Systems, LLC.  info@mjbots.com
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-/// @file
-///
-/// This example shows how multiple controllers can be commanded using
-/// the Cycle method.  This approach can result in lower overall
-/// latency and improved performance with some transports, such as the
-/// fdcanusb and pi3hat.
-
 #include <unistd.h>
 #include <cmath>
 #include <iostream>
 #include <map>
 #include <vector>
 #include <chrono>
+#include <thread>
+#include <atomic>
+#include <csignal>
 #include "moteus.h"
 #include "pi3hat_moteus_transport.h"
 #include "wheel_math.h"
@@ -33,231 +15,233 @@
 #include "detect_ball.h"
 #include "arduino.h"
 #include "Telemetry.h"
-#include <thread>
-#include <atomic>
+#include "arduino.h"
+#include <yaml-cpp/yaml.h>
 
-std::atomic<bool> ball_detected{false};
+// --- Atomic flags for inter-thread communication ---
+std::atomic<bool> ball_detected{false};       // Stores ball detection result from camera thread
+std::atomic<bool> stop_camera_thread{false}; // Signals the camera thread to stop
+std::atomic<bool> manual_stop_flag{false};   // Signals main loop to stop on Ctrl+C
 
-// void CameraThread(BallDetection &detector)
-// {
-//   while (true)
-//   {
-//     bool result = detector.find_ball();
-//     ball_detected.store(result, std::memory_order_relaxed);
-//     std::this_thread::sleep_for(std::chrono::milliseconds(300));
-//   }
-// }
+// --- Forward declaration for signal handler ---
+void signalHandler(int signum);
 
-// A simple way to get the current time accurately as a double.
-static double GetNow()
+// --- Thread function for camera detection ---
+void CameraThread(BallDetection &detector)
 {
-  struct timespec ts = {};
-  ::clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-  return static_cast<double>(ts.tv_sec) +
-         static_cast<double>(ts.tv_nsec) / 1e9;
+    while (!stop_camera_thread.load(std::memory_order_relaxed))
+    {
+        bool result = detector.find_ball(); // Check if ball is present
+        ball_detected.store(result, std::memory_order_relaxed); // Store result atomically
+        std::this_thread::sleep_for(std::chrono::milliseconds(300)); // Reduce CPU usage
+    }
 }
+
+// --- Struct for telemetry message to send ---
+struct Telemetry_msg{
+    bool ball_present; // True if ball detected
+    float voltage;     // Average motor voltage
+};
 
 int main(int argc, char **argv)
 {
+    using namespace mjbots;
+    
+    char kick = 'k';
+    char dribble = 'd';
+    char stop_dribble = 's';
+    
+    double current_limit;
+    // double temperture_limit;
 
-  using namespace mjbots;
+    // --- Interval times (ms) for periodic tasks ---
+    int interval_reciver, interval_sender, interval_arduino, interval_camera, interval_motor;
 
-  static auto UDP_interval = std::chrono::milliseconds(20);
-  static auto CameraInterval = std::chrono::milliseconds(100);
-  static auto MotorInterval = std::chrono::milliseconds(20);
+    // --- Load YAML config ---
+    try {
+        YAML::Node config = YAML::LoadFile("config/Main.yaml"); //Main control Config file 
+        YAML::Node s_config = YAML::LoadFile("config/Safety.yaml"); // Safety Config file 
+        YAML::Node interval_values = config["intervals"];
 
-  BallDetection detect;
-  Reciver r;
-  Wheel_math m;
-  std::string msg;
-  cmdDecoder cmd;
-  std::vector<double> wheel_velocity;
-  std::map<int, double> velocity_map;
+        current_limit = s_config["currentLimit"].as<double>();
 
-  // if (detect.open_cam() > 0)
-  // {
-  //   std::thread camera_thread(CameraThread, std::ref(detect));
-  // }
+        interval_reciver = interval_values["Reciver_interval"].as<int>();
+        interval_sender = interval_values["Sender_interval"].as<int>(); 
+        interval_arduino = interval_values["Arduino_interval"].as<int>(); 
+        interval_camera = interval_values["Camera_interval"].as<int>(); 
+        interval_motor = interval_values["Motor_interval"].as<int>();
 
-  // // This shows how you could construct a runtime number of controller
-  // // instances.
-  // std::map<int, std::shared_ptr<moteus::Controller>> controllers;
-  // std::map<int, moteus::Query::Result> servo_data;
+        
+    } catch (const std::exception &e) {
+        std::cerr << "Error loading Interval config: " << e.what() << std::endl;
+        // Fallback defaults
+        interval_reciver = 20;
+        interval_sender = 1000;
+        interval_arduino = 100;
+        interval_camera = 200;
+        interval_motor = 20;
 
-  // pi3hat::Pi3HatMoteusTransport::Options toptions; // Mapping out the servo maps
-  // std::map <int, int> servo_map = {
-  // //Made a map of motor controller and
-  // //and matching bus pair
+        current_limit = 5.0;
+    }
 
-  //   {1, 1},  // Motor ID 1 mapped to BUS 1
-  //   {4, 1},  // Motor ID 4 mapped to BUS 1
-  //   {2, 2},  // Motor ID 2 mapped to BUS 2
-  //   {3, 2},  // Motor ID 3 mapped to BUS 2
-  // };
-  // toptions.servo_map = servo_map;
-  // int count = 1;
+    // --- Convert intervals to chrono durations ---
+    static auto Reciver_interval = std::chrono::milliseconds(interval_reciver);
+    static auto CameraInterval = std::chrono::milliseconds(interval_camera);
+    static auto MotorInterval = std::chrono::milliseconds(interval_motor);
+    static auto Sender_interval = std::chrono::milliseconds(interval_sender);
+    static auto Arduino_interval = std::chrono::milliseconds(interval_arduino);
 
-  // //Simple for loop to go though the map and create the matching ID and BUS pair
-  //   for(auto& pairs : servo_map){
-  //     moteus::Controller::Options opts;
-  //     opts.id = pairs.first;
-  //     opts.bus = pairs.second;
-  //     opts.transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(toptions);
-  //     controllers[count] = std::make_shared<moteus::Controller>(opts);
-  //     count++;
-  //   }
+    // --- Initialize modules ---
+    BallDetection detect;      // Camera detection
+    UDP UDP;                   // UDP communication
+    Wheel_math m;              // Wheel velocity calculations
+    cmdDecoder cmd;            // Decode incoming commands
+    Telemetry telemetry;       // Motor telemetry
+    Arduino a;                 // Arduino controller
 
-  // Use the telemetry class
-  Telemetry telemetry;
+    std::string msg;                   // Incoming UDP message
+    std::vector<double> wheel_velocity; // Calculated wheel velocities
+    std::map<int, double> velocity_map; // Motor ID → velocity map
+    Telemetry_msg sender_msg;          // Telemetry message to send
 
-  // Stop everything to clear faults.
-  for (const auto &pair : telemetry.controllers)
-  {
-    pair.second->SetStop();
-  }
+    // --- Initialize Arduino ---
+    a.findArduino();
+    a.connect(a.getPort());
 
-  while (true)
-  {
+    bool emergency_stop = false; // Flag to stop robot on emergency
 
-    auto current_time = std::chrono::steady_clock::now();
-    static auto last_UDP_time = current_time;
-    static auto last_motor_time = current_time;
-    static auto last_camera_time = current_time;
+    // --- Start camera detection thread ---
+    std::thread camera_thread;
+    if (detect.open_cam() > 0) {
+        // I didnt detach this beacsue it wanted to close it later on. 
+        camera_thread = std::thread(CameraThread, std::ref(detect));
+    }
 
-    // if (current_time - last_UDP_time >= UDP_interval)
-    // {
-    //   r.clear_buffer();
-    //   msg = r.recive();
-    //   if (msg == "TIMEOUT")
-    //   {
-    //     std::cout << msg << "\n";
-    //     velocity_map = {
-    //         {1, 0.0},
-    //         {2, 0.0},
-    //         {3, 0.0},
-    //         {4, 0.0},
-    //     };
-    //   }
-    //   else
-    //   {
-    //     std::cout << msg << "\n";
-    //     cmd.decode_cmd(msg);
-    //     wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
-    //     velocity_map = {
-    //         {1, wheel_velocity[0]},
-    //         {2, wheel_velocity[1]},
-    //         {3, wheel_velocity[2]},
-    //         {4, wheel_velocity[3]}};
-    //   };
-    //   last_UDP_time = current_time;
-    // }
+    // --- Setup signal handler to catch Ctrl+C ---
+    std::signal(SIGINT, signalHandler);
 
-    // if (current_time - last_camera_time >= CameraInterval)
-    // {
-    //   bool camera_ball_dected = ball_detected.load(std::memory_order_relaxed);
-    //   std::cout << camera_ball_dected << "\n";
-    //   last_camera_time = current_time;
-    // };
+    // --- Stop all motors initially to clear faults ---
+    for (const auto &pair : telemetry.controllers) {
+        pair.second->SetStop();
+    }
 
-    // if (current_time - last_motor_time >= MotorInterval){
-
-    //   const auto now = GetNow();
-    //   std::vector<moteus::CanFdFrame> command_frames;
-
-    //     // std::cout << "Doing" << std::endl;
-
-    //     // Accumulate all of our command CAN frames.
-    //   for (const auto& pair : controllers) {
-    //       moteus::PositionMode::Command position_command;
-    //         position_command.position = NaN;
-    //         position_command.velocity = velocity_map[pair.first];
-
-    //     command_frames.push_back(pair.second->MakePosition(position_command));
-    //       };
-
-    //     // Now send them in a single call to Transport::Cycle.
-    //     std::vector<moteus::CanFdFrame> replies;
-    //     const auto start = GetNow();
-    //     transport->BlockingCycle(&command_frames[0], command_frames.size(), &replies);
-    //     const auto end = GetNow();
-    //     const auto cycle_time = end - start;
-
-    //     // Finally, print out our current query results.
-
-    //     char buf[4096] = {};
-    //     std::string status_line;
-
-    //     ::snprintf(buf, sizeof(buf) - 1, "%10.2f dt=%7.4f) ", now, cycle_time);
-
-    //     status_line += buf;
-
-    //     // We parse these into a map to both sort and de-duplicate them,
-    //     // and persist data in the event that any are missing.
-    //     for (const auto& frame : replies) {
-    //       servo_data[frame.source] = moteus::Query::Parse(frame.data, frame.size);
-    //     }
-
-    //     for (const auto& pair : servo_data) {
-    //       const auto r = pair.second;
-    //       ::snprintf(buf, sizeof(buf) - 1,
-    //                 "%2d %3d temp/velocity/volatge=(%7.3f,%7.3f,%7.3f)  ",
-    //                 pair.first,
-    //                 static_cast<int>(r.mode),
-    //                 r.temperature,
-    //                 r.velocity,
-    //                 r.voltage);
-    //       status_line += buf;
-    //     }
-    //     ::printf("%s  \r", status_line.c_str());
-    //     ::fflush(::stdout);
-
-    //     // Sleep 20ms between iterations.  By default, when commanded over
-    //     // CAN, there is a watchdog which requires commands to be sent at
-    //     // least every 100ms or the controller will enter a latched fault
-    //     // state.
-
-    //     last_motor_time = current_time;
-    //   };
-
-    // };
-    if (current_time - last_motor_time >= MotorInterval)
+    // --- Main control loop ---
+ 
+    while (!emergency_stop && !manual_stop_flag.load(std::memory_order_relaxed))
     {
+        auto current_time = std::chrono::steady_clock::now();
 
-      const auto now = GetNow();
-      // Use Telemetry to send position/velocity commands and collect telemetry in one synchronous cycle.
-      const auto start = GetNow();
-      velocity_map = {
-            {1, 0.0},
-            {2, 0.0},
-            {3, 0.0},
-            {4, 0.0},
-        };
-      auto servo_status = telemetry.cycle(velocity_map);
-      const auto end = GetNow();
-      const auto cycle_time = end - start;
+        // Static timers for periodic tasks
+        static auto last_reciver_time = current_time;
+        static auto last_motor_time = current_time;
+        static auto last_camera_time = current_time;
+        static auto last_sender_time = current_time;
+        static auto last_arduino_time = current_time;
 
-      // Print out telemetry like before.
-      char buf[4096] = {};
-      std::string status_line;
-      ::snprintf(buf, sizeof(buf) - 1, "%10.2f dt=%7.4f) ", now, cycle_time);
-      status_line += buf;
+        // --- UDP Receiver ---
+        if (current_time - last_reciver_time >= Reciver_interval)
+        {
+            msg = UDP.recive(); // Receive new message
+            if (msg == "TIMEOUT")
+            {
+                std::cout << msg << "\n";
+                velocity_map = {{1, 0.0}, {2, 0.0}, {3, 0.0}, {4, 0.0}}; // Stop wheels
+            }
+            else
+            {
+                std::cout << msg << "\n";
+                cmd.decode_cmd(msg); // Decode velocity commands
+                wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
+                // Map velocities to motors
+                velocity_map = {
+                    {1, wheel_velocity[0]},
+                    {2, wheel_velocity[1]},
+                    {3, wheel_velocity[2]},
+                    {4, wheel_velocity[3]}
+                };
+            }
+            last_reciver_time = current_time;
+        }
 
-      for (const auto &pair : servo_status)
-      {
-        const auto &r = pair.second;
-        ::snprintf(buf, sizeof(buf) - 1,
-                   "%2d %3d temp/velocity/voltage=(%7.3f,%7.3f,%7.3f)  ",
-                   pair.first,
-                   r.mode,
-                   r.temperature,
-                   r.velocity,
-                   r.voltage);
-        status_line += buf;
-      }
-      ::printf("%s  \r", status_line.c_str());
-      ::fflush(::stdout);
+        // --- Camera Ball Detection ---
+        if (current_time - last_camera_time >= CameraInterval)
+        {
+            bool camera_ball_detected = ball_detected.load(std::memory_order_relaxed);
+            std::cout << camera_ball_detected << "\n";
+            sender_msg.ball_present = camera_ball_detected;
+            last_camera_time = current_time;
+        }
 
-      last_motor_time = current_time;
-    };
-  };
+        // --- Motor Telemetry and Safety Check ---
+        if (current_time - last_motor_time >= MotorInterval)
+        {
+            auto servo_status = telemetry.cycle(velocity_map); // Send commands & receive telemetry
+
+            float voltage[4];
+            int i = 0;
+
+            for (const auto &pair : servo_status)
+            {
+                const auto &r = pair.second;
+                voltage[i] = r.voltage;
+                if (r.current > current_limit) {
+                    emergency_stop = true; // Stop on overcurrent
+                }
+                i++;
+            }
+
+            // Compute average voltage
+            float sum = 0;
+            for (int i = 0; i < 4; i++) sum += voltage[i];
+            sender_msg.voltage = sum / 4;
+
+            std::cout << sender_msg.voltage << "\n";
+
+            last_motor_time = current_time;
+        }
+
+        // --- UDP Telemetry Sender ---
+        if (current_time - last_sender_time >= Sender_interval) {
+            std::string msg = "Robot State: Active, Battery Voltage:" + std::to_string(sender_msg.voltage) +
+                              ", Ball Detection:" + std::to_string(sender_msg.ball_present); 
+            UDP.send(msg);
+            last_sender_time = current_time;
+        }
+
+        // --- Arduino Commands ---
+        if (current_time - last_arduino_time >= Arduino_interval) {
+            if (a.isConnected()) {
+                if (cmd.kick) {
+                    a.sendCommand(kick); // Kick
+                } else if (cmd.dribble) {
+                    a.sendCommand(dribble); // Dribble
+                } else {
+                    a.sendCommand(stop_dribble); // Stop
+                }
+            }
+            last_arduino_time = current_time;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1)); // Reduce CPU load
+    }
+
+    // --- Emergency Stop ---
+    for (const auto &pair : telemetry.controllers) {
+        pair.second->SetStop();
+    }
+    a.disconnect();
+
+    // Stop camera thread and join
+    stop_camera_thread.store(true, std::memory_order_relaxed);
+    if (camera_thread.joinable()) {
+        camera_thread.join();
+    }
+
+    std::cout << "Emergency Stop has been activated\n";
+}
+
+// --- Signal handler for Ctrl+C ---
+void signalHandler(int signum) {
+    std::cout << "\nSIGINT received. Stopping safely...\n";
+    manual_stop_flag.store(true);
 }

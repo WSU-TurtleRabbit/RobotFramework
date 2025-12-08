@@ -1,17 +1,12 @@
 #include "Telemetry.h"
+#include <yaml-cpp/yaml.h>
 #include <limits>
 
 Telemetry::Telemetry()
 {
     // Transport configuration for Pi3Hat
     mjbots::pi3hat::Pi3HatMoteusTransport::Options toptions;
-    std::map<int, int> servo_map = {
-        // Motor ID → Bus pair mapping
-        {1, 1}, // Motor ID 1 mapped to BUS 1
-        {4, 4}, // Motor ID 4 mapped to BUS 1
-        {2, 2}, // Motor ID 2 mapped to BUS 2
-        {3, 3}, // Motor ID 3 mapped to BUS 2
-    };
+    std::map<int, int> servo_map = YAML_Load_MotorMap("config/Motor.yaml");
     toptions.servo_map = servo_map;
 
     // A shared transport instance used for the Cycle method
@@ -73,4 +68,26 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
     // std::cout << servo_data << "\n";
 
     return servo_data;
+}
+
+std::map<int,int> Telemetry::YAML_Load_MotorMap(const std::string& path) {
+    std::map<int,int> motor_map;
+
+    try {
+        YAML::Node config = YAML::LoadFile(path);
+        YAML::Node motors = config["motorMap"];
+
+        for (YAML::const_iterator it = motors.begin(); it != motors.end(); ++it) {
+            int motor_id = it->first.as<int>();   // key in YAML
+            int bus_num  = it->second.as<int>();  // value in YAML
+            motor_map[motor_id] = bus_num;       // store in C++ map
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error loading motor config: " << e.what() << std::endl;
+        // optional: fallback default mapping
+        motor_map = {{1,1},{2,2},{3,2},{4,1}};
+    }
+
+    return motor_map;
 }
