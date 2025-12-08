@@ -1,12 +1,9 @@
 #!/bin/bash
-
 # ROBOTFRAMEWORK SETUP
-
 echo "--------------------------------------------------"
 echo "     --- WELCOME TO ROBOT FRAMEWORK SETUP ---     "
 echo "--------------------------------------------------"
 echo ""
-
 # Package / Dependency list
 PACKAGES=(
     "cmake"
@@ -17,7 +14,6 @@ PACKAGES=(
     "pkg-config"
     "raspberrypi-kernel-headers"
 )
-
 # Check if the package is installed
 is_package_installed() {
     PACKAGE_NAME=$1
@@ -27,7 +23,6 @@ is_package_installed() {
         return 1
     fi
 }
-
 # Install package if not already installed
 package_installer() {
     TO_BE_CHECKED=$1
@@ -46,7 +41,6 @@ package_installer() {
         fi
     fi
 }
-
 # Menu
 PS3='What would you like to do? '
 options=(
@@ -56,7 +50,6 @@ options=(
     "Full Setup"
     "Quit"
 )
-
 select opt in "${options[@]}"
 do
     case $opt in
