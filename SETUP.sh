@@ -72,21 +72,26 @@ do
             done
             echo "Check complete!"
             ;;
+
         "Install Dependencies")
             echo "Installing dependancies..."
+            sudo apt update
             for package in "${PACKAGES[@]}"; do
                 package_installer "$package"
             done
             echo "Install complete!"
             ;;
+
         "Build RobotFramework")
             echo "Building RobotFramework..."
             rm -rf build
             mkdir build && cd build && cmake ..
             make
             ;;
+
         "Full Setup")
             echo "Installing dependancies..."
+            sudo apt update
             for package in "${PACKAGES[@]}"; do
                 package_installer "$package"
             done
@@ -97,6 +102,7 @@ do
             make
             echo "Setup complete!"
             ;;
+            
         "Quit")
             echo "Laters!"
             break
