@@ -1,5 +1,10 @@
 #!/bin/bash
-exec tr -d '\r' < "$0" | bash
+if grep -q $'\r' "$0"; then
+    tr -d '\r' < "$0" > "${0%.sh}_clean.sh"
+    chmod +x "${0%.sh}_clean.sh"
+    echo "CRLF detected. Re-running clean file..."
+    exec bash "${0%.sh}_clean.sh"
+fi
 # ROBOTFRAMEWORK SETUP
 echo "--------------------------------------------------"
 echo "     --- WELCOME TO ROBOT FRAMEWORK SETUP ---     "
