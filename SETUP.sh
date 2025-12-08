@@ -1,7 +1,16 @@
 #!/bin/bash
-if grep -q $'\r' "$0"; then
-    (which dos2unix > /dev/null || sudo apt install -y dos2unix) && dos2unix "$0" && exec bash "$0"
-    exit $?
+if [ -z "$SETUP_SELF_CLEANED" ]; then
+  if grep -q $'\r' "$0" 2>/dev/null; then
+    TMP_SCRIPT="$(mktemp /tmp/SETUP_clean.XXXXXX.sh)" || { echo "mktemp failed"; exit 1; }
+    # Remove CR characters into tmp script
+    tr -d '\r' < "$0" > "$TMP_SCRIPT" || { echo "failed to write cleaned script"; rm -f "$TMP_SCRIPT"; exit 1; }
+    chmod +x "$TMP_SCRIPT" 2>/dev/null || true
+    # Mark that we're the cleaned child and tell it where the tmp is so it can clean up
+    export SETUP_SELF_CLEANED=1
+    export SETUP_TMP_SCRIPT="$TMP_SCRIPT"
+    exec bash "$TMP_SCRIPT" "$@"
+    # exec replaces the shell; doesn't return
+  fi
 fi
 # ROBOTFRAMEWORK SETUP
 echo "--------------------------------------------------"
