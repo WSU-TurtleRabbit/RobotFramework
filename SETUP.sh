@@ -1,17 +1,4 @@
-#!/bin/bash
-if [ -z "$SETUP_SELF_CLEANED" ]; then
-  if grep -q $'\r' "$0" 2>/dev/null; then
-    TMP_SCRIPT="$(mktemp /tmp/SETUP_clean.XXXXXX.sh)" || { echo "mktemp failed"; exit 1; }
-    # Remove CR characters into tmp script
-    tr -d '\r' < "$0" > "$TMP_SCRIPT" || { echo "failed to write cleaned script"; rm -f "$TMP_SCRIPT"; exit 1; }
-    chmod +x "$TMP_SCRIPT" 2>/dev/null || true
-    # Mark that we're the cleaned child and tell it where the tmp is so it can clean up
-    export SETUP_SELF_CLEANED=1
-    export SETUP_TMP_SCRIPT="$TMP_SCRIPT"
-    exec bash "$TMP_SCRIPT" "$@"
-    # exec replaces the shell; doesn't return
-  fi
-fi
+#!/usr/bin/env bash
 # ROBOTFRAMEWORK SETUP
 echo "--------------------------------------------------"
 echo "     --- WELCOME TO ROBOT FRAMEWORK SETUP ---     "
@@ -44,7 +31,6 @@ package_installer() {
     else
         echo "Dependancy Package: $TO_BE_CHECKED ✗ Dependancy missing"
         echo "Installing $TO_BE_CHECKED now..."
-
         sudo apt install -y "$TO_BE_CHECKED"
         if [ $? -eq 0 ]; then
             echo "✓ $TO_BE_CHECKED installed successfully"
@@ -77,7 +63,6 @@ do
             done
             echo "Check complete!"
             ;;
-
         "Install Dependencies")
             echo "Installing dependancies..."
             sudo apt update
@@ -86,26 +71,22 @@ do
             done
             echo "Install complete!"
             ;;
-
         "Build RobotFramework")
             echo "Building RobotFramework..."
             rm -rf build
             mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)
             ;;
-
         "Full Setup")
             echo "Installing dependancies..."
             sudo apt update
             for package in "${PACKAGES[@]}"; do
                 package_installer "$package"
             done
-
             echo "Building RobotFramework..."
             rm -rf build
             mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)
             echo "Setup complete!"
             ;;
-
         "Quit")
             echo "Laters!"
             break
