@@ -1,10 +1,5 @@
 #!/bin/bash
-if grep -q $'\r' "$0"; then
-    tr -d '\r' < "$0" > "${0%.sh}_clean.sh"
-    chmod +x "${0%.sh}_clean.sh"
-    echo "CRLF detected. Re-running clean file..."
-    exec bash "${0%.sh}_clean.sh"
-fi
+(which dos2unix > /dev/null || sudo apt install -y dos2unix) && dos2unix "$0"
 # ROBOTFRAMEWORK SETUP
 echo "--------------------------------------------------"
 echo "     --- WELCOME TO ROBOT FRAMEWORK SETUP ---     "
