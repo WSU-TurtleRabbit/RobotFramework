@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <csignal>
+#include <atomic>
 #include <algorithm>
 
 #include <Arduino/arduino.h>
@@ -13,7 +14,7 @@
 // --- Forward declaration for signal handler ---
 void signalHandler(int signum);
 
-static bool manual_stop_flag = false;
+static std::atomic<bool> stop_requested{false};
 static Arduino ard;
 static Logger logger("arduino_logs");
 static bool log_enabled = false;
@@ -96,6 +97,7 @@ int main(int argc, char **argv)
         logger.log("arduino", "Connected successfully", LogLevel::INFO);
 
     // --- Execute Commands ---
+    // (In Order of Blink, Kick, Dribble, Stop)
 
     // Blink
     if (blink_count > 0)
@@ -103,12 +105,14 @@ int main(int argc, char **argv)
         std::cout << "\nExecuting " << blink_count << " blink commands..." << std::endl;
         for (int i = 0; i < blink_count; ++i)
         {
+            if (stop_requested.load()) break;
             if (ard.sendCommand('B'))
             {
                 std::cout << "Blink " << (i + 1) << " sent" << std::endl;
                 if (log_enabled)
                     logger.log("arduino", "Blink command sent", LogLevel::INFO);
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                for (int ms = 0; ms < 500 && !stop_requested.load(); ms += 50)
+                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
             else
             {
@@ -126,12 +130,14 @@ int main(int argc, char **argv)
         std::cout << "\nExecuting " << kick_count << " kick commands..." << std::endl;
         for (int i = 0; i < kick_count; ++i)
         {
+            if (stop_requested.load()) break;
             if (ard.sendCommand('K'))
             {
                 std::cout << "Kick " << (i + 1) << " sent" << std::endl;
                 if (log_enabled)
                     logger.log("arduino", "Kick command sent", LogLevel::INFO);
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                for (int ms = 0; ms < 500 && !stop_requested.load(); ms += 50)
+                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
             else
             {
@@ -157,6 +163,7 @@ int main(int argc, char **argv)
 
             while (true)
             {
+                if (stop_requested.load()) break;
                 auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
                                    std::chrono::steady_clock::now() - start_time)
                                    .count();
@@ -191,12 +198,14 @@ int main(int argc, char **argv)
         std::cout << "\nExecuting " << stop_count << " stop commands..." << std::endl;
         for (int i = 0; i < stop_count; ++i)
         {
+            if (stop_requested.load()) break;
             if (ard.sendCommand('S'))
             {
                 std::cout << "Stop " << (i + 1) << " sent" << std::endl;
                 if (log_enabled)
                     logger.log("arduino", "Stop command sent", LogLevel::INFO);
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                for (int ms = 0; ms < 500 && !stop_requested.load(); ms += 50)
+                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
             else
             {
@@ -208,13 +217,20 @@ int main(int argc, char **argv)
         }
     }
 
+    // If a stop was requested, ensure device is commanded to stop once here
+    if (stop_requested.load()) {
+        ard.sendCommand('S');
+        if (log_enabled)
+            logger.log("arduino", "Stopped by Ctrl^C", LogLevel::DONE);
+    }
+
     // Disconnect
     ard.disconnect();
     std::cout << "\nTest complete. Arduino disconnected." << std::endl;
 
     if (log_enabled)
     {
-        logger.log("arduino", "Test complete", LogLevel::INFO);
+        logger.log("arduino", "Test complete", LogLevel::DONE);
         logger.closeAll();
     }
 
@@ -224,13 +240,6 @@ int main(int argc, char **argv)
 // --- Signal handler for Ctrl+C ---
 void signalHandler(int signum)
 {
-    // Send stop command
-    ard.sendCommand('S');
-
-    if (log_enabled)
-    {
-        logger.log("arduino", "Stopped with Ctrl^C", LogLevel::WARN);
-    }
-
-    manual_stop_flag = true;
+    // Only set an atomic flag; handle stop on main thread
+    stop_requested.store(true);
 }
