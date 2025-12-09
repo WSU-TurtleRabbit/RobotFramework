@@ -29,7 +29,7 @@ UDP::UDP() {
 
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(reciver_port);
+    server_addr.sin_port = htons(receiver_port);
 
     tv.tv_usec = 50000; 
     tv.tv_sec = 0;
