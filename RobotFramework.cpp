@@ -132,11 +132,11 @@ int main(int argc, char **argv)
 
     if (a.isConnected)
     {
-        logger.log("rframework", "arduino", ("Port found at ") + (a.getPort), LogLevel::DONE)
+        logger.log("rframework", "arduino", ("Port found at ") + (a.getPort), LogLevel::DONE);
     }
     else
     {
-        logger.log("rframework", "arduino", "No arduino found", LogLevel::WARN)
+        logger.log("rframework", "arduino", "No arduino found", LogLevel::WARN);
     }
 
     bool emergency_stop = false; // Flag to stop robot on emergency
