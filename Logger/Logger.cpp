@@ -65,7 +65,7 @@ void Logger::log(const std::string &component, const std::map<std::string, doubl
 
 void Logger::log(const std::string &component, const std::string &message, LogLevel level)
 {
-    log(component, {}, message, level);
+    log(component, std::map<std::string, double>{}, message, level);
 }
 
 void Logger::log(const std::string &component,
