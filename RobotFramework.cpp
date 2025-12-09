@@ -130,9 +130,9 @@ int main(int argc, char **argv)
     logger.log("rframework", "arduino", "Connecting to Arduino port", LogLevel::INFO);
     a.connect(a.getPort());
 
-    if (a.isConnected)
+    if (a.isConnected())
     {
-        logger.log("rframework", "arduino", ("Port found at ") + (a.getPort), LogLevel::DONE);
+        logger.log("rframework", "arduino", ("Port found at ") + (a.getPort()), LogLevel::DONE);
     }
     else
     {
