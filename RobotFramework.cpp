@@ -130,6 +130,15 @@ int main(int argc, char **argv)
     logger.log("rframework", "arduino", "Connecting to Arduino port", LogLevel::INFO);
     a.connect(a.getPort());
 
+    if (a.isConnected)
+    {
+        logger.log("rframework", "arduino", ("Port found at ") + (a.getPort), LogLevel::DONE)
+    }
+    else
+    {
+        logger.log("rframework", "arduino", "No arduino found", LogLevel::WARN)
+    }
+
     bool emergency_stop = false; // Flag to stop robot on emergency
 
     // --- Start camera detection thread ---
@@ -147,7 +156,7 @@ int main(int argc, char **argv)
     for (const auto &pair : telemetry.controllers) {
         pair.second->SetStop();
     }
-    logger.log("rframework", "motor", "Sent stop to all controllers", LogLevel::INFO);
+    logger.log("rframework", "motor", "Sent stop to all controllers", LogLevel::DONE);
 
     // --- Main control loop ---
  
@@ -209,6 +218,18 @@ int main(int argc, char **argv)
             {
                 const auto &r = pair.second;
                 voltage[i] = r.voltage;
+                {
+                    int motor_id = pair.first;
+                    std::string sub = std::string("motor-") + std::to_string(motor_id);
+                    std::map<std::string, double> data = {
+                        {"temperature", r.temperature},
+                        {"voltage", r.voltage},
+                        {"velocity", r.velocity},
+                        {"current", r.current},
+                        {"mode", static_cast<double>(r.mode)}
+                    };
+                    logger.log("rframework", sub, data, "", LogLevel::INFO);
+                }
                 if (r.current > current_limit) {
                     logger.log("rframework", "motor", "Overcurrent detected", LogLevel::CRIT);
                     emergency_stop = true; // Stop on overcurrent
@@ -256,7 +277,7 @@ int main(int argc, char **argv)
         pair.second->SetStop();
     }
     a.disconnect();
-    logger.log("rframework", "Emergency stop activated, shutting down", LogLevel::DONE);
+    logger.log("rframework", "Emergency stop activated, shutting down", LogLevel::HATE);
 
     // Stop camera thread and join
     stop_camera_thread.store(true, std::memory_order_relaxed);

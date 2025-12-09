@@ -140,7 +140,6 @@ void Logger::closeAll()
     is_initialized = false;
 }
 
-// Sub-component message logging: logs/<component>/<sub>_<timestamp>.log
 void Logger::log(const std::string &component,
                  const std::string &sub,
                  const std::string &message,
@@ -149,7 +148,6 @@ void Logger::log(const std::string &component,
     std::string key = sub.empty() ? component : (component + "/" + sub);
     if (!is_initialized)
     {
-        // Ensure directories and open lazily even if initialize wasn't called
         ensureOpen(key, component, sub);
     }
     else if (files.find(key) == files.end())
@@ -162,6 +160,31 @@ void Logger::log(const std::string &component,
     auto now = std::chrono::high_resolution_clock::now();
     long long elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count();
     buffers[key].push_back({elapsed_ms, {}, message, level});
+    if (buffers[key].size() >= BUFFER_SIZE) flush(key);
+}
+
+// Sub-component numeric data logging: logs/<component>/<sub>_<timestamp>.log
+void Logger::log(const std::string &component,
+                 const std::string &sub,
+                 const std::map<std::string, double> &numeric_data,
+                 const std::string &message,
+                 LogLevel level)
+{
+    std::string key = sub.empty() ? component : (component + "/" + sub);
+    if (!is_initialized)
+    {
+        ensureOpen(key, component, sub);
+    }
+    else if (files.find(key) == files.end())
+    {
+        ensureOpen(key, component, sub);
+    }
+
+    if (files.find(key) == files.end()) return;
+
+    auto now = std::chrono::high_resolution_clock::now();
+    long long elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count();
+    buffers[key].push_back({elapsed_ms, numeric_data, message, level});
     if (buffers[key].size() >= BUFFER_SIZE) flush(key);
 }
 

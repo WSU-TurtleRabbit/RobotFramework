@@ -82,6 +82,12 @@ public:
              const std::string &message,
              LogLevel level = LogLevel::INFO);
 
+    void log(const std::string &component,
+             const std::string &sub,
+             const std::map<std::string, double> &numeric_data,
+             const std::string &message = "",
+             LogLevel level = LogLevel::INFO);
+
     void flushAll();
     void closeAll();
 };
