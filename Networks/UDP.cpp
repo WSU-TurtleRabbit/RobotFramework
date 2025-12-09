@@ -6,7 +6,7 @@
 UDP::UDP() {
 
     try {
-    YAML::Node config = YAML::LoadFile("config/Network.yaml");
+    YAML::Node config = YAML::LoadFile("../config/Network.yaml");
     YAML::Node network = config["network"];
 
     buffer_size   = network["bufferSize"].as<int>();

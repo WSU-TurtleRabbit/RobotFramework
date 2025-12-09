@@ -59,8 +59,8 @@ int main(int argc, char **argv)
 
     // --- Load YAML config ---
     try {
-        YAML::Node config = YAML::LoadFile("config/Main.yaml"); //Main control Config file 
-        YAML::Node s_config = YAML::LoadFile("config/Safety.yaml"); // Safety Config file 
+        YAML::Node config = YAML::LoadFile("../config/Main.yaml"); //Main control Config file 
+        YAML::Node s_config = YAML::LoadFile("../config/Safety.yaml"); // Safety Config file 
         YAML::Node interval_values = config["intervals"];
 
         current_limit = s_config["currentLimit"].as<double>();
@@ -167,7 +167,7 @@ int main(int argc, char **argv)
         if (current_time - last_camera_time >= CameraInterval)
         {
             bool camera_ball_detected = ball_detected.load(std::memory_order_relaxed);
-            std::cout << camera_ball_detected << "\n";
+            // std::cout << camera_ball_detected << "\n";
             sender_msg.ball_present = camera_ball_detected;
             last_camera_time = current_time;
         }
@@ -195,7 +195,7 @@ int main(int argc, char **argv)
             for (int i = 0; i < 4; i++) sum += voltage[i];
             sender_msg.voltage = sum / 4;
 
-            std::cout << sender_msg.voltage << "\n";
+            // std::cout << sender_msg.voltage << "\n";
 
             last_motor_time = current_time;
         }

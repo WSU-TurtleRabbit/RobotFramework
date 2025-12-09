@@ -6,7 +6,7 @@ Telemetry::Telemetry()
 {
     // Transport configuration for Pi3Hat
     mjbots::pi3hat::Pi3HatMoteusTransport::Options toptions;
-    std::map<int, int> servo_map = YAML_Load_MotorMap("config/Motor.yaml");
+    std::map<int, int> servo_map = YAML_Load_MotorMap("../config/Motor.yaml");
     toptions.servo_map = servo_map;
 
     // A shared transport instance used for the Cycle method

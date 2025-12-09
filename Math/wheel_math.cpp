@@ -7,7 +7,7 @@
 Wheel_math::Wheel_math() {
 
     try{
-    YAML::Node config = YAML::LoadFile("config/Safety.yaml");
+    YAML::Node config = YAML::LoadFile("../config/Safety.yaml");
     YAML::Node vLimits = config["velocityLimit"];
 
     X_LIMIT = vLimits["xLimit"].as<double>();   // m/s
