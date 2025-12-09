@@ -141,7 +141,7 @@ int main(int argc, char **argv)
         // --- UDP Receiver ---
         if (current_time - last_reciver_time >= Reciver_interval)
         {
-            msg = UDP.recive(); // Receive new message
+            msg = UDP.receive(); // Receive new message
             if (msg == "TIMEOUT")
             {
                 // std::cout << msg << "\n";
