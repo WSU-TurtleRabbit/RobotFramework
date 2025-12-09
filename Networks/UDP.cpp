@@ -6,11 +6,11 @@
 UDP::UDP() {
 
     try {
-    YAML::Node config = YAML::LoadFile("config/Network.yaml");
+    YAML::Node config = YAML::LoadFile("/config/Network.yaml");
     YAML::Node network = config["network"];
 
     buffer_size   = network["bufferSize"].as<int>();
-    reciver_port  = network["reciver_port"].as<int>();
+    receiver_port  = network["receiver_port"].as<int>();
     sender_port   = network["sender_port"].as<int>();
 
 
@@ -18,7 +18,7 @@ UDP::UDP() {
     std::cerr << "Error loading network config: " << e.what() << std::endl;
     // Provide fallback defaults
     buffer_size = 1024;
-    reciver_port = 50514;
+    receiver_port = 50514;
     sender_port = 50513;
     }
 
@@ -43,7 +43,7 @@ UDP::UDP() {
     len = sizeof(client_addr);
 };
 
-std::string UDP::recive() {
+std::string UDP::receive() {
 
     int latest_msg = recvfrom(sockfd, buffer.data(), buffer_size , 0, (struct sockaddr*)&client_addr, &len);
     if (latest_msg < 0) {

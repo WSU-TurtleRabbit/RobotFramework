@@ -25,7 +25,7 @@ class UDP
 private:
 
     int buffer_size;
-    int reciver_port; 
+    int receiver_port; 
     int sender_port; 
   
     int sockfd;
@@ -39,7 +39,7 @@ private:
 public:
     UDP();
     ~UDP() = default;
-    std::string recive();
+    std::string receive();
     void clear_buffer();
     void send(const std::string& message);
     void close_socket();
