@@ -10,29 +10,51 @@
 #include <sstream>
 #include <iostream>
 
-enum class LogLevel {
+enum class LogLevel
+{
     INFO,
     WARN,
-    CRIT
+    CRIT,
+    DONE,
+    MISC,
+    LOVE,
+    HATE
 };
 
-inline std::string logLevelToString(LogLevel level) {
-    switch(level) {
-        case LogLevel::INFO: return "INFO";
-        case LogLevel::WARN: return "WARN";
-        case LogLevel::CRIT: return "CRIT";
-        default: return "UNKNOWN";
+inline std::string logLevelToString(LogLevel level)
+{
+    switch (level)
+    {
+    case LogLevel::INFO:
+        return "INFO";
+    case LogLevel::WARN:
+        return "WARN";
+    case LogLevel::CRIT:
+        return "CRIT";
+    case LogLevel::DONE:
+        return "DONE";
+    case LogLevel::MISC:
+        return "MISC";
+    case LogLevel::LOVE:
+        return "LOVE";
+    case LogLevel::HATE:
+        return "HATE";
+
+    default:
+        return "----";
     }
 }
 
-struct LogEntry {
+struct LogEntry
+{
     long long timestamp_ms;
     std::map<std::string, double> numeric_data;
     std::string message;
     LogLevel level = LogLevel::INFO;
 };
 
-class Logger {
+class Logger
+{
 private:
     std::map<std::string, std::ofstream> files;
     std::map<std::string, std::vector<LogEntry>> buffers;
@@ -41,20 +63,23 @@ private:
     const size_t BUFFER_SIZE = 100;
     std::chrono::high_resolution_clock::time_point start_time;
 
-    std::string sanitize(double value) {
-        if (std::isnan(value) || std::isinf(value)) return "null";
+    std::string sanitize(double value)
+    {
+        if (std::isnan(value) || std::isinf(value))
+            return "null";
         std::ostringstream oss;
         oss << std::fixed << std::setprecision(6) << value;
         return oss.str();
     }
 
 public:
-    Logger(const std::string& dir = "logs") 
+    Logger(const std::string &dir = "logs")
         : log_directory(dir), is_initialized(false) {}
 
     ~Logger() { closeAll(); }
 
-    bool initialize(const std::vector<std::string>& components) {
+    bool initialize(const std::vector<std::string> &components)
+    {
         system(("mkdir -p " + log_directory).c_str());
         start_time = std::chrono::high_resolution_clock::now();
         auto now = std::chrono::system_clock::now();
@@ -62,10 +87,12 @@ public:
         std::stringstream timestamp;
         timestamp << std::put_time(std::localtime(&t), "%Y%m%d_%H%M%S");
 
-        for (const auto& comp : components) {
+        for (const auto &comp : components)
+        {
             std::string filename = log_directory + "/" + comp + "_" + timestamp.str() + ".log";
             files[comp].open(filename, std::ios::app);
-            if (!files[comp].is_open()) {
+            if (!files[comp].is_open())
+            {
                 std::cerr << "Failed to open log file: " << filename << std::endl;
                 return false;
             }
@@ -75,43 +102,52 @@ public:
         return true;
     }
 
-    void log(const std::string& component, const std::map<std::string, double>& numeric_data) {
+    void log(const std::string &component, const std::map<std::string, double> &numeric_data)
+    {
         log(component, numeric_data, "", LogLevel::INFO);
     }
 
-    void log(const std::string& component, const std::string& message, LogLevel level = LogLevel::INFO) {
+    void log(const std::string &component, const std::string &message, LogLevel level = LogLevel::INFO)
+    {
         log(component, {}, message, level);
     }
 
-    void log(const std::string& component,
-             const std::map<std::string, double>& numeric_data,
-             const std::string& message,
-             LogLevel level = LogLevel::INFO) 
+    void log(const std::string &component,
+             const std::map<std::string, double> &numeric_data,
+             const std::string &message,
+             LogLevel level = LogLevel::INFO)
     {
-        if (!is_initialized || files.find(component) == files.end()) return;
+        if (!is_initialized || files.find(component) == files.end())
+            return;
 
         auto now = std::chrono::high_resolution_clock::now();
         long long elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count();
 
         buffers[component].push_back({elapsed_ms, numeric_data, message, level});
 
-        if (buffers[component].size() >= BUFFER_SIZE) flush(component);
+        if (buffers[component].size() >= BUFFER_SIZE)
+            flush(component);
     }
 
 private:
-    void flush(const std::string& component) {
-        auto& file = files[component];
-        auto& buf = buffers[component];
-        if (buf.empty()) return;
+    void flush(const std::string &component)
+    {
+        auto &file = files[component];
+        auto &buf = buffers[component];
+        if (buf.empty())
+            return;
 
-        for (const auto& entry : buf) {
+        for (const auto &entry : buf)
+        {
             file << std::setw(8) << std::setfill('0') << entry.timestamp_ms;
 
-            for (const auto& kv : entry.numeric_data) {
+            for (const auto &kv : entry.numeric_data)
+            {
                 file << " | " << std::setw(10) << std::fixed << std::setprecision(6) << kv.second;
             }
 
-            if (!entry.message.empty()) {
+            if (!entry.message.empty())
+            {
                 file << " [" << logLevelToString(entry.level) << "] " << entry.message;
             }
 
@@ -123,14 +159,18 @@ private:
     }
 
 public:
-    void flushAll() {
-        for (auto& pair : buffers) flush(pair.first);
+    void flushAll()
+    {
+        for (auto &pair : buffers)
+            flush(pair.first);
     }
 
-    void closeAll() {
+    void closeAll()
+    {
         flushAll();
-        for (auto& pair : files)
-            if (pair.second.is_open()) pair.second.close();
+        for (auto &pair : files)
+            if (pair.second.is_open())
+                pair.second.close();
         files.clear();
         buffers.clear();
         is_initialized = false;
