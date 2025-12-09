@@ -22,6 +22,7 @@ target_link_libraries(COMMON_LIBS INTERFACE
     pi3hat 
     bcm_host
     Telemetry
+    Logger
     yaml-cpp
 )
 
@@ -39,6 +40,7 @@ add_subdirectory(Arduino)
 add_subdirectory(Networks)
 add_subdirectory(Math)
 add_subdirectory(Telemetry)
+add_subdirectory(Logger)
 
 # Build the main executable
 build_executable(RobotFramework)
