@@ -1,3 +1,17 @@
+// Copyright 2023 mjbots Robotic Systems, LLC.  info@mjbots.com
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <unistd.h>
 #include <cmath>
 #include <iostream>
@@ -17,6 +31,7 @@
 #include "Telemetry.h"
 #include "arduino.h"
 #include <yaml-cpp/yaml.h>
+#include "Logger/Logger.h"
 
 // --- Atomic flags for inter-thread communication ---
 std::atomic<bool> ball_detected{false};       // Stores ball detection result from camera thread
@@ -104,8 +119,15 @@ int main(int argc, char **argv)
     std::map<int, double> velocity_map; // Motor ID → velocity map
     Telemetry_msg sender_msg;          // Telemetry message to send
 
+    // --- Logger ---
+    Logger logger("logs");
+    logger.initialize({"rframework"});
+    logger.log("rframework", "RobotFramework starting", LogLevel::LOVE);
+
     // --- Initialize Arduino ---
+    logger.log("rframework", "arduino", "Searching for Arduino", LogLevel::INFO);
     a.findArduino();
+    logger.log("rframework", "arduino", "Connecting to Arduino port", LogLevel::INFO);
     a.connect(a.getPort());
 
     bool emergency_stop = false; // Flag to stop robot on emergency
@@ -115,6 +137,7 @@ int main(int argc, char **argv)
     if (detect.open_cam() > 0) {
         // I didnt detach this beacsue it wanted to close it later on. 
         camera_thread = std::thread(CameraThread, std::ref(detect));
+        logger.log("rframework", "camball", "Camera thread started", LogLevel::INFO);
     }
 
     // --- Setup signal handler to catch Ctrl+C ---
@@ -124,6 +147,7 @@ int main(int argc, char **argv)
     for (const auto &pair : telemetry.controllers) {
         pair.second->SetStop();
     }
+    logger.log("rframework", "motor", "Sent stop to all controllers", LogLevel::INFO);
 
     // --- Main control loop ---
  
@@ -144,7 +168,7 @@ int main(int argc, char **argv)
             msg = UDP.receive(); // Receive new message
             if (msg == "TIMEOUT")
             {
-                // std::cout << msg << "\n";
+                logger.log("rframework", "network", "UDP TIMEOUT", LogLevel::WARN);
                 velocity_map = {{1, 0.0}, {2, 0.0}, {3, 0.0}, {4, 0.0}}; // Stop wheels
             }
             else
@@ -168,6 +192,7 @@ int main(int argc, char **argv)
         {
             bool camera_ball_detected = ball_detected.load(std::memory_order_relaxed);
             // std::cout << camera_ball_detected << "\n";
+            logger.log("rframework", "camball", std::string("ball_detected=") + (camera_ball_detected ? "true" : "false"), LogLevel::INFO);
             sender_msg.ball_present = camera_ball_detected;
             last_camera_time = current_time;
         }
@@ -185,6 +210,7 @@ int main(int argc, char **argv)
                 const auto &r = pair.second;
                 voltage[i] = r.voltage;
                 if (r.current > current_limit) {
+                    logger.log("rframework", "motor", "Overcurrent detected", LogLevel::CRIT);
                     emergency_stop = true; // Stop on overcurrent
                 }
                 i++;
@@ -230,6 +256,7 @@ int main(int argc, char **argv)
         pair.second->SetStop();
     }
     a.disconnect();
+    logger.log("rframework", "Emergency stop activated, shutting down", LogLevel::DONE);
 
     // Stop camera thread and join
     stop_camera_thread.store(true, std::memory_order_relaxed);
@@ -238,6 +265,7 @@ int main(int argc, char **argv)
     }
 
     std::cout << "Emergency Stop has been activated\n";
+    logger.closeAll();
 }
 
 // --- Signal handler for Ctrl+C ---
