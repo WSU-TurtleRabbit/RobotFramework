@@ -144,12 +144,12 @@ int main(int argc, char **argv)
             msg = UDP.recive(); // Receive new message
             if (msg == "TIMEOUT")
             {
-                std::cout << msg << "\n";
+                // std::cout << msg << "\n";
                 velocity_map = {{1, 0.0}, {2, 0.0}, {3, 0.0}, {4, 0.0}}; // Stop wheels
             }
             else
             {
-                std::cout << msg << "\n";
+                // std::cout << msg << "\n";
                 cmd.decode_cmd(msg); // Decode velocity commands
                 wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
                 // Map velocities to motors

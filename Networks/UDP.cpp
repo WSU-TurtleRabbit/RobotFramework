@@ -18,8 +18,8 @@ UDP::UDP() {
     std::cerr << "Error loading network config: " << e.what() << std::endl;
     // Provide fallback defaults
     buffer_size = 1024;
-    reciver_port = 5005;
-    sender_port = 5006;
+    reciver_port = 50514;
+    sender_port = 50513;
     }
 
     buffer.resize(buffer_size);
