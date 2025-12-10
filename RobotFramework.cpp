@@ -34,7 +34,7 @@
 #include "Logger/Logger.h"
 
 // --- Atomic flags for inter-thread communication ---
-std::atomic<bool> ball_detected{false};       // Stores ball detection result from camera thread
+std::atomic<bool> ball_detected{false};      // Stores ball detection result from camera thread
 std::atomic<bool> stop_camera_thread{false}; // Signals the camera thread to stop
 std::atomic<bool> manual_stop_flag{false};   // Signals main loop to stop on Ctrl+C
 
@@ -46,14 +46,15 @@ void CameraThread(BallDetection &detector)
 {
     while (!stop_camera_thread.load(std::memory_order_relaxed))
     {
-        bool result = detector.find_ball(); // Check if ball is present
-        ball_detected.store(result, std::memory_order_relaxed); // Store result atomically
+        bool result = detector.find_ball();                          // Check if ball is present
+        ball_detected.store(result, std::memory_order_relaxed);      // Store result atomically
         std::this_thread::sleep_for(std::chrono::milliseconds(300)); // Reduce CPU usage
     }
 }
 
 // --- Struct for telemetry message to send ---
-struct Telemetry_msg{
+struct Telemetry_msg
+{
     bool ball_present; // True if ball detected
     float voltage;     // Average motor voltage
 };
@@ -61,34 +62,47 @@ struct Telemetry_msg{
 int main(int argc, char **argv)
 {
     using namespace mjbots;
-    
+
     char kick = 'k';
     char dribble = 'd';
     char stop_dribble = 's';
-    
+
     double current_limit;
     // double temperture_limit;
 
     // --- Interval times (ms) for periodic tasks ---
     int interval_reciver, interval_sender, interval_arduino, interval_camera, interval_motor;
 
+    // --- Logger ---
+    Logger logger("logs");
+    logger.initialize({"rframework"});
+    logger.log("rframework", "RobotFramework starting", LogLevel::LOVE);
+
     // --- Load YAML config ---
-    try {
-        YAML::Node config = YAML::LoadFile("../config/Main.yaml"); //Main control Config file 
-        YAML::Node s_config = YAML::LoadFile("../config/Safety.yaml"); // Safety Config file 
+    logger.log("rframework", "Loading configs...", LogLevel::INFO);
+    std::map<std::string, double> configData;
+    try
+    {
+        YAML::Node config = YAML::LoadFile("../config/Main.yaml");     // Main control Config file
+        YAML::Node s_config = YAML::LoadFile("../config/Safety.yaml"); // Safety Config file
         YAML::Node interval_values = config["intervals"];
 
         current_limit = s_config["currentLimit"].as<double>();
 
         interval_reciver = interval_values["Reciver_interval"].as<int>();
-        interval_sender = interval_values["Sender_interval"].as<int>(); 
-        interval_arduino = interval_values["Arduino_interval"].as<int>(); 
-        interval_camera = interval_values["Camera_interval"].as<int>(); 
+        interval_sender = interval_values["Sender_interval"].as<int>();
+        interval_arduino = interval_values["Arduino_interval"].as<int>();
+        interval_camera = interval_values["Camera_interval"].as<int>();
         interval_motor = interval_values["Motor_interval"].as<int>();
 
-        
-    } catch (const std::exception &e) {
+        logger.log("rframework", "Successfully loaded configs!", LogLevel::INFO);
+    }
+    catch (const std::exception &e)
+    {
         std::cerr << "Error loading Interval config: " << e.what() << std::endl;
+
+        logger.log("rframework", std::string("Failed to load configs: ") + (e.what()), LogLevel::WARN);
+
         // Fallback defaults
         interval_reciver = 20;
         interval_sender = 1000;
@@ -97,7 +111,19 @@ int main(int argc, char **argv)
         interval_motor = 20;
 
         current_limit = 5.0;
+
+        logger.log("rframework", std::string("Failed to load configs: ") + (e.what()), LogLevel::WARN);
+        logger.log("rframework", std::string("Using fallback values:") + (e.what()), LogLevel::WARN);
     }
+
+    configData = {
+        {"Reciever Interval", interval_reciver},
+        {"Sender Interval", interval_sender},
+        {"Arduino Interval", interval_arduino},
+        {"Camera Interval", interval_camera},
+        {"Motor Interval", interval_motor},
+        {"Current Limit", current_limit}};
+    logger.log("rframework", configData, LogLevel::INFO);
 
     // --- Convert intervals to chrono durations ---
     static auto Reciver_interval = std::chrono::milliseconds(interval_reciver);
@@ -107,32 +133,27 @@ int main(int argc, char **argv)
     static auto Arduino_interval = std::chrono::milliseconds(interval_arduino);
 
     // --- Initialize modules ---
-    BallDetection detect;      // Camera detection
-    UDP UDP;                   // UDP communication
-    Wheel_math m;              // Wheel velocity calculations
-    cmdDecoder cmd;            // Decode incoming commands
-    Telemetry telemetry;       // Motor telemetry
-    Arduino a;                 // Arduino controller
+    BallDetection detect; // Camera detection
+    UDP UDP;              // UDP communication
+    Wheel_math m;         // Wheel velocity calculations
+    cmdDecoder cmd;       // Decode incoming commands
+    Telemetry telemetry;  // Motor telemetry
+    Arduino a;            // Arduino controller
 
-    std::string msg;                   // Incoming UDP message
+    std::string msg;                    // Incoming UDP message
     std::vector<double> wheel_velocity; // Calculated wheel velocities
     std::map<int, double> velocity_map; // Motor ID → velocity map
-    Telemetry_msg sender_msg;          // Telemetry message to send
-
-    // --- Logger ---
-    Logger logger("logs");
-    logger.initialize({"rframework"});
-    logger.log("rframework", "RobotFramework starting", LogLevel::LOVE);
+    Telemetry_msg sender_msg;           // Telemetry message to send
 
     // --- Initialize Arduino ---
-    logger.log("rframework", "arduino", "Searching for Arduino", LogLevel::INFO);
+    logger.log("rframework", "arduino", "Searching for Arduino...", LogLevel::INFO);
     a.findArduino();
-    logger.log("rframework", "arduino", "Connecting to Arduino port", LogLevel::INFO);
+    logger.log("rframework", "arduino", "Connecting to Arduino port...", LogLevel::INFO);
     a.connect(a.getPort());
 
     if (a.isConnected())
     {
-        logger.log("rframework", "arduino", ("Port found at ") + (a.getPort()), LogLevel::DONE);
+        logger.log("rframework", "arduino", std::string("Port found at ") + (a.getPort()), LogLevel::DONE);
     }
     else
     {
@@ -143,8 +164,9 @@ int main(int argc, char **argv)
 
     // --- Start camera detection thread ---
     std::thread camera_thread;
-    if (detect.open_cam() > 0) {
-        // I didnt detach this beacsue it wanted to close it later on. 
+    if (detect.open_cam() > 0)
+    {
+        // I didnt detach this beacsue it wanted to close it later on.
         camera_thread = std::thread(CameraThread, std::ref(detect));
         logger.log("rframework", "camball", "Camera thread started", LogLevel::INFO);
     }
@@ -153,13 +175,14 @@ int main(int argc, char **argv)
     std::signal(SIGINT, signalHandler);
 
     // --- Stop all motors initially to clear faults ---
-    for (const auto &pair : telemetry.controllers) {
+    for (const auto &pair : telemetry.controllers)
+    {
         pair.second->SetStop();
     }
-    logger.log("rframework", "motor", "Sent stop to all controllers", LogLevel::DONE);
+    logger.log("rframework", "Sent stop to all controllers", LogLevel::DONE);
 
     // --- Main control loop ---
- 
+
     while (!emergency_stop && !manual_stop_flag.load(std::memory_order_relaxed))
     {
         auto current_time = std::chrono::steady_clock::now();
@@ -177,12 +200,13 @@ int main(int argc, char **argv)
             msg = UDP.receive(); // Receive new message
             if (msg == "TIMEOUT")
             {
-                logger.log("rframework", "network", "UDP TIMEOUT", LogLevel::WARN);
+                logger.log("rframework", "reciever", "UDP TIMEOUT", LogLevel::WARN);
                 velocity_map = {{1, 0.0}, {2, 0.0}, {3, 0.0}, {4, 0.0}}; // Stop wheels
             }
             else
             {
                 // std::cout << msg << "\n";
+                logger.log("rframework", "reciever", std::string("Message Recieved: ") + msg, LogLevel::INFO);
                 cmd.decode_cmd(msg); // Decode velocity commands
                 wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
                 // Map velocities to motors
@@ -190,8 +214,7 @@ int main(int argc, char **argv)
                     {1, wheel_velocity[0]},
                     {2, wheel_velocity[1]},
                     {3, wheel_velocity[2]},
-                    {4, wheel_velocity[3]}
-                };
+                    {4, wheel_velocity[3]}};
             }
             last_reciver_time = current_time;
         }
@@ -218,28 +241,29 @@ int main(int argc, char **argv)
             {
                 const auto &r = pair.second;
                 voltage[i] = r.voltage;
+                int motor_id = pair.first;
+
+                std::string sub = std::string("motor-") + std::to_string(motor_id);
+                std::map<std::string, double> data = {
+                    {"temperature", r.temperature},
+                    {"voltage", r.voltage},
+                    {"velocity", r.velocity},
+                    {"current", r.current},
+                    {"mode", static_cast<double>(r.mode)}};
+                logger.log("rframework", sub, data, "", LogLevel::INFO);
+
+                if (r.current > current_limit)
                 {
-                    int motor_id = pair.first;
-                    std::string sub = std::string("motor-") + std::to_string(motor_id);
-                    std::map<std::string, double> data = {
-                        {"temperature", r.temperature},
-                        {"voltage", r.voltage},
-                        {"velocity", r.velocity},
-                        {"current", r.current},
-                        {"mode", static_cast<double>(r.mode)}
-                    };
-                    logger.log("rframework", sub, data, "", LogLevel::INFO);
-                }
-                if (r.current > current_limit) {
-                    logger.log("rframework", "motor", "Overcurrent detected", LogLevel::CRIT);
-                    emergency_stop = true; // Stop on overcurrent
+                    logger.log("rframework", sub, "Overcurrent detected", LogLevel::CRIT);
+                    emergency_stop = true;
                 }
                 i++;
             }
 
             // Compute average voltage
             float sum = 0;
-            for (int i = 0; i < 4; i++) sum += voltage[i];
+            for (int i = 0; i < 4; i++)
+                sum += voltage[i];
             sender_msg.voltage = sum / 4;
 
             // std::cout << sender_msg.voltage << "\n";
@@ -248,22 +272,34 @@ int main(int argc, char **argv)
         }
 
         // --- UDP Telemetry Sender ---
-        if (current_time - last_sender_time >= Sender_interval) {
+        if (current_time - last_sender_time >= Sender_interval)
+        {
             std::string msg = "Robot State: Active, Battery Voltage:" + std::to_string(sender_msg.voltage) +
-                              ", Ball Detection:" + std::to_string(sender_msg.ball_present); 
+                              ", Ball Detection:" + std::to_string(sender_msg.ball_present);
+            logger.log("rframework", "sender", msg, LogLevel::INFO)
             UDP.send(msg);
             last_sender_time = current_time;
         }
 
         // --- Arduino Commands ---
-        if (current_time - last_arduino_time >= Arduino_interval) {
-            if (a.isConnected()) {
-                if (cmd.kick) {
+        if (current_time - last_arduino_time >= Arduino_interval)
+        {
+            if (a.isConnected())
+            {
+                if (cmd.kick)
+                {
                     a.sendCommand(kick); // Kick
-                } else if (cmd.dribble) {
+                    logger.log("rframework", "arduino", "Sent kick", LogLevel::HATE)
+                }
+                else if (cmd.dribble)
+                {
                     a.sendCommand(dribble); // Dribble
-                } else {
+                    logger.log("rframework", "arduino", "Sent dribble", LogLevel::LOVE)
+                }
+                else
+                {
                     a.sendCommand(stop_dribble); // Stop
+                    logger.log("rframework", "arduino", "Sent stop dribble", LogLevel::INFO)
                 }
             }
             last_arduino_time = current_time;
@@ -273,7 +309,8 @@ int main(int argc, char **argv)
     }
 
     // --- Emergency Stop ---
-    for (const auto &pair : telemetry.controllers) {
+    for (const auto &pair : telemetry.controllers)
+    {
         pair.second->SetStop();
     }
     a.disconnect();
@@ -281,7 +318,8 @@ int main(int argc, char **argv)
 
     // Stop camera thread and join
     stop_camera_thread.store(true, std::memory_order_relaxed);
-    if (camera_thread.joinable()) {
+    if (camera_thread.joinable())
+    {
         camera_thread.join();
     }
 
@@ -290,7 +328,8 @@ int main(int argc, char **argv)
 }
 
 // --- Signal handler for Ctrl+C ---
-void signalHandler(int signum) {
+void signalHandler(int signum)
+{
     std::cout << "\nSIGINT received. Stopping safely...\n";
     manual_stop_flag.store(true);
 }

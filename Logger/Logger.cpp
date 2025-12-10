@@ -6,6 +6,13 @@
 #include <ctime>
 #include <cmath>
 #include <cstdlib>
+#ifdef _WIN32
+#include <io.h>
+#define CHMOD(path, mode) _chmod(path, mode)
+#else
+#include <sys/stat.h>
+#define CHMOD(path, mode) chmod(path, mode)
+#endif
 
 Logger::Logger(const std::string &dir) : log_directory(dir), is_initialized(false) {}
 
@@ -29,6 +36,8 @@ bool Logger::initialize(const std::vector<std::string> &components)
 {
     // Create base log directory
     system(("mkdir -p " + log_directory).c_str());
+    // Make base directory writable/removable by any user
+    CHMOD(log_directory.c_str(), 0777);
     start_time = std::chrono::high_resolution_clock::now();
 
     auto now = std::chrono::system_clock::now();
@@ -42,6 +51,8 @@ bool Logger::initialize(const std::vector<std::string> &components)
         // Ensure component directory exists: logs/<component>
         std::string comp_dir = log_directory + "/" + comp;
         system(("mkdir -p " + comp_dir).c_str());
+        // Ensure component directory is writable/removable by any user
+        CHMOD(comp_dir.c_str(), 0777);
 
         // Default file for this component: logs/<component>/<component>_<timestamp>.log
         std::string filename = comp_dir + "/" + comp + "_" + session_timestamp + ".log";
@@ -51,6 +62,8 @@ bool Logger::initialize(const std::vector<std::string> &components)
             std::cerr << "Failed to open log file: " << filename << std::endl;
             return false;
         }
+        // Make log file writable by any user
+        CHMOD(filename.c_str(), 0666);
         buffers[comp] = {};
     }
 
@@ -195,6 +208,8 @@ void Logger::ensureOpen(const std::string &key, const std::string &component, co
     // Ensure component dir exists
     std::string comp_dir = log_directory + "/" + component;
     system(("mkdir -p " + comp_dir).c_str());
+    // Ensure permissions allow deletion by non-root users
+    CHMOD(comp_dir.c_str(), 0777);
 
     // Use session timestamp if set, else compute once
     if (session_timestamp.empty())
@@ -214,5 +229,7 @@ void Logger::ensureOpen(const std::string &key, const std::string &component, co
         std::cerr << "Failed to open log file: " << filename << std::endl;
         return;
     }
+    // Make log file writable by any user
+    CHMOD(filename.c_str(), 0666);
     buffers[key] = {};
 }
