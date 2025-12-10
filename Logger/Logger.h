@@ -13,6 +13,7 @@ enum class LogLevel
     WARN,
     CRIT,
     DONE,
+    FAIL,
     MISC,
     LOVE,
     HATE
@@ -28,14 +29,20 @@ inline std::string logLevelToString(LogLevel level)
         return "WARN";
     case LogLevel::CRIT:
         return "CRIT";
+
     case LogLevel::DONE:
         return "DONE";
+    case LogLevel::FAIL:
+        return "FAIL";
+
     case LogLevel::MISC:
         return "MISC";
+    
     case LogLevel::LOVE:
         return "LOVE";
     case LogLevel::HATE:
         return "HATE";
+
     default:
         return "----";
     }

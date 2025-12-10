@@ -66,7 +66,7 @@ void UDP::clear_buffer() {
 };
 
 
-void UDP::send(const std::string& message){
+void UDP::send(const std::string& message) {
     sendto(sockfd, message.c_str(), message.size(), 0,
            (struct sockaddr*)&target_addr, sizeof(target_addr));
 
@@ -77,6 +77,17 @@ void UDP::send(const std::string& message){
     target_addr.sin_addr = client_addr.sin_addr;
 }
 
+int UDP::getBufferSize() {
+    return buffer_size;
+}
+
+int UDP::getRecieverPort() {
+    return receiver_port;
+}
+
+int UDP::getSenderPort() {
+    return sender_port;
+}
 
 void UDP::close_socket() {
     close(this->sockfd);

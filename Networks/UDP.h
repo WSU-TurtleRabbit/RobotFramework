@@ -43,6 +43,9 @@ public:
     void clear_buffer();
     void send(const std::string& message);
     void close_socket();
+    int getBufferSize();
+    int getRecieverPort();
+    int getSenderPort();
 };
 
 #endif // UDP_H

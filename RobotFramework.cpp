@@ -181,8 +181,14 @@ int main(int argc, char **argv)
     }
     logger.log("rframework", "Sent stop to all controllers", LogLevel::DONE);
 
-    // --- Main control loop ---
+    // --- Log UDP ports ---
+    logger.log("rframework", "sender", std::string("Sending port at: ") + 
+        std::to_string(UDP.getSenderPort), LogLevel::LOVE);
+    logger.log("rframework", "reciever", std::string("Recieving port at: ") + 
+        std::to_string(UDP.getRecieverPort), LogLevel::LOVE);
 
+    // --- Main control loop ---
+    logger.log("rframework", "Entering main control loop", LogLevel::LOVE);
     while (!emergency_stop && !manual_stop_flag.load(std::memory_order_relaxed))
     {
         auto current_time = std::chrono::steady_clock::now();
