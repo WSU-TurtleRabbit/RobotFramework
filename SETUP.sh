@@ -14,6 +14,7 @@ PACKAGES=(
     "python3-opencv"
     "libserial-dev"
     "libraspberrypi-dev"
+    "libyaml-cpp-dev"
     "pkg-config"
     "raspberrypi-kernel-headers"
 )

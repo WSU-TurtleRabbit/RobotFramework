@@ -182,10 +182,10 @@ int main(int argc, char **argv)
     logger.log("rframework", "Sent stop to all controllers", LogLevel::DONE);
 
     // --- Log UDP ports ---
-    logger.log("rframework", "sender", std::string("Sending port at: ") + 
-        std::to_string(UDP.getSenderPort), LogLevel::LOVE);
-    logger.log("rframework", "reciever", std::string("Recieving port at: ") + 
-        std::to_string(UDP.getRecieverPort), LogLevel::LOVE);
+    logger.log("rframework", std::string("Sending port at: ") + 
+        std::to_string(UDP.getSenderPort()), LogLevel::LOVE);
+    logger.log("rframework", std::string("Recieving port at: ") + 
+        std::to_string(UDP.getRecieverPort()), LogLevel::LOVE);
 
     // --- Main control loop ---
     logger.log("rframework", "Entering main control loop", LogLevel::LOVE);
@@ -282,7 +282,7 @@ int main(int argc, char **argv)
         {
             std::string msg = "Robot State: Active, Battery Voltage:" + std::to_string(sender_msg.voltage) +
                               ", Ball Detection:" + std::to_string(sender_msg.ball_present);
-            logger.log("rframework", "sender", msg, LogLevel::INFO)
+            logger.log("rframework", "sender", msg, LogLevel::INFO);
             UDP.send(msg);
             last_sender_time = current_time;
         }
@@ -295,17 +295,17 @@ int main(int argc, char **argv)
                 if (cmd.kick)
                 {
                     a.sendCommand(kick); // Kick
-                    logger.log("rframework", "arduino", "Sent kick", LogLevel::HATE)
+                    logger.log("rframework", "arduino", "Sent kick", LogLevel::HATE);
                 }
                 else if (cmd.dribble)
                 {
                     a.sendCommand(dribble); // Dribble
-                    logger.log("rframework", "arduino", "Sent dribble", LogLevel::LOVE)
+                    logger.log("rframework", "arduino", "Sent dribble", LogLevel::LOVE);
                 }
                 else
                 {
                     a.sendCommand(stop_dribble); // Stop
-                    logger.log("rframework", "arduino", "Sent stop dribble", LogLevel::INFO)
+                    logger.log("rframework", "arduino", "Sent stop dribble", LogLevel::INFO);
                 }
             }
             last_arduino_time = current_time;

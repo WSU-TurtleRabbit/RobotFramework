@@ -201,6 +201,13 @@ void Logger::log(const std::string &component,
     if (buffers[key].size() >= BUFFER_SIZE) flush(key);
 }
 
+void Logger::log(const std::string &component,
+                 const std::map<std::string, double> &numeric_data,
+                 LogLevel level)
+{
+    log(component, numeric_data, "", level);
+}
+
 void Logger::ensureOpen(const std::string &key, const std::string &component, const std::string &sub)
 {
     if (files.find(key) != files.end()) return;
