@@ -67,6 +67,8 @@ int main(int argc, char **argv)
     char dribble = 'd';
     char stop_dribble = 's';
 
+    int mode = 0;
+
     double current_limit;
     // double temperture_limit;
 
@@ -76,7 +78,48 @@ int main(int argc, char **argv)
     // --- Logger ---
     Logger logger("logs");
     logger.initialize({"rframework"});
-    logger.log("rframework", "RobotFramework starting", LogLevel::LOVE);
+    logger.log("rframework", "--- ROBOTFRAMEWORK STARTING ---", LogLevel::LOVE);
+
+    // --- Initializing mode (SAFE, CAPPED, UNSAFE) ---
+    if (argc > 1)
+    {
+        std::string arg = argv[1];
+        if (arg == "-s" || arg == "-safe")
+        {
+            // Robot will stop and shutdown at set safety speed limits
+            mode = 0;
+            logger.log("rframework", "Starting in SAFE mode", LogLevel::INFO);
+        }
+        else if (arg == "-c" || arg == "-capped")
+        {
+            // Robot will have speed capped to speed limits
+            mode = 1;
+            logger.log("rframework", "Starting in CAPPED mode", LogLevel::INFO);
+        }
+        else if (arg == "-unsafe")
+        {
+            // Robot will not follow speed limits
+            mode = 2;
+            logger.log("rframework", "Starting in UNSAFE mode", LogLevel::WARN);
+        }
+        else
+        {
+            // Fallback on SAFE mode
+            mode = 0;
+            std::cerr << "Unknown flag or argument: " << argv[1] << std::endl;
+            logger.log("rframework", std::string("Unknown flag or argument: ") + 
+                argv[1], LogLevel::WARN);
+            logger.log("rframework", "Starting in SAFE mode", LogLevel::INFO);
+        }
+    }
+    else
+    {
+        // SAFE mode is default
+        mode = 0;
+        logger.log("rframework", "Starting in SAFE mode", LogLevel::INFO);
+    }
+
+    // Enter the mode into the Wheel_math model
 
     // --- Load YAML config ---
     logger.log("rframework", "Loading configs...", LogLevel::INFO);
@@ -144,6 +187,9 @@ int main(int argc, char **argv)
     std::vector<double> wheel_velocity; // Calculated wheel velocities
     std::map<int, double> velocity_map; // Motor ID → velocity map
     Telemetry_msg sender_msg;           // Telemetry message to send
+
+    // Set mode of Wheel_math based on flags
+    m.setMode(mode);
 
     // --- Initialize Arduino ---
     logger.log("rframework", "arduino", "Searching for Arduino...", LogLevel::INFO);
