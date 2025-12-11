@@ -23,6 +23,8 @@ Logger::~Logger()
 
 std::string Logger::sanitize(double value)
 {
+    // Convert numeric values to a canonical string form.
+    // NaN/Inf are rendered as "null" to avoid corrupting downstream parsing.
     if (std::isnan(value) || std::isinf(value))
     {
         return "null";
@@ -34,23 +36,30 @@ std::string Logger::sanitize(double value)
 
 bool Logger::initialize(const std::vector<std::string> &components)
 {
+    // Prepare base directory and per-component files; sets a session timestamp used in filenames.
+    // Repeated calls re-open files for new components while preserving the existing buffers.
     // Create base log directory
     system(("mkdir -p " + log_directory).c_str());
     // Make base directory writable/removable by any user
     CHMOD(log_directory.c_str(), 0777);
     start_time = std::chrono::high_resolution_clock::now();
 
+    // Set the clock from now and keep the time since then
     auto now = std::chrono::system_clock::now();
     auto t = std::chrono::system_clock::to_time_t(now);
     std::stringstream timestamp;
+
+    // Timeset to know when logs were created
     timestamp << std::put_time(std::localtime(&t), "%Y%m%d_%H%M%S");
     session_timestamp = timestamp.str();
 
     for (const auto &comp : components)
     {
+        // Each component gets a dedicated file in its own directory.
         // Ensure component directory exists: logs/<component>
         std::string comp_dir = log_directory + "/" + comp;
         system(("mkdir -p " + comp_dir).c_str());
+
         // Ensure component directory is writable/removable by any user
         CHMOD(comp_dir.c_str(), 0777);
 
@@ -73,11 +82,13 @@ bool Logger::initialize(const std::vector<std::string> &components)
 
 void Logger::log(const std::string &component, const std::map<std::string, double> &numeric_data)
 {
+    // Numeric-only entry; uses INFO level implicitly and empty message.
     log(component, numeric_data, "", LogLevel::INFO);
 }
 
 void Logger::log(const std::string &component, const std::string &message, LogLevel level)
 {
+    // Message-only entry; stores the level and an empty numeric map.
     log(component, std::map<std::string, double>{}, message, level);
 }
 
@@ -86,6 +97,8 @@ void Logger::log(const std::string &component,
                  const std::string &message,
                  LogLevel level)
 {
+    // Unified path for component logs. Ensures file is open, buffers the entry,
+    // and triggers flush when buffer threshold is reached.
     if (!is_initialized || files.find(component) == files.end())
     {
         ensureOpen(component, component);
@@ -105,6 +118,7 @@ void Logger::log(const std::string &component,
 
 void Logger::flush(const std::string &component)
 {
+    // Write buffered entries for a component to disk and clear the buffer.
     auto &file = files[component];
     auto &buf = buffers[component];
     if (buf.empty())
@@ -117,6 +131,7 @@ void Logger::flush(const std::string &component)
         file << std::setw(8) << std::setfill('0') << entry.timestamp_ms;
         for (const auto &kv : entry.numeric_data)
         {
+            // Only values are printed to keep lines compact.
             file << " | " << std::setw(10) << std::fixed << std::setprecision(6) << kv.second;
         }
         if (!entry.message.empty())
@@ -132,6 +147,7 @@ void Logger::flush(const std::string &component)
 
 void Logger::flushAll()
 {
+    // Flush all component and sub-component buffers.
     for (auto &pair : buffers)
     {
         flush(pair.first);
@@ -140,6 +156,7 @@ void Logger::flushAll()
 
 void Logger::closeAll()
 {
+    // Flush everything, close all files, and reset initialization state.
     flushAll();
     for (auto &pair : files)
     {
@@ -158,6 +175,7 @@ void Logger::log(const std::string &component,
                  const std::string &message,
                  LogLevel level)
 {
+    // Sub-component message-only logging. Key is "component/sub" and file lives under the component dir.
     std::string key = sub.empty() ? component : (component + "/" + sub);
     if (!is_initialized)
     {
@@ -183,6 +201,7 @@ void Logger::log(const std::string &component,
                  const std::string &message,
                  LogLevel level)
 {
+    // Sub-component numeric+message logging.
     std::string key = sub.empty() ? component : (component + "/" + sub);
     if (!is_initialized)
     {
@@ -205,11 +224,14 @@ void Logger::log(const std::string &component,
                  const std::map<std::string, double> &numeric_data,
                  LogLevel level)
 {
+    // Numeric-only with explicit level; empty message.
     log(component, numeric_data, "", level);
 }
 
 void Logger::ensureOpen(const std::string &key, const std::string &component, const std::string &sub)
 {
+    // Lazily create/open a log file for the given component/sub key.
+    // Ensures directories exist and permissions are set.
     if (files.find(key) != files.end()) return;
 
     // Ensure component dir exists

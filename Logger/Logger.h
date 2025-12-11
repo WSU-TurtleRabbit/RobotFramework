@@ -7,6 +7,45 @@
 #include <vector>
 #include <chrono>
 
+/*
+* Logger
+*
+* Purpose:
+* - Lightweight, buffered component logger for telemetry and events.
+* - Creates a base log directory (e.g., "logs") and one subdirectory per component.
+* - Writes lines containing timestamp, optional numeric values, and optional message + level.
+*
+* File structure:
+* - Base dir: <log_directory>/
+* - Component dir: <log_directory>/<component>/
+* - Default file: <log_directory>/<component>/<component>_<session_timestamp>.log
+* - Sub-component file: <log_directory>/<component>/<sub>_<session_timestamp>.log
+*
+* Line format:
+* - Timestamp (ms since Logger::initialize) zero-padded to 8 chars
+* - Followed by " | value" for each numeric datum (map values only; keys are not printed)
+* - If message is present: " [LEVEL] message"
+* - Always ends with a newline
+*
+* Buffering:
+* - Each component/sub has an in-memory buffer of log entries.
+* - When buffer size reaches BUFFER_SIZE, flush() writes and clears it.
+* - flushAll() and closeAll() ensure all buffered logs are written.
+*
+* Permissions:
+* - Directories are chmod 0777 and files 0666 to avoid permission issues across users.
+*
+* Usage:
+*  Logger logger("logs");
+*  logger.initialize({"motor", "network"});
+*  logger.log("motor", std::map<std::string,double>{{"vel", 1.0}}); // numeric-only
+*  logger.log("motor", "Started", LogLevel::INFO);                   // message-only
+*  logger.log("motor", std::map<std::string,double>{{"cur", 2.0}}, "tick", LogLevel::MISC);
+*  logger.log("motor", "subA", "calibrated", LogLevel::DONE);      // sub-component message
+*  logger.log("motor", "subA", std::map<std::string,double>{{"err", 0.01}}, "", LogLevel::INFO);
+*  logger.closeAll();
+*/
+
 enum class LogLevel
 {
     INFO,
