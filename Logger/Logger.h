@@ -38,10 +38,10 @@
 * Usage:
 *  Logger logger("logs");
 *  logger.initialize({"motor", "network"});
-*  logger.log("motor", std::map<std::string,double>{{"vel", 1.0}}); // numeric-only
-*  logger.log("motor", "Started", LogLevel::INFO);                   // message-only
+*  logger.log("motor", std::map<std::string,double>{{"vel", 1.0}});        // numeric-only
+*  logger.log("motor", "Started", LogLevel::INFO);                         // message-only
 *  logger.log("motor", std::map<std::string,double>{{"cur", 2.0}}, "tick", LogLevel::MISC);
-*  logger.log("motor", "subA", "calibrated", LogLevel::DONE);      // sub-component message
+*  logger.log("motor", "subA", "calibrated", LogLevel::DONE);              // sub-component message
 *  logger.log("motor", "subA", std::map<std::string,double>{{"err", 0.01}}, "", LogLevel::INFO);
 *  logger.closeAll();
 */
