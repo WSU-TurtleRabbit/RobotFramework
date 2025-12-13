@@ -33,4 +33,8 @@
 
 *.json
 
+# Virtual Environments
+*venv
+.rframework-venv
+
 build
