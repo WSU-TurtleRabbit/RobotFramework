@@ -44,9 +44,15 @@ private:
     float wheel_dist_3 = std::hypot(WHEEL_3[0], WHEEL_3[1]);
     float wheel_dist_4 = std::hypot(WHEEL_4[0], WHEEL_4[1]);
 
+    // Running mode for safety
+    int mode = 0;
+
+    void initalize_math();
+
 public:
     Wheel_math();
     ~Wheel_math() = default;
+    void setMode(int base_mode);
 
     // Calculate wheel velocities from robot desired motion
     std::vector<double> calculate(double velocity_x, double velocity_y, double velocity_w);

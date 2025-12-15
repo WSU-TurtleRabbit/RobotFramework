@@ -5,7 +5,10 @@
 #include "wheel_math.h"
 
 Wheel_math::Wheel_math() {
+    initalize_math();
+}
 
+void Wheel_math::initalize_math() {
     try{
     YAML::Node config = YAML::LoadFile("../config/Safety.yaml");
     YAML::Node vLimits = config["velocityLimit"];
@@ -24,17 +27,39 @@ Wheel_math::Wheel_math() {
 std::vector<double> Wheel_math::calculate(double velocity_x, double velocity_y, double velocity_w) {
 
     // ---- Limit Checking ----
-    if (std::abs(velocity_x) > X_LIMIT) {
-        std::cout << "error: incoming x is too large\n";
-        return stop_vel;
+    if (mode == 0)
+    {
+        // Safe mode, stops movement
+        if (std::abs(velocity_x) > X_LIMIT) {
+            std::cout << "error: incoming x is too large\n";
+            return stop_vel;
+        }
+        if (std::abs(velocity_y) > Y_LIMIT) {
+            std::cout << "error: incoming y is too large\n";
+            return stop_vel;
+        }
+        if (std::abs(velocity_w) > W_LIMIT) {
+            std::cout << "error: incoming w is too large\n";
+            return stop_vel;
+        }
     }
-    if (std::abs(velocity_y) > Y_LIMIT) {
-        std::cout << "error: incoming y is too large\n";
-        return stop_vel;
-    }
-    if (std::abs(velocity_w) > W_LIMIT) {
-        std::cout << "error: incoming w is too large\n";
-        return stop_vel;
+    else if (mode == 1)
+    {
+        // Capped mode, stops scales down movement if values exceed
+        double scale = 1;
+        if (std::abs(velocity_x) > X_LIMIT) {
+            scale = std::min(scale, X_LIMIT / std::abs(velocity_x));
+        }
+        if (std::abs(velocity_y) > Y_LIMIT) {
+            scale = std::min(scale, Y_LIMIT / std::abs(velocity_y));
+        }
+        if (std::abs(velocity_w) > W_LIMIT) {
+            scale = std::min(scale, W_LIMIT / std::abs(velocity_w));
+        }
+
+        velocity_x *= scale;
+        velocity_y *= scale;
+        velocity_w *= scale;
     }
 
     // ---- Omni Wheel Kinematics ----
@@ -57,4 +82,8 @@ std::vector<double> Wheel_math::calculate(double velocity_x, double velocity_y, 
     return wheel_vel;
 }
 
-
+void Wheel_math::setMode(int base_mode)
+{
+    mode = base_mode;
+    std::cout << "Mode set to: " << mode;
+}
