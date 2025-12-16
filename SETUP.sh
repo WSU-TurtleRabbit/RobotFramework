@@ -127,5 +127,8 @@ do
             echo "Laters!"
             exit 0
             ;;
+        *)
+            echo "Invalid option, try again."
+            ;;
     esac
 done

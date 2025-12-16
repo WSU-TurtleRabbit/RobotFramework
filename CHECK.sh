@@ -3,7 +3,7 @@
 # RUN USING:    bash ./CHECK.sh
 
 echo "--------------------------------------------------"
-echo "     --- WELCOME TO ROBOT FRAMEWORK SETUP ---     "
+echo "     --- WELCOME TO ROBOT CHECKUP ---     "
 echo "--------------------------------------------------"
 echo ""
 
@@ -17,29 +17,20 @@ PACKAGES=(
 install_py_moteus() {
     # Checking for Venv
     echo "Checking for venv..."
-    if check_venv; then
-        echo "✓ Already inside .rframework-venv"
-    else
-        echo "✗ Not inside .rframework-venv"
-        if [ -d ".rframework-venv" ]; then
-            echo "Tempting to activating venv..."
-            source .rframework-venv/bin/activate
-        else
-            install_venv
-        fi
-    fi
-
-    if check_venv; then
-        echo "Upgrading pip..."
-        pip install --upgrade pip
-        echo "Installing moteus packages..."
-        for package in "${PACKAGES[@]}"; do
-                py_package_installer "$package"
-            done
+    if ensure_venv; then
+        echo "✓ .rframework-venv is active"
     else
         echo "✗ Failed to activate .rframework-venv"
         exit 1
     fi
+
+    # Upgrade pip and install packages
+    echo "Upgrading pip..."
+    pip install --upgrade pip
+    echo "Installing moteus packages..."
+    for package in "${PACKAGES[@]}"; do
+        py_package_installer "$package"
+    done
 }
 
 install_venv() {
@@ -57,6 +48,33 @@ check_venv() {
         return 0
     else
         return 1
+    fi
+}
+
+activate_venv() {
+    if [ -d ".rframework-venv" ]; then
+        echo "Activating .rframework-venv..."
+        source .rframework-venv/bin/activate
+        return 0
+    else
+        echo "✗ .rframework-venv not found! Please create it first"
+        return 1
+    fi
+}
+
+ensure_venv() {
+    if check_venv; then
+        echo "✓ Already inside .rframework-venv"
+        return 0
+    else
+        echo "⚠ Venv not active. Trying to activate..."
+        activate_venv
+
+        # Re-check after activation
+        if ! check_venv; then
+            echo "✗ Failed to activate .rframework-venv"
+            return 1
+        fi
     fi
 }
 
@@ -83,29 +101,69 @@ py_package_installer() {
 }
 
 # Menu
-PS3='What would you like to do? '
-options=(
-    "Run Tests"
-    "Callibrate"
-    "Install Python Packages"
+PS3='Main Menu --> What would you like to do? '
+main_options=(
+    "Tests"
+    "Callibration"
+    "Packages"
     "Quit"
 )
-select opt in "${options[@]}"
+select opt in "${main_options[@]}"
 do
     case $opt in
-        "Run Tests")
+        "Tests")
             echo "Sorry, this feature isn't done yet..."
             ;;
-        "Callibrate")
+
+        "Callibration")
             echo "Sorry, this feature isn't done yet..."
             ;;
-        "Install Python Packages")
-            echo "Starting installing process..."
-            install_py_moteus
+
+        "Packages")
+            PS3='Package Menu --> What would you like to do? '
+            package_options=(
+                "Check Packages"
+                "Install Packages"
+                "Uninstall Packages"
+            )
+            select p_opt in "${package_options[@]}"
+            do
+                case $p_opt in
+                    "Check Packages" )
+                        # Ensure the venv is active before checking packages
+                        ensure_venv || { echo "Cannot check packages without venv"; break; }
+
+                        for package in "${PACKAGES[@]}"; do
+                            if is_py_package_installed "$package"; then
+                                echo "Python Package: $package ✓ Package installed"
+                            else
+                                echo "Python Package: $package ✗ Package missing"
+                            fi
+                        done
+                        ;;
+                    "Install Packages" )
+                        # Ensure the venv is active before installing packages
+                        ensure_venv || { echo "Cannot install packages without venv"; break; }
+
+                        echo "Starting installing process..."
+                        install_py_moteus
+                        ;;
+                    "Uninstall Packages" )
+                        echo "Uninstall feature not implemented yet"
+                        ;;
+                    *)
+                        echo "Invalid option, try again."
+                        ;;
+                esac
+            done
             ;;
+
         "Quit")
             echo "Laters!"
             exit 0
+            ;;
+        *)
+            echo "Invalid option, try again."
             ;;
     esac
 done
