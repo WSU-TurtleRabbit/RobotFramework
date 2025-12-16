@@ -14,7 +14,7 @@ PACKAGES=(
     "moteus_gui"
 )
 
-install_py_moteus() {
+install_py_packages() {
     # Checking for Venv
     echo "Checking for venv..."
     if ensure_venv; then
@@ -100,62 +100,57 @@ py_package_installer() {
     fi
 }
 
+# Uninstall python package if not already uninstalled
+py_package_uninstaller() {
+    TO_BE_CHECKED=$1
+    if is_py_package_installed "$TO_BE_CHECKED"; then
+        echo "Python Package: $TO_BE_CHECKED ✗ Package installed"
+        echo "Uninstalling $TO_BE_CHECKED now..."
+        pip uninstall -y "$TO_BE_CHECKED"
+        if [ $? -eq 0 ]; then
+            echo "✓ $TO_BE_CHECKED uninstalled successfully"
+        else
+            echo "✗ Failed to uninstall $TO_BE_CHECKED"
+            return 1
+        fi
+    else
+        echo "Python Package: $TO_BE_CHECKED ✓ Package already not installed"
+    fi
+}
+
 # Menu
 PS3='Main Menu --> What would you like to do? '
 main_options=(
-    "Tests"
-    "Callibration"
-    "Packages"
+    "Check Packages"
+    "Install Packages"
+    "Callibrate Wheels"
+    "Run Tests"
     "Quit"
 )
 select opt in "${main_options[@]}"
 do
     case $opt in
-        "Tests")
-            echo "Sorry, this feature isn't done yet..."
-            ;;
+        "Check Packages")
+            "Check Packages" )
+            ensure_venv || { echo "Cannot check packages without venv"; break; }
 
-        "Callibration")
-            echo "Sorry, this feature isn't done yet..."
-            ;;
-
-        "Packages")
-            PS3='Package Menu --> What would you like to do? '
-            package_options=(
-                "Check Packages"
-                "Install Packages"
-                "Uninstall Packages"
-            )
-            select p_opt in "${package_options[@]}"
-            do
-                case $p_opt in
-                    "Check Packages" )
-                        # Ensure the venv is active before checking packages
-                        ensure_venv || { echo "Cannot check packages without venv"; break; }
-
-                        for package in "${PACKAGES[@]}"; do
-                            if is_py_package_installed "$package"; then
-                                echo "Python Package: $package ✓ Package installed"
-                            else
-                                echo "Python Package: $package ✗ Package missing"
-                            fi
-                        done
-                        ;;
-                    "Install Packages" )
-                        # Ensure the venv is active before installing packages
-                        ensure_venv || { echo "Cannot install packages without venv"; break; }
-
-                        echo "Starting installing process..."
-                        install_py_moteus
-                        ;;
-                    "Uninstall Packages" )
-                        echo "Uninstall feature not implemented yet"
-                        ;;
-                    *)
-                        echo "Invalid option, try again."
-                        ;;
-                esac
+            for package in "${PACKAGES[@]}"; do
+                if is_py_package_installed "$package"; then
+                    echo "Python Package: $package ✓ Package installed"
+                else
+                  echo "Python Package: $package ✗ Package missing"
+                fi
             done
+
+            ;;
+
+        "Install Packages" )
+            echo "Starting installing process..."
+            install_py_packages
+            ;;
+
+        "Callibrate Wheels")
+
             ;;
 
         "Quit")
