@@ -37,4 +37,7 @@
 *venv
 .rframework-venv
 
+# Log files
+*.log
+
 build
