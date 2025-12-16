@@ -22,7 +22,7 @@ install_py_moteus() {
     else
         echo "✗ Not inside .rframework-venv"
         if [ -d ".rframework-venv" ]; then
-            echo "Activating venv..."
+            echo "Tempting to activating venv..."
             source .rframework-venv/bin/activate
         else
             install_venv
@@ -34,10 +34,11 @@ install_py_moteus() {
         pip install --upgrade pip
         echo "Installing moteus packages..."
         for package in "${PACKAGES[@]}"; do
-                package_installer "$package"
+                py_package_installer "$package"
             done
     else
         echo "✗ Failed to activate .rframework-venv"
+        exit 1
     fi
 }
 
@@ -52,17 +53,21 @@ install_venv() {
 }
 
 check_venv() {
-    if [[ "$VIRTUAL_ENV" == *"/.rframework-venv"* ]]; then
+    if [[ -n "$VIRTUAL_ENV" && "$VIRTUAL_ENV" == *"/.rframework-venv"* ]]; then
         return 0
     else
         return 1
     fi
 }
 
-# Install package if not already installed
-package_installer() {
+is_py_package_installed() {
+    pip show "$1" >/dev/null 2>&1
+}
+
+# Install python package if not already installed
+py_package_installer() {
     TO_BE_CHECKED=$1
-    if is_package_installed "$TO_BE_CHECKED"; then
+    if is_py_package_installed "$TO_BE_CHECKED"; then
         echo "Python Package: $TO_BE_CHECKED ✓ Package installed"
     else
         echo "Python Package: $TO_BE_CHECKED ✗ Package missing"
@@ -82,7 +87,7 @@ PS3='What would you like to do? '
 options=(
     "Run Tests"
     "Callibrate"
-    "Install Moteus"
+    "Install Python Packages"
     "Quit"
 )
 select opt in "${options[@]}"
@@ -92,20 +97,11 @@ do
             echo "Sorry, this feature isn't done yet..."
             ;;
         "Callibrate")
-            echo "Installing dependancies..."
-            sudo apt update
-            for package in "${PACKAGES[@]}"; do
-                package_installer "$package"
-            done
-            echo "Install complete!"
+            echo "Sorry, this feature isn't done yet..."
             ;;
-        "Install Moteus")
-            echo "Uninstalling dependancies..."
-            sudo apt update
-            for package in "${PACKAGES[@]}"; do
-                package_uninstaller "$package"
-            done
-            echo "Uninstalls complete!"
+        "Install Python Packages")
+            echo "Starting installing process..."
+            install_py_moteus
             ;;
         "Quit")
             echo "Laters!"
