@@ -12,6 +12,7 @@ PACKAGES=(
     "moteus"
     "moteus_pi3hat"
     "moteus_gui"
+    "pyyaml"
 )
 
 install_py_packages() {
@@ -131,18 +132,17 @@ select opt in "${main_options[@]}"
 do
     case $opt in
         "Check Packages")
-            "Check Packages" )
-            ensure_venv || { echo "Cannot check packages without venv"; break; }
+        ensure_venv || { echo "Cannot check packages without venv"; break; }
 
-            for package in "${PACKAGES[@]}"; do
-                if is_py_package_installed "$package"; then
-                    echo "Python Package: $package ✓ Package installed"
-                else
-                  echo "Python Package: $package ✗ Package missing"
-                fi
-            done
+        for package in "${PACKAGES[@]}"; do
+            if is_py_package_installed "$package"; then
+                echo "Python Package: $package ✓ Package installed"
+            else
+              echo "Python Package: $package ✗ Package missing"
+            fi
+        done
 
-            ;;
+        ;;
 
         "Install Packages" )
             echo "Starting installing process..."
@@ -150,7 +150,7 @@ do
             ;;
 
         "Callibrate Wheels")
-
+            echo 
             ;;
 
         "Quit")
