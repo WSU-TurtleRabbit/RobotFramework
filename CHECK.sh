@@ -119,6 +119,115 @@ py_package_uninstaller() {
     fi
 }
 
+# Parse Motor.yaml and build pi3hat-cfg string
+build_pi3hat_cfg() {
+    if [ ! -f "config/Motor.yaml" ]; then
+        echo "✗ config/Motor.yaml not found"
+        return 1
+    fi
+
+    # Extract motor map and group by bus
+    # Format: bus=motor_id1,motor_id2;bus=motor_id3,motor_id4
+    declare -A bus_map
+    
+    # Parse Motor.yaml to build bus_map
+    while IFS=: read -r motor_id bus_id; do
+        motor_id=$(echo "$motor_id" | xargs)  # trim whitespace
+        bus_id=$(echo "$bus_id" | xargs | cut -d'#' -f1 | xargs)  # trim, remove comments, trim again
+        
+        # Skip empty lines and motorMap line
+        if [ -z "$motor_id" ] || [ "$motor_id" = "motorMap" ]; then
+            continue
+        fi
+        
+        # Build bus_map
+        if [ -z "${bus_map[$bus_id]}" ]; then
+            bus_map[$bus_id]="$motor_id"
+        else
+            bus_map[$bus_id]="${bus_map[$bus_id]},$motor_id"
+        fi
+    done < <(grep -v "^#" config/Motor.yaml | grep -v "motorMap" | grep ":")
+    
+    # Build the pi3hat-cfg string
+    local cfg_string=""
+    for bus in $(printf '%s\n' "${!bus_map[@]}" | sort -n); do
+        if [ -z "$cfg_string" ]; then
+            cfg_string="$bus=${bus_map[$bus]}"
+        else
+            cfg_string="$cfg_string;$bus=${bus_map[$bus]}"
+        fi
+    done
+    
+    echo "$cfg_string"
+}
+
+# Get all motor IDs from Motor.yaml
+get_motor_ids() {
+    if [ ! -f "config/Motor.yaml" ]; then
+        return 1
+    fi
+    
+    grep -v "^#" config/Motor.yaml | grep ":" | awk '{print $1}' | grep -v "motorMap" | tr -d ':' | tr '\n' ',' | sed 's/,$//'
+}
+
+# Calibrate wheels using moteus_tool
+calibrate_wheels() {
+    echo "Building pi3hat configuration from Motor.yaml..."
+    
+    local all_motor_ids=$(get_motor_ids)
+    if [ -z "$all_motor_ids" ]; then
+        echo "✗ Failed to extract motor IDs from Motor.yaml"
+        return 1
+    fi
+    
+    echo "Available motor IDs: $all_motor_ids"
+    echo ""
+    read -p "Calibrate all motors or select specific? (a/s): " -n 1 -r
+    echo
+    
+    local motor_ids=""
+    if [[ $REPLY =~ ^[Aa]$ ]]; then
+        motor_ids="$all_motor_ids"
+        echo "✓ Calibrating all motors: $motor_ids"
+    elif [[ $REPLY =~ ^[Ss]$ ]]; then
+        read -p "Enter motor IDs to calibrate (comma-separated, e.g. 1,4): " motor_ids
+        if [ -z "$motor_ids" ]; then
+            echo "✗ No motors selected"
+            return 1
+        fi
+        echo "✓ Calibrating motors: $motor_ids"
+    else
+        echo "✗ Invalid choice"
+        return 1
+    fi
+    
+    local pi3hat_cfg=$(build_pi3hat_cfg)
+    if [ -z "$pi3hat_cfg" ]; then
+        echo "✗ Failed to parse Motor.yaml"
+        return 1
+    fi
+    
+    echo "✓ pi3hat config: $pi3hat_cfg"
+    echo ""
+    echo "⚠ WARNING: Ensure all motors can spin freely before proceeding!"
+    read -p "Continue with calibration? (y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Calibration cancelled"
+        return 0
+    fi
+    
+    echo "Starting motor calibration..."
+    sudo ./.rframework-venv/bin/moteus_tool --pi3hat-cfg "$pi3hat_cfg" -t "$motor_ids" --calibrate
+    
+    if [ $? -eq 0 ]; then
+        echo "✓ Calibration completed successfully"
+    else
+        echo "✗ Calibration failed"
+        return 1
+    fi
+}
+
 # Menu
 PS3='Main Menu --> What would you like to do? '
 main_options=(
@@ -150,7 +259,8 @@ do
             ;;
 
         "Callibrate Wheels")
-            echo 
+            ensure_venv || { echo "Cannot calibrate without venv"; break; }
+            calibrate_wheels
             ;;
 
         "Quit")
