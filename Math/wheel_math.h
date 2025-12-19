@@ -13,10 +13,10 @@ private:
     const std::vector<double> WHEEL_4 = {-63.6/1000.0, 36.87/1000.0};
 
     // Wheel orientation (degrees)
-    const double W1_ANG = 45.0;
-    const double W2_ANG = -45.0;
-    const double W3_ANG = -120.0;
-    const double W4_ANG = 120.0;
+    const double W1_ANG = 45;
+    const double W2_ANG = -45;
+    const double W3_ANG = -120;
+    const double W4_ANG = 120;
 
     // Max velocity limits
     double X_LIMIT;   // m/s

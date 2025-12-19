@@ -63,19 +63,19 @@ std::vector<double> Wheel_math::calculate(double velocity_x, double velocity_y, 
     }
 
     // ---- Omni Wheel Kinematics ----
-    wheel_vel[0] = ( (velocity_x * std::sin(W1_RAD)) +
+    wheel_vel[0] = ( (-velocity_x * std::sin(W1_RAD)) +
                      (velocity_y * std::cos(W1_RAD)) +
                      (velocity_w * wheel_dist_1) ) / WHEEL_RADIUS;
 
-    wheel_vel[1] = ( (velocity_x * std::sin(W2_RAD)) +
+    wheel_vel[1] = ( (-velocity_x * std::sin(W2_RAD)) +
                      (velocity_y * std::cos(W2_RAD)) +
                      (velocity_w * wheel_dist_2) ) / WHEEL_RADIUS;
 
-    wheel_vel[2] = ( (velocity_x * std::sin(W3_RAD)) +
+    wheel_vel[2] = ( (-velocity_x * std::sin(W3_RAD)) +
                      (velocity_y * std::cos(W3_RAD)) +
                      (velocity_w * wheel_dist_3) ) / WHEEL_RADIUS;
 
-    wheel_vel[3] = ( (velocity_x * std::sin(W4_RAD)) +
+    wheel_vel[3] = ( (-velocity_x * std::sin(W4_RAD)) +
                      (velocity_y * std::cos(W4_RAD)) +
                      (velocity_w * wheel_dist_4) ) / WHEEL_RADIUS;
 
