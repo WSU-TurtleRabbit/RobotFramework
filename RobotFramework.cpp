@@ -481,11 +481,12 @@ void fault()
     {
         msg = UDP.receive();
         // In FAULT state, always stop all motors, and keep track of which are faulty
-        for (int id = 1; id <= 4; ++id)
+        for (const auto &pair : telemetry.controllers)
         {
-            velocity_map[id] = 0.0;
+            pair.second->SetStop();
         }
-        
+        logger.log("rframework", "Sent stop to all controllers", LogLevel::DONE);
+
         // Log FAULT state for each faulty motor
         if (!faulty_motors.empty())
         {
@@ -519,12 +520,17 @@ void fault()
     if (current_time - last_sender_time >= (Sender_interval * 2))
     {
         std::string fault_list;
-        if (!faulty_motors.empty()) {
-            for (int id : faulty_motors) {
+        if (!faulty_motors.empty())
+        {
+            for (int id : faulty_motors)
+            {
                 fault_list += std::to_string(id) + ",";
             }
-            if (!fault_list.empty()) fault_list.pop_back(); // Remove trailing comma
-        } else {
+            if (!fault_list.empty())
+                fault_list.pop_back(); // Remove trailing comma
+        }
+        else
+        {
             fault_list = "none";
         }
         std::string msg = "Robot State: FAULT, Battery Voltage:" + std::to_string(sender_msg.voltage) +
