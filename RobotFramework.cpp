@@ -89,6 +89,11 @@ std::vector<double> wheel_velocity; // Calculated wheel velocities
 std::map<int, double> velocity_map; // Motor ID → velocity map
 Telemetry_msg sender_msg;           // Telemetry message to send
 
+// --- Faulty motors tracking ---
+std::set<int> faulty_motors;                                              // Set of motor IDs considered faulty
+std::map<int, std::chrono::steady_clock::time_point> last_motor_response; // Last response time for each motor
+std::chrono::milliseconds FaultGrace{1500};                               // Time in milliseconds a part can go without responding before being considered faulty
+
 // --- Initialize Dribbler Variables ---
 char kick = 'k';         // Kick command
 char dribble = 'd';      // Dribble command
@@ -99,7 +104,7 @@ std::thread camera_thread;
 
 // --- Interval times (ms) for periodic tasks and YAML content ---
 
-int interval_reciver, interval_sender, interval_arduino, interval_camera, interval_motor, time_until_idle;
+int interval_reciver, interval_sender, interval_arduino, interval_camera, interval_motor, time_until_idle, fault_grace;
 double current_limit;
 std::map<std::string, double> configData;
 
@@ -205,6 +210,7 @@ void startup(int argc, char **argv)
         YAML::Node interval_values = config["intervals"];
 
         current_limit = s_config["currentLimit"].as<double>();
+        fault_grace = s_config["faultyGracePeriod"].as<int>();
 
         interval_reciver = interval_values["Reciver_interval"].as<int>();
         interval_sender = interval_values["Sender_interval"].as<int>();
@@ -228,9 +234,10 @@ void startup(int argc, char **argv)
         interval_camera = 200;
         interval_motor = 20;
 
-        time_until_idle = 3000;
-
         current_limit = 5.0;
+        fault_grace = 1500;
+
+        time_until_idle = 3000;
 
         logger.log("rframework", std::string("Failed to load configs: ") + (e.what()), LogLevel::WARN);
         logger.log("rframework", std::string("Using fallback values:") + (e.what()), LogLevel::WARN);
@@ -243,6 +250,7 @@ void startup(int argc, char **argv)
         {"Camera Interval", interval_camera},
         {"Motor Interval", interval_motor},
         {"Current Limit", current_limit},
+        {"Fault Grace", fault_grace},
         {"Time until Idle", time_until_idle}};
     logger.log("rframework", configData, LogLevel::INFO);
 
@@ -252,6 +260,7 @@ void startup(int argc, char **argv)
     MotorInterval = std::chrono::milliseconds(interval_motor);
     Sender_interval = std::chrono::milliseconds(interval_sender);
     Arduino_interval = std::chrono::milliseconds(interval_arduino);
+    FaultGrace = std::chrono::milliseconds(fault_grace);
     TimeUntilIdle = std::chrono::milliseconds(time_until_idle);
 
     // Set mode of Wheel_math based on flags
@@ -458,6 +467,99 @@ void running()
 
 void fault()
 {
+    // In FAULT state, keep running but do not send commands to faulty motors
+    current_time = std::chrono::steady_clock::now();
+
+    static auto last_reciver_time = current_time;
+    static auto last_motor_time = current_time;
+    static auto last_camera_time = current_time;
+    static auto last_sender_time = current_time;
+    static auto last_arduino_time = current_time;
+
+    // --- UDP Receiver ---
+    if (current_time - last_reciver_time >= Reciver_interval)
+    {
+        msg = UDP.receive();
+        // In FAULT state, always stop all motors, and keep track of which are faulty
+        for (int id = 1; id <= 4; ++id)
+        {
+            velocity_map[id] = 0.0;
+        }
+        
+        // Log FAULT state for each faulty motor
+        if (!faulty_motors.empty())
+        {
+            for (int id : faulty_motors)
+            {
+                logger.log("rframework", "motor-" + std::to_string(id), "FAULT state: all motors shut off. This motor is FAULTY.", LogLevel::CRIT);
+            }
+        }
+
+        last_reciver_time = current_time;
+    }
+
+    // --- Camera Ball Detection ---
+    if (current_time - last_camera_time >= CameraInterval)
+    {
+        bool camera_ball_detected = ball_detected.load(std::memory_order_relaxed);
+        logger.log("rframework", "camball", std::string("ball_detected=") + (camera_ball_detected ? "true" : "false"), LogLevel::INFO);
+        sender_msg.ball_present = camera_ball_detected;
+        last_camera_time = current_time;
+    }
+
+    // --- Motor Telemetry and Safety Check ---
+    if (current_time - last_motor_time >= MotorInterval)
+    {
+        process_motor_telemetry();
+        last_motor_time = current_time;
+    }
+
+    // --- UDP Telemetry Sender ---
+    // In FAULT state, robot sends state 2 times less often
+    if (current_time - last_sender_time >= (Sender_interval * 2))
+    {
+        std::string fault_list;
+        if (!faulty_motors.empty()) {
+            for (int id : faulty_motors) {
+                fault_list += std::to_string(id) + ",";
+            }
+            if (!fault_list.empty()) fault_list.pop_back(); // Remove trailing comma
+        } else {
+            fault_list = "none";
+        }
+        std::string msg = "Robot State: FAULT, Battery Voltage:" + std::to_string(sender_msg.voltage) +
+                          ", Ball Detection:" + std::to_string(sender_msg.ball_present) +
+                          ", Faulty Motors: [" + fault_list + "]";
+        logger.log("rframework", "sender", msg, LogLevel::INFO);
+        UDP.send(msg);
+        last_sender_time = current_time;
+    }
+
+    // --- Arduino Commands ---
+    if (current_time - last_arduino_time >= Arduino_interval)
+    {
+        if (a.isConnected())
+        {
+            if (cmd.kick)
+            {
+                a.sendCommand(kick);
+                logger.log("rframework", "arduino", "Sent kick", LogLevel::HATE);
+            }
+            else if (cmd.dribble)
+            {
+                a.sendCommand(dribble);
+                logger.log("rframework", "arduino", "Sent dribble", LogLevel::LOVE);
+            }
+            else
+            {
+                a.sendCommand(stop_dribble);
+                logger.log("rframework", "arduino", "Sent stop dribble", LogLevel::INFO);
+            }
+        }
+        last_arduino_time = current_time;
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
 
 void stopping()
@@ -484,13 +586,16 @@ void stopping()
 inline void process_motor_telemetry()
 {
     auto servo_status = telemetry.cycle(velocity_map);
-    float voltage[4];
+    float voltage[4] = {0, 0, 0, 0};
     int i = 0;
+    auto now = std::chrono::steady_clock::now();
+    std::set<int> responding_motors;
     for (const auto &pair : servo_status)
     {
         const auto &r = pair.second;
-        voltage[i] = r.voltage;
         int motor_id = pair.first;
+        responding_motors.insert(motor_id);
+        voltage[i] = r.voltage;
         std::string sub = "motor-" + std::to_string(motor_id);
         std::map<std::string, double> data = {
             {"temperature", r.temperature},
@@ -504,12 +609,41 @@ inline void process_motor_telemetry()
             logger.log("rframework", sub, "Overcurrent detected", LogLevel::CRIT);
             emergency_stop = true;
         }
+        // Update last response time for this motor
+        last_motor_response[motor_id] = now;
         i++;
     }
+    // Mark motors as faulty if not responding for >1s
+    for (int id = 1; id <= 4; ++id)
+    {
+        auto it = last_motor_response.find(id);
+        if (it == last_motor_response.end() || std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second).count() > FaultGrace)
+        {
+            if (faulty_motors.count(id) == 0)
+            {
+                logger.log("rframework", "motor-" + std::to_string(id), "No telemetry for >1s, marking as FAULTY", LogLevel::CRIT);
+            }
+            faulty_motors.insert(id);
+        }
+    }
+    // If any new faulty motors detected, enter FAULT state
+    if (!faulty_motors.empty() && state != State::FAULT)
+    {
+        logger.log("rframework", "FAULT detected", LogLevel::CRIT);
+        logger.log("rframework", "Entering FAULT state", LogLevel::INFO);
+        state = State::FAULT;
+    }
     float sum = 0;
+    int count = 0;
     for (int j = 0; j < 4; j++)
-        sum += voltage[j];
-    sender_msg.voltage = sum / 4;
+    {
+        if (voltage[j] > 0)
+        {
+            sum += voltage[j];
+            count++;
+        }
+    }
+    sender_msg.voltage = (count > 0) ? (sum / count) : 0;
 }
 
 // --- Signal handler for Ctrl+C ---
