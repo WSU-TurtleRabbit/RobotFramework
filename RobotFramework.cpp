@@ -327,6 +327,7 @@ void idle()
         msg = UDP.receive(); // Receive new message
         if (msg == "TIMEOUT" || msg == "IDLE")
         {
+            logger.log("rframework", "reciever", "UDP TIMEOUT", LogLevel::WARN);
             velocity_map = {{1, 0.0}, {2, 0.0}, {3, 0.0}, {4, 0.0}}; // Stop wheels
         }
         else
