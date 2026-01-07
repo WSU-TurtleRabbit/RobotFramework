@@ -623,11 +623,12 @@ inline void process_motor_telemetry()
     for (int id = 1; id <= 4; ++id)
     {
         auto it = last_motor_response.find(id);
-        if (it == last_motor_response.end() || std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second).count() > FaultGrace)
+        auto ms_since_response = it == last_motor_response.end() ? FaultGrace.count() + 1 : std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second).count();
+        if (ms_since_response > FaultGrace.count())
         {
             if (faulty_motors.count(id) == 0)
             {
-                logger.log("rframework", "motor-" + std::to_string(id), "No telemetry for >1s, marking as FAULTY", LogLevel::CRIT);
+                logger.log("rframework", "motor-" + std::to_string(id), "No telemetry for >" + std::to_string(FaultGrace.count()) + "ms, marking as FAULTY", LogLevel::CRIT);
             }
             faulty_motors.insert(id);
         }
