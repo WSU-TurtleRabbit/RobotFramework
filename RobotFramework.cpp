@@ -68,6 +68,9 @@ enum class State
     STOPPING
 };
 
+// --- Helper functions ----
+inline void process_motor_telemetry();
+
 // --- Forward declaration of states ---
 void startup(int argc, char **argv);
 void idle();
