@@ -483,12 +483,6 @@ void fault()
     if (current_time - last_reciver_time >= Reciver_interval)
     {
         msg = UDP.receive();
-        // In FAULT state, always stop all motors, and keep track of which are faulty
-        for (const auto &pair : telemetry.controllers)
-        {
-            pair.second->SetStop();
-        }
-        logger.log("rframework", "Sent stop to all controllers", LogLevel::DONE);
 
         // Log FAULT state for each faulty motor
         if (!faulty_motors.empty())
@@ -502,6 +496,13 @@ void fault()
         last_reciver_time = current_time;
     }
 
+    // In FAULT state, always stop all motors, and keep track of which are faulty
+    for (const auto &pair : telemetry.controllers)
+    {
+        pair.second->SetStop();
+    }
+    logger.log("rframework", "Sent stop to all controllers", LogLevel::DONE);
+
     // --- Camera Ball Detection ---
     if (current_time - last_camera_time >= CameraInterval)
     {
@@ -509,13 +510,6 @@ void fault()
         logger.log("rframework", "camball", std::string("ball_detected=") + (camera_ball_detected ? "true" : "false"), LogLevel::INFO);
         sender_msg.ball_present = camera_ball_detected;
         last_camera_time = current_time;
-    }
-
-    // --- Motor Telemetry and Safety Check ---
-    if (current_time - last_motor_time >= MotorInterval)
-    {
-        process_motor_telemetry();
-        last_motor_time = current_time;
     }
 
     // --- UDP Telemetry Sender ---
