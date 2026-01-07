@@ -358,7 +358,7 @@ void idle()
 
     // --- UDP Telemetry Sender ---
     // In IDLE state, robot sends state 3 times less often
-    if (current_time - last_sender_time >= (Sender_interval * 3))
+    if (current_time - last_sender_time >= Sender_interval)
     {
         std::string msg = "Robot State: IDLE, Battery Voltage:" + std::to_string(sender_msg.voltage) +
                           ", Ball Detection:" + std::to_string(sender_msg.ball_present);
