@@ -98,9 +98,9 @@ std::map<int, std::chrono::steady_clock::time_point> last_motor_response; // Las
 std::chrono::milliseconds FaultGrace{1500};                               // Time in milliseconds a part can go without responding before being considered faulty
 
 // --- Initialize Dribbler Variables ---
-char kick = 'k';         // Kick command
-char dribble = 'd';      // Dribble command
-char stop_dribble = 's'; // Stop Dribble command
+char kick = 'K';         // Kick command
+char dribble = 'D';      // Dribble command
+char stop_dribble = 'S'; // Stop Dribble command
 
 // --- Cam Detection Thread ---
 std::thread camera_thread;
