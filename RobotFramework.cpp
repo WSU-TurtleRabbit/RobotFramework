@@ -114,7 +114,7 @@ std::map<std::string, double> configData;
 // --- Interval durations for periodic tasks ---
 std::chrono::milliseconds Reciver_interval{20};
 std::chrono::milliseconds CameraInterval{200};
-std::chrono::milliseconds MotorInterval{20};
+std::chrono::milliseconds MotorInterval{50};
 std::chrono::milliseconds Sender_interval{1000};
 std::chrono::milliseconds Arduino_interval{100};
 
@@ -610,6 +610,11 @@ inline void process_motor_telemetry()
         if (r.current > current_limit)
         {
             logger.log("rframework", sub, "Overcurrent detected", LogLevel::CRIT);
+            emergency_stop = true;
+        }
+        if (r.voltage < 22.5)
+        {
+            logger.log("rframework", sub, "Overvoltage detected", LogLevel::CRIT);
             emergency_stop = true;
         }
         // Update last response time for this motor
