@@ -58,7 +58,8 @@ activate_venv() {
         source .rframework-venv/bin/activate
         return 0
     else
-        echo "✗ .rframework-venv not found! Please create it first"
+        echo "✗ .rframework-venv not found!"
+        install_venv
         return 1
     fi
 }
