@@ -479,6 +479,8 @@ void fault()
     static auto last_sender_time = current_time;
     static auto last_arduino_time = current_time;
 
+    bool hasLoggedStop = false;
+
     // --- UDP Receiver ---
     if (current_time - last_reciver_time >= Reciver_interval)
     {
@@ -501,7 +503,10 @@ void fault()
     {
         pair.second->SetStop();
     }
-    logger.log("rframework", "Sent stop to all controllers", LogLevel::DONE);
+    if (!hasLoggedStop)
+    {
+        logger.log("rframework", "Sent stop to all controllers", LogLevel::DONE);
+    }
 
     // --- Camera Ball Detection ---
     if (current_time - last_camera_time >= CameraInterval)
