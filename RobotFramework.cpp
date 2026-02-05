@@ -121,6 +121,7 @@ std::chrono::milliseconds Arduino_interval{100};
 // --- Robot mode and state ---
 State state = State::STARTUP;
 bool emergency_stop = false;
+bool hasLoggedFaultStop = false;
 int mode = 0;
 
 // --- Current time and time from last command and how long until IDLE mode ---
@@ -479,8 +480,6 @@ void fault()
     static auto last_sender_time = current_time;
     static auto last_arduino_time = current_time;
 
-    bool hasLoggedStop = false;
-
     // --- UDP Receiver ---
     if (current_time - last_reciver_time >= Reciver_interval)
     {
@@ -503,9 +502,10 @@ void fault()
     {
         pair.second->SetStop();
     }
-    if (!hasLoggedStop)
+    if (!hasLoggedFaultStop)
     {
         logger.log("rframework", "Sent stop to all controllers", LogLevel::DONE);
+        hasLoggedFaultStop = true;
     }
 
     // --- Camera Ball Detection ---
