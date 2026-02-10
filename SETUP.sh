@@ -65,6 +65,27 @@ package_uninstaller() {
     fi
 }
 
+# Setup the startup script by copy and pasting it into systemd/system and enabling it
+setup_startup_script() {
+    set -e
+
+    S_NAME=rf_startup.service
+    S_LOC=./$S_NAME
+    S_DST=/etc/systemd/system/$S_NAME
+
+    echo "Installing startup script: $S_NAME"
+
+    sudo cp "$S_LOC" "$S_DST"
+    sudo chmod 644 "$S_DST"
+
+    sudo systemctl daemon-reexec
+    sudo systemctl daemon-reload
+
+    sudo systemctl enable "$S_NAME"
+
+    echo "✓ Startup script installed and enabled"
+}
+
 # Menu
 PS3='What would you like to do? '
 options=(
@@ -107,9 +128,13 @@ do
             ;;
         "Build RobotFramework")
             echo "Building RobotFramework..."
-            rm -rf build
-            mkdir build && cd build && cmake .. && make
-            cd ..
+            if cd build && make; then
+                cd ..
+            else
+                rm -rf build
+                mkdir build && cd build && cmake .. && make
+                cd ..
+            fi
             ;;
         "Full Setup")
             echo "Installing dependancies..."
@@ -121,6 +146,8 @@ do
             rm -rf build
             mkdir build && cd build && cmake .. && make
             cd ..
+            echo "Installing startup script..."
+            setup_startup_script
             echo "Setup complete!"
             ;;
         "Quit")
