@@ -1,0 +1,12 @@
+[Unit]
+Description=Start up RobotFramework
+After=network.target
+
+[Service]
+ExecStart=/home/pi/RobotFramework/$ADD_LATER
+WorkingDirectory=/home/pi/RobotFramework
+Restart=on-failure
+
+# Needed if service runs autmoatically in startup
+[Install]
+WantedBy=multi-user.target
