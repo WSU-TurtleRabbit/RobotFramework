@@ -69,8 +69,8 @@ package_uninstaller() {
 setup_startup_script() {
     set -e
 
-    S_NAME=rfstartup.service
-    S_LOC=./$S_NAME
+    S_NAME=rframework.service
+    S_LOC=./scripts/$S_NAME
     S_DST=/etc/systemd/system/$S_NAME
 
     echo "Installing startup script: $S_NAME"

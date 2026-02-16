@@ -2,10 +2,12 @@
 Description=Start up RobotFramework
 After=network.target
 
+# %h to expand to home dir
 [Service]
-ExecStart=/home/pi/RobotFramework/$ADD_LATER
-WorkingDirectory=/home/pi/RobotFramework
-Restart=on-failure
+ExecStart=%h/RobotFramework/scripts/startup.sh
+WorkingDirectory=%h/RobotFramework
+Restart=always
+RestartSec=3s
 
 # Needed if service runs autmoatically in startup
 [Install]
