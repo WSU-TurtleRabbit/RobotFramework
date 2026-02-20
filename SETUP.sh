@@ -92,6 +92,7 @@ options=(
     "Check Dependencies"
     "Install Dependencies"
     "Uninstall Dependencies"
+    "Reload Startup Script"
     "Build RobotFramework"
     "Full Setup"
     "Quit"
@@ -125,6 +126,10 @@ do
                 package_uninstaller "$package"
             done
             echo "Uninstalls complete!"
+            ;;
+        "Reload Startup Script")
+            echo "Installing startup script..."
+            setup_startup_script
             ;;
         "Build RobotFramework")
             echo "Building RobotFramework..."

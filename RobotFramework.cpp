@@ -617,7 +617,7 @@ inline void process_motor_telemetry()
             logger.log("rframework", sub, "Overcurrent detected", LogLevel::CRIT);
             emergency_stop = true;
         }
-        if (r.voltage < 22.5)
+        if (r.voltage < 20)
         {
             logger.log("rframework", sub, "Overvoltage detected", LogLevel::CRIT);
             emergency_stop = true;
