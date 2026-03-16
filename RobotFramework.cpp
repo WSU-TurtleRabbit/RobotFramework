@@ -96,6 +96,7 @@ Telemetry_msg sender_msg;           // Telemetry message to send
 std::set<int> faulty_motors;                                              // Set of motor IDs considered faulty
 std::map<int, std::chrono::steady_clock::time_point> last_motor_response; // Last response time for each motor
 std::chrono::milliseconds FaultGrace{1500};                               // Time in milliseconds a part can go without responding before being considered faulty
+std::chrono::steady_clock::time_point fault_entry_time;                   // When the robot entered FAULT state
 
 // --- Initialize Dribbler Variables ---
 char kick = 'K';         // Kick command
@@ -339,6 +340,16 @@ void idle()
 
             logger.log("rframework", "Entering RUNNING state", LogLevel::INFO);
             state = State::RUNNING;
+
+                for (const auto &pair : telemetry.controllers)
+                    {
+                        pair.second->SetStop();
+                    }
+                    if (!hasLoggedFaultStop)
+                    {
+                        logger.log("rframework", "Sent stop to all controllers", LogLevel::DONE);
+                        hasLoggedFaultStop = true;
+                    }
             return;
         }
         last_reciver_time = current_time;
@@ -626,7 +637,7 @@ inline void process_motor_telemetry()
         last_motor_response[motor_id] = now;
         i++;
     }
-    // Mark motors as faulty if not responding for >1s
+    // Mark motors as faulty if not responding, or clear them if they've recovered
     for (int id = 1; id <= 4; ++id)
     {
         auto it = last_motor_response.find(id);
@@ -639,13 +650,30 @@ inline void process_motor_telemetry()
             }
             faulty_motors.insert(id);
         }
+        else
+        {
+            // Motor is responding within grace period — remove from faulty set if it was there
+            if (faulty_motors.count(id))
+            {
+                faulty_motors.erase(id);
+                logger.log("rframework", "motor-" + std::to_string(id), "Motor recovered, removed from faulty set", LogLevel::INFO);
+            }
+        }
     }
     // If any new faulty motors detected, enter FAULT state
     if (!faulty_motors.empty() && state != State::FAULT)
     {
         logger.log("rframework", "FAULT detected", LogLevel::CRIT);
         logger.log("rframework", "Entering FAULT state", LogLevel::INFO);
+        fault_entry_time = now;
         state = State::FAULT;
+    }
+    // If all motors have recovered while in FAULT, transition back to IDLE
+    if (faulty_motors.empty() && state == State::FAULT)
+    {
+        logger.log("rframework", "All motors recovered, entering IDLE state", LogLevel::INFO);
+        hasLoggedFaultStop = false;
+        state = State::IDLE;
     }
     float sum = 0;
     int count = 0;
