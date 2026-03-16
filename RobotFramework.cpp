@@ -334,22 +334,18 @@ void idle()
         }
         else
         {
-            // std::cout << msg << "\n";
             logger.log("rframework", "reciever", std::string("Message Recieved: ") + msg, LogLevel::INFO);
+            cmd.decode_cmd(msg);
+            wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
+            velocity_map = {
+                {1, wheel_velocity[0]},
+                {2, wheel_velocity[1]},
+                {3, wheel_velocity[2]},
+                {4, wheel_velocity[3]}};
             last_command_time = current_time;
 
             logger.log("rframework", "Entering RUNNING state", LogLevel::INFO);
             state = State::RUNNING;
-
-                for (const auto &pair : telemetry.controllers)
-                    {
-                        pair.second->SetStop();
-                    }
-                    if (!hasLoggedFaultStop)
-                    {
-                        logger.log("rframework", "Sent stop to all controllers", LogLevel::DONE);
-                        hasLoggedFaultStop = true;
-                    }
             return;
         }
         last_reciver_time = current_time;
@@ -632,6 +628,17 @@ inline void process_motor_telemetry()
         {
             logger.log("rframework", sub, "Overvoltage detected", LogLevel::CRIT);
             emergency_stop = true;
+        }
+        // If the controller is in hardware fault mode, clear it with SetStop()
+        // so the next MakePosition() command will be accepted.
+        if (r.mode == static_cast<int>(mjbots::moteus::Mode::kFault))
+        {
+            logger.log("rframework", sub, "Hardware fault detected (mode=1), sending SetStop to clear", LogLevel::WARN);
+            auto ctrl_it = telemetry.controllers.find(motor_id);
+            if (ctrl_it != telemetry.controllers.end())
+            {
+                ctrl_it->second->SetStop();
+            }
         }
         // Update last response time for this motor
         last_motor_response[motor_id] = now;
