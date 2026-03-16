@@ -339,6 +339,15 @@ void idle()
 
             logger.log("rframework", "Entering RUNNING state", LogLevel::INFO);
             state = State::RUNNING;
+               for (const auto &pair : telemetry.controllers)
+                {
+                    pair.second->SetStop();
+                }
+                if (!hasLoggedFaultStop)
+                {
+                    logger.log("rframework", "Sent stop to all controllers", LogLevel::DONE);
+                    hasLoggedFaultStop = true;
+                }
             return;
         }
         last_reciver_time = current_time;
