@@ -107,7 +107,7 @@ int main(int argc, char **argv)
             // Fallback on SAFE mode
             mode = 0;
             std::cerr << "Unknown flag or argument: " << argv[1] << std::endl;
-            logger.log("rframework", std::string("Unknown flag or argument: ") + 
+            logger.log("rframework", std::string("Unknown flag or argument: ") +
                 argv[1], LogLevel::WARN);
             logger.log("rframework", "Starting in SAFE mode", LogLevel::INFO);
         }
@@ -228,9 +228,9 @@ int main(int argc, char **argv)
     logger.log("rframework", "Sent stop to all controllers", LogLevel::DONE);
 
     // --- Log UDP ports ---
-    logger.log("rframework", std::string("Sending port at: ") + 
+    logger.log("rframework", std::string("Sending port at: ") +
         std::to_string(UDP.getSenderPort()), LogLevel::LOVE);
-    logger.log("rframework", std::string("Recieving port at: ") + 
+    logger.log("rframework", std::string("Recieving port at: ") +
         std::to_string(UDP.getRecieverPort()), LogLevel::LOVE);
 
     // --- Main control loop ---
