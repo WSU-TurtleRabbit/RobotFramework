@@ -61,7 +61,7 @@ package_uninstaller() {
             return 1
         fi
     else
-        echo "Dependancy Package: $TO_BE_CHECKED ✓ Dependancy already uninstalled"
+        echo "Dependancy Package: $TO_BE_CHECKED ✓ Dependancy already not installed"
     fi
 }
 
@@ -126,6 +126,9 @@ do
         "Quit")
             echo "Laters!"
             exit 0
+            ;;
+        *)
+            echo "Invalid option, try again."
             ;;
     esac
 done

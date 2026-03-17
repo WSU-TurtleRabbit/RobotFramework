@@ -22,9 +22,12 @@ void Wheel_math::initalize_math() {
     Y_LIMIT = 0.5;
     W_LIMIT = 0.1;
     }
+
 }
 
 std::vector<double> Wheel_math::calculate(double velocity_x, double velocity_y, double velocity_w) {
+    double vx;
+    double vy;
 
     // ---- Limit Checking ----
     if (mode == 0)
@@ -62,22 +65,26 @@ std::vector<double> Wheel_math::calculate(double velocity_x, double velocity_y, 
         velocity_w *= scale;
     }
 
+    vy = velocity_x;
+    vx = velocity_y;
     // ---- Omni Wheel Kinematics ----
-    wheel_vel[0] = ( (velocity_x * std::sin(W1_RAD)) +
-                     (velocity_y * std::cos(W1_RAD)) +
+    wheel_vel[0] = ( (vx * std::sin(W1_RAD)) +
+                     (vy * std::cos(W1_RAD)) +
                      (velocity_w * wheel_dist_1) ) / WHEEL_RADIUS;
 
-    wheel_vel[1] = ( (velocity_x * std::sin(W2_RAD)) +
-                     (velocity_y * std::cos(W2_RAD)) +
+    wheel_vel[1] = ( (vx * std::sin(W2_RAD)) +
+                     (vy * std::cos(W2_RAD)) +
                      (velocity_w * wheel_dist_2) ) / WHEEL_RADIUS;
 
-    wheel_vel[2] = ( (velocity_x * std::sin(W3_RAD)) +
-                     (velocity_y * std::cos(W3_RAD)) +
+    wheel_vel[2] = ( (vx * std::sin(W3_RAD)) +
+                     (vy * std::cos(W3_RAD)) +
                      (velocity_w * wheel_dist_3) ) / WHEEL_RADIUS;
 
-    wheel_vel[3] = ( (velocity_x * std::sin(W4_RAD)) +
-                     (velocity_y * std::cos(W4_RAD)) +
+    wheel_vel[3] = ( (vx * std::sin(W4_RAD)) +
+                     (vy * std::cos(W4_RAD)) +
                      (velocity_w * wheel_dist_4) ) / WHEEL_RADIUS;
+
+
 
     return wheel_vel;
 }

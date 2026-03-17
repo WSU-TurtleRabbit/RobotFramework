@@ -4,3 +4,4 @@ intervals:
   Reciver_interval: 20
   Sender_interval: 1000
   Camera_interval: 200
+  Idle_interval: 3000

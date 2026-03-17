@@ -45,3 +45,5 @@ add_subdirectory(Logger)
 # Build the main executable
 build_executable(RobotFramework)
 build_executable(StopMotor)
+add_executable(Motor_test tests/legacy/MultiMotor.cpp)
+target_link_libraries(Motor_test PRIVATE COMMON_LIBS)

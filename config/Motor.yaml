@@ -1,5 +1,5 @@
 motorMap:
   1: 1 # MOTOR ID 1 Mapped to BUS 1
-  4: 1 # MOTOR ID 4 Mapped to BUS 1
   2: 2 # MOTOR ID 2 Mapped to BUS 2
-  3: 2 # MOTOR ID 3 Mapped to BUS 2
+  3: 3 # MOTOR ID 3 Mapped to BUS 3
+  4: 4 # MOTOR ID 4 Mapped to BUS 4
