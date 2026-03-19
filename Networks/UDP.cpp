@@ -31,7 +31,7 @@ UDP::UDP() {
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(receiver_port);
 
-    tv.tv_usec = 50000; 
+    tv.tv_usec = 1000; 
     tv.tv_sec = 0;
 
     setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)); 
