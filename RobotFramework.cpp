@@ -175,6 +175,9 @@ int main(int argc, char **argv)
     static auto Sender_interval = std::chrono::milliseconds(interval_sender);
     static auto Arduino_interval = std::chrono::milliseconds(interval_arduino);
 
+    // Watchdog: zero motors if no valid packet received within this window
+    static constexpr auto WatchdogTimeout = std::chrono::milliseconds(500);
+
     // --- Initialize modules ---
     BallDetection detect; // Camera detection
     UDP UDP;              // UDP communication
@@ -250,27 +253,26 @@ int main(int argc, char **argv)
         static auto last_sender_time = current_time;
         static auto last_arduino_time = current_time;
 
-        // --- UDP Receiver ---
+        // Tracks last time a valid UDP packet was received (for watchdog)
+        static auto last_valid_packet_time = current_time;
+
+        // --- UDP Receiver (5ms) ---
+        // Polls frequently to get the latest command ASAP.
+        // Timeout is handled by the watchdog below, not here.
         if (current_time - last_reciver_time >= Reciver_interval)
         {
-            msg = UDP.receive(); // Receive new message
-            if (msg == "TIMEOUT")
+            msg = UDP.receive();
+            if (msg != "TIMEOUT")
             {
-                logger.log("rframework", "reciever", "UDP TIMEOUT", LogLevel::WARN);
-                velocity_map = {{1, 0.0}, {2, 0.0}, {3, 0.0}, {4, 0.0}}; // Stop wheels
-            }
-            else
-            {
-                // std::cout << msg << "\n";
                 logger.log("rframework", "reciever", std::string("Message Recieved: ") + msg, LogLevel::INFO);
-                cmd.decode_cmd(msg); // Decode velocity commands
+                cmd.decode_cmd(msg);
                 wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
-                // Map velocities to motors
                 velocity_map = {
                     {1, wheel_velocity[0]},
                     {2, wheel_velocity[1]},
                     {3, wheel_velocity[2]},
                     {4, wheel_velocity[3]}};
+                last_valid_packet_time = current_time; // Reset watchdog
             }
             last_reciver_time = current_time;
         }
@@ -288,7 +290,15 @@ int main(int argc, char **argv)
         // --- Motor Telemetry and Safety Check ---
         if (current_time - last_motor_time >= MotorInterval)
         {
-            auto servo_status = telemetry.cycle(velocity_map); // Send commands & receive telemetry
+            // Watchdog: if no valid packet in 500ms, send zero velocity instead
+            std::map<int, double> motor_commands = velocity_map;
+            if (current_time - last_valid_packet_time > WatchdogTimeout)
+            {
+                motor_commands = {{1, 0.0}, {2, 0.0}, {3, 0.0}, {4, 0.0}};
+                logger.log("rframework", "motor", "Watchdog triggered: no packet for >500ms, zeroing motors", LogLevel::WARN);
+            }
+
+            auto servo_status = telemetry.cycle(motor_commands); // Send commands & receive telemetry
 
             float voltage[4];
             int i = 0;
