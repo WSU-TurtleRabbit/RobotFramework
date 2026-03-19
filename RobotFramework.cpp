@@ -63,9 +63,9 @@ int main(int argc, char **argv)
 {
     using namespace mjbots;
 
-    char kick = 'k';
-    char dribble = 'd';
-    char stop_dribble = 's';
+    char kick = 'K';
+    char dribble = 'D';
+    char stop_dribble = 'S';
 
     int mode = 0;
 
@@ -197,14 +197,18 @@ int main(int argc, char **argv)
     logger.log("rframework", "arduino", "Connecting to Arduino port...", LogLevel::INFO);
     a.connect(a.getPort());
 
-    if (a.isConnected())
-    {
-        logger.log("rframework", "arduino", std::string("Port found at ") + (a.getPort()), LogLevel::DONE);
-    }
-    else
-    {
-        logger.log("rframework", "arduino", "No arduino found", LogLevel::WARN);
-    }
+    cmd.kick = false;
+    cmd.dribble = false;
+
+
+    // if (a.isConnected())
+    // {
+    //     logger.log("rframework", "arduino", std::string("Port found at ") + (a.getPort()), LogLevel::DONE);
+    // }
+    // else
+    // {
+    //     logger.log("rframework", "arduino", "No arduino found", LogLevel::WARN);
+    // }
 
     bool emergency_stop = false; // Flag to stop robot on emergency
 
@@ -342,16 +346,20 @@ int main(int argc, char **argv)
                 {
                     a.sendCommand(kick); // Kick
                     logger.log("rframework", "arduino", "Sent kick", LogLevel::HATE);
+                    cmd.kick = false;
                 }
                 else if (cmd.dribble)
                 {
                     a.sendCommand(dribble); // Dribble
                     logger.log("rframework", "arduino", "Sent dribble", LogLevel::LOVE);
+                
                 }
                 else
                 {
                     a.sendCommand(stop_dribble); // Stop
                     logger.log("rframework", "arduino", "Sent stop dribble", LogLevel::INFO);
+                    
+
                 }
             }
             last_arduino_time = current_time;
