@@ -1,7 +1,7 @@
 intervals:
   Motor_interval: 20
   Arduino_interval: 100
-  Reciver_interval: 20
+  Reciver_interval: 5
   Sender_interval: 1000
   Camera_interval: 200
   Idle_interval: 3000
