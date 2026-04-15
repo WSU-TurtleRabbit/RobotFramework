@@ -38,6 +38,13 @@ std::atomic<bool> ball_detected{false};      // Stores ball detection result fro
 std::atomic<bool> stop_camera_thread{false}; // Signals the camera thread to stop
 std::atomic<bool> manual_stop_flag{false};   // Signals main loop to stop on Ctrl+C
 
+// Full onboard ball observation, published by the camera thread.
+// Read without a lock: trivially copyable POD stored atomically.
+static_assert(std::is_trivially_copyable<BallObservation>::value,
+              "BallObservation must be trivially copyable for std::atomic");
+std::atomic<BallObservation> ball_observation{
+    BallObservation{false, 0.f, 0.f, 0.f, 0.f, 0.f}};
+
 // --- Forward declaration for signal handler ---
 void signalHandler(int signum);
 
@@ -46,8 +53,9 @@ void CameraThread(BallDetection &detector)
 {
     while (!stop_camera_thread.load(std::memory_order_relaxed))
     {
-        bool result = detector.find_ball();                          // Check if ball is present
-        ball_detected.store(result, std::memory_order_relaxed);      // Store result atomically
+        BallObservation obs = detector.observe();
+        ball_observation.store(obs, std::memory_order_relaxed);
+        ball_detected.store(obs.found, std::memory_order_relaxed);
         std::this_thread::sleep_for(std::chrono::milliseconds(300)); // Reduce CPU usage
     }
 }
@@ -55,8 +63,9 @@ void CameraThread(BallDetection &detector)
 // --- Struct for telemetry message to send ---
 struct Telemetry_msg
 {
-    bool ball_present; // True if ball detected
-    float voltage;     // Average motor voltage
+    bool  ball_present; // True if ball detected
+    float voltage;      // Average motor voltage
+    BallObservation obs; // Onboard detection details
 };
 
 int main(int argc, char **argv)
@@ -285,10 +294,17 @@ int main(int argc, char **argv)
         // --- Camera Ball Detection ---
         if (current_time - last_camera_time >= CameraInterval)
         {
-            bool camera_ball_detected = ball_detected.load(std::memory_order_relaxed);
-            // std::cout << camera_ball_detected << "\n";
-            logger.log("rframework", "camball", std::string("ball_detected=") + (camera_ball_detected ? "true" : "false"), LogLevel::INFO);
-            sender_msg.ball_present = camera_ball_detected;
+            BallObservation obs = ball_observation.load(std::memory_order_relaxed);
+            sender_msg.obs = obs;
+            sender_msg.ball_present = obs.found;
+            logger.log("rframework", "camball",
+                std::string("ball_detected=") + (obs.found ? "true" : "false") +
+                " px=" + std::to_string(obs.px) +
+                " py=" + std::to_string(obs.py) +
+                " r="  + std::to_string(obs.radius) +
+                " b="  + std::to_string(obs.bearing) +
+                " c="  + std::to_string(obs.confidence),
+                LogLevel::INFO);
             last_camera_time = current_time;
         }
 
@@ -342,8 +358,20 @@ int main(int argc, char **argv)
         // --- UDP Telemetry Sender ---
         if (current_time - last_sender_time >= Sender_interval)
         {
-            std::string msg = "Robot State: Active, Battery Voltage:" + std::to_string(sender_msg.voltage) +
-                              ", Ball Detection:" + std::to_string(sender_msg.ball_present);
+            // key=value telemetry so external PC can parse deterministically.
+            // Fields: state, voltage, ball (0/1), px, py, radius, bearing, conf, ts_ms.
+            auto ts_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                current_time.time_since_epoch()).count();
+            std::string msg =
+                "state=active"
+                ",voltage=" + std::to_string(sender_msg.voltage) +
+                ",ball="    + (sender_msg.obs.found ? "1" : "0") +
+                ",px="      + std::to_string(sender_msg.obs.px) +
+                ",py="      + std::to_string(sender_msg.obs.py) +
+                ",r="       + std::to_string(sender_msg.obs.radius) +
+                ",bearing=" + std::to_string(sender_msg.obs.bearing) +
+                ",conf="    + std::to_string(sender_msg.obs.confidence) +
+                ",ts_ms="   + std::to_string(ts_ms);
             logger.log("rframework", "sender", msg, LogLevel::INFO);
             UDP.send(msg);
             last_sender_time = current_time;
