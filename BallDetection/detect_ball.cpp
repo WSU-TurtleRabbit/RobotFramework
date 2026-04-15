@@ -1,0 +1,41 @@
+#include "detect_ball.h"
+
+BallDetection::BallDetection(){
+
+    lower_orange = cv::Scalar(5, 100, 100);
+    upper_orange = cv::Scalar(15, 255, 255);
+}
+
+int BallDetection::open_cam(){
+    capture.open(0);
+    if (!capture.isOpened()) {
+        std::cerr << "Error: Could not open camera\n";
+        return -1;
+    }
+    capture.set(cv::CAP_PROP_FRAME_WIDTH, 320);
+    capture.set(cv::CAP_PROP_FRAME_HEIGHT, 240);
+    capture.set(cv::CAP_PROP_FPS, 30);
+    return 1;
+}
+
+bool BallDetection::find_ball() {
+    cv::Mat frame, hsv, mask;
+    capture >> frame;
+    if (frame.empty()) {
+        std::cerr << "Error: Empty frame\n";
+    }
+
+    // Convert to HSV and threshold for orange
+    cv::cvtColor(frame, hsv, cv::COLOR_BGR2HSV);
+    cv::inRange(hsv, lower_orange, upper_orange, mask);
+    cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+
+    for (const auto& contour : contours) {
+        double area = cv::contourArea(contour);
+        if (area > 300) { // Adjust this threshold as needed
+            return true;
+        }
+    }
+    return false;
+}

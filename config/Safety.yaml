@@ -1,0 +1,8 @@
+velocityLimit:
+  xLimit: 2 # m/s
+  yLimit: 2 # m/s
+  wLimit: 3.15 # rads/s
+
+currentLimit: 5.0 # Amps
+
+faultyGrace: 1500 # milliseconds
