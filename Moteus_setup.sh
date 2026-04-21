@@ -23,7 +23,7 @@ echo "Dependencies installed."
 # Run calibration as admin
 echo "Starting calibration"
 echo "Ensure motors are lifted"
-sudo "$VENV_DIR/bin/moteus_tool" \
+sudo moteus_tool \
     --pi3hat-cfg "1=1;2=2;3=3;4=4" \
     -t 1,2,3,4 \
     --calibrate
