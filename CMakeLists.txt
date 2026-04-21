@@ -23,6 +23,7 @@ target_link_libraries(COMMON_LIBS INTERFACE
     bcm_host
     Telemetry
     Logger
+    Atomic 
     yaml-cpp
 )
 
