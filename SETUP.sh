@@ -1,6 +1,28 @@
 #!/usr/bin/env bash
 
-# RUN USING:    bash ./SETUP.sh [action]
+# Simple setup helper for the RobotFramework project.
+#
+# It can:
+# - check whether required system packages are installed
+# - install or uninstall system packages used by the project
+# - create and activate the local Python virtual environment
+# - install or uninstall the required Python packages
+# - prepare moteus tools and optionally calibrate the wheel motors
+# - build the project with CMake
+#
+# How to use it:
+# - bash ./SETUP.sh            -> open the interactive menu
+# - bash ./SETUP.sh help       -> show the full command list
+# - bash ./SETUP.sh [action]   -> run one action directly
+#
+# Main actions:
+# - checkup: check both system dependencies and Python packages
+# - check-system / install-system / uninstall-system: manage Linux packages
+# - check-python / install-python / uninstall-python: manage Python packages
+# - moteus-setup: set up the moteus Python environment and offer calibration
+# - calibrate-wheels: calibrate selected motors using config/Motor.yaml
+# - build: configure and build the project
+# - full-setup: install dependencies and build everything
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR" || exit 1
