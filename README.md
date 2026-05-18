@@ -26,3 +26,11 @@ cd build
 cmake <repo-destination>
 make
 ```
+
+On a Raspberry Pi running Linux, the repo now has one main setup entrypoint:
+
+```bash
+bash ./SETUP.sh
+```
+
+That script covers system dependencies, the shared Python virtual environment, moteus package installation, Motor.yaml-based calibration, and project builds. The older helper scripts still exist as wrappers and forward into `SETUP.sh`.
