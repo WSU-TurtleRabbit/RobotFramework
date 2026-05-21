@@ -23,7 +23,7 @@ target_link_libraries(COMMON_LIBS INTERFACE
     bcm_host
     Telemetry
     Logger
-    Atomic 
+    atomic 
     yaml-cpp
 )
 
@@ -46,5 +46,5 @@ add_subdirectory(Logger)
 # Build the main executable
 build_executable(RobotFramework)
 build_executable(StopMotor)
-add_executable(Motor_test tests/legacy/MultiMotor.cpp)
+add_executable(Motor_test MultiMotor.cpp)
 target_link_libraries(Motor_test PRIVATE COMMON_LIBS)
