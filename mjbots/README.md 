@@ -1,0 +1,38 @@
+# mjbots Libraries
+
+## Purpose
+
+This folder contains local copies of the `moteus` and `pi3hat` libraries from the mjbots project. Rather than relying on the upstream packages directly, these libraries have been vendored into this repository to give us full version control over the exact code we depend on.
+
+The motivation is straightforward: upstream mjbots libraries can and do change. New releases may introduce API changes, behavioural differences, or bugs that would silently break our current working system if we pulled the latest versions automatically. By keeping a known-good copy here, we control exactly when (and whether) to update, and any changes can be reviewed and tested deliberately rather than being forced on us.
+
+## How It Was Built
+
+The libraries were not modified or re-implemented. They are a direct copy-paste from the official mjbots repositories, taken from the `lib/cpp/moteus` and `lib/cpp/pi3hat` subdirectories respectively. This keeps the code identical to the upstream version we validated against, while still isolating us from future upstream changes.
+
+### Source Repositories
+
+- **moteus:** https://github.com/mjbots/moteus — copied from `lib/cpp/moteus`
+- **pi3hat:** https://github.com/mjbots/pi3hat — copied from `lib/cpp/pi3hat`
+
+### Version Tags (at time of copy)
+
+| Library | Latest release tag as of 21/05/2026 | Release date |
+| ------- | ----------------------------------- | ------------ |
+| moteus  | `0.1-20260121`                      | 22 Jan 2026  |
+| pi3hat  | `0.1-20260117`                      | 17 Jan 2026  |
+
+> These are the most recent upstream release tags that existed on or before our copy date. The actual files in this folder were taken from the `main`/`master` branch at the time of copy, which may include commits made after the tagged release. If exact reproducibility is needed, diff against the tags above or check the upstream commit history between the tag date and 21/05/2026.
+
+### Updating in the Future
+
+If we need to update either library:
+
+1. Pull the desired version from the upstream mjbots repository.
+2. Replace the contents of the relevant folder here.
+3. Re-test the system against the new version before committing.
+4. Update this README with the new version tag and date.
+
+## Import Date
+
+Both the `moteus` and `pi3hat` libraries were added to this repository on **21/05/2026**, copied directly from the mjbots main libraries.

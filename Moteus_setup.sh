@@ -17,15 +17,6 @@ fi
 # Activate and install moteus
 source "$VENV_DIR/bin/activate"
 pip install --upgrade pip --quiet
-pip install moteus moteus-pi3hat numpy requests --quiet
+pip install moteus moteus-pi3hat numpy moteus_gui requests --quiet
 echo "Dependencies installed."
  
-# Run calibration as admin
-echo "Starting calibration"
-echo "Ensure motors are lifted"
-sudo moteus_tool \
-    --pi3hat-cfg "1=1;2=2;3=3;4=4" \
-    -t 1,2,3,4 \
-    --calibrate
- 
-echo "Done."
