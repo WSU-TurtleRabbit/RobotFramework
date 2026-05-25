@@ -10,6 +10,7 @@ The motivation is straightforward: upstream mjbots libraries can and do change. 
 
 The libraries were not modified or re-implemented. They are a direct copy-paste from the official mjbots repositories, taken from the `lib/cpp/moteus` and `lib/cpp/pi3hat` subdirectories respectively. This keeps the code identical to the upstream version we validated against, while still isolating us from future upstream changes.
 
+on the pi3hat.h we have made a modifaction to enable_aux = false this was to adress an aux error. 
 ### Source Repositories
 
 - **moteus:** https://github.com/mjbots/moteus — copied from `lib/cpp/moteus`

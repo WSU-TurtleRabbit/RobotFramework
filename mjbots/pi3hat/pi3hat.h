@@ -176,7 +176,7 @@ class Pi3Hat {
     // RF communication will be with a transmitter having this ID.
     uint32_t rf_id = 5678;
 
-    bool enable_aux = true;
+    bool enable_aux = false; //Set to false as we were gettting a version mismatch error . 
 
     CanConfiguration can[5] = {};
 
