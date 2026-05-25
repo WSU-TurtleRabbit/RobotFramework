@@ -28,9 +28,9 @@ target_link_libraries(COMMON_LIBS INTERFACE
 
 # Function to build an executable with common dependencies
 function(build_executable target_name source_file)
-    add_executable(${target_name} ${source_file})
-    target_link_libraries(${target_name} PRIVATE COMMON_LIBS)
-endfunction()
+       add_executable(${target_name} ${source_file})
+       target_link_libraries(${target_name} PRIVATE COMMON_LIBS)
+   endfunction()
 
 # Subdirectories
 add_subdirectory(mjbots/moteus)
@@ -43,7 +43,7 @@ add_subdirectory(Telemetry)
 add_subdirectory(Logger)
 
 # Build the main executable
-build_executable(RobotFramework)
+build_executable(RobotFramework RobotFramework.cpp)
 build_executable(Motor_test tests/MultiMotor.cpp)
 build_executable(pi3hat_tool mjbots/pi3hat/pi3hat_tool.cc)
 
