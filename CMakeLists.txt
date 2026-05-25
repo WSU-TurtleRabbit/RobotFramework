@@ -44,7 +44,6 @@ add_subdirectory(Logger)
 
 # Build the main executable
 build_executable(RobotFramework)
-build_executable(StopMotor)
 build_executable(Motor_test tests/MultiMotor.cpp)
-build_executable(pi3hat_tool mjbots/pi3hat/pi3hat_tool)
+build_executable(pi3hat_tool mjbots/pi3hat/pi3hat_tool.cc)
 
