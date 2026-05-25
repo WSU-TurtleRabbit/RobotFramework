@@ -18,9 +18,9 @@ target_link_libraries(COMMON_LIBS INTERFACE
     Arduino
     Networks 
     wheel_math
-    bcm_host
     moteus 
     pi3hat 
+    bcm_host
     Telemetry
     Logger
     atomic 
