@@ -1,6 +1,13 @@
-// motor_test.cc
-// Minimal moteus single-motor test via pi3hat.
-// Ctrl+C cleanly stops the motor before exit.
+// Copyright 2023 mjbots Robotic Systems, LLC.
+// Licensed under the Apache License, Version 2.0
+//
+// Simple single-motor test using moteus + pi3hat directly:
+//   - Configures the pi3hat router with ONLY the specified bus
+//   - Sends a constant velocity command at 50 Hz
+//   - Prints telemetry returned each cycle
+//   - Ctrl+C stops the motor cleanly before exit
+//
+// Usage: sudo ./motor_test --bus 1 --id 1 --vel 1
 
 #include <atomic>
 #include <chrono>
@@ -14,31 +21,32 @@
 
 using namespace mjbots;
 
-// Signal flag - must be sig_atomic_t for signal-handler safety.
-// std::atomic<bool> happens to be lock-free for bool on every platform
-// you'd run this on, so it's fine here too.
-std::atomic<bool> g_stop{false};
+// --- Atomic flag set by Ctrl+C ---
+std::atomic<bool> stop_flag{false};
 
-void HandleSignal(int /*signum*/) {
-    g_stop = true;
+void signalHandler(int /*signum*/) {
+    stop_flag.store(true, std::memory_order_relaxed);
 }
 
 int main(int argc, char** argv) {
-    int bus = 1;
-    int id = 1;
-    double velocity = 1.0;
-    int duration = 3;
+    using namespace std::chrono_literals;
 
+    // ----- Config (defaults, overridable by flags) -----
+    int    bus      = 1;
+    int    id       = 1;
+    double velocity = 1.0;       // rev/s
+    const auto cycle_period = 20ms;  // 50 Hz control loop
+
+    // ----- Argument parsing -----
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
         if (a == "--bus" && i + 1 < argc) bus = std::stoi(argv[++i]);
         else if (a == "--id" && i + 1 < argc) id = std::stoi(argv[++i]);
         else if (a == "--vel" && i + 1 < argc) velocity = std::stod(argv[++i]);
-        else if (a == "--duration" && i + 1 < argc) duration = std::stoi(argv[++i]);
         else if (a == "-h" || a == "--help") {
             std::cerr << "Usage: " << argv[0]
-                      << " --bus N --id N --vel V [--duration S]\n"
-                      << "Ctrl+C to stop cleanly.\n";
+                      << " --bus N --id N --vel V\n"
+                      << "Ctrl+C to stop.\n";
             return 0;
         } else {
             std::cerr << "Unknown arg: " << a << "\n";
@@ -46,15 +54,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    // Install signal handlers BEFORE constructing transport, so even
-    // if init hangs we can still bail out somewhat cleanly.
-    std::signal(SIGINT, HandleSignal);
-    std::signal(SIGTERM, HandleSignal);
-
-    std::cout << "Bus " << bus << ", ID " << id
-              << ", velocity " << velocity << " rev/s, "
-              << duration << "s (Ctrl+C to stop early)\n";
-
+    // ----- Init transport (configures pi3hat with ONLY this bus) -----
     pi3hat::Pi3HatMoteusTransport::Options topts;
     topts.servo_map[id] = bus;
     auto transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(topts);
@@ -64,22 +64,18 @@ int main(int argc, char** argv) {
     copts.id = id;
     moteus::Controller controller(copts);
 
+    // ----- Install Ctrl+C handler -----
+    std::signal(SIGINT, signalHandler);
+
+    // ----- Clear any latched faults before commanding motion -----
     controller.SetStop();
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(100ms);
 
-    std::cout << "\nCycle | Pos     | Vel     | Trq     | Volt   | Temp | Fault | Mode\n"
-              << "------+---------+---------+---------+--------+------+-------+-----\n";
+    std::cout << "Spinning motor (bus " << bus << ", id " << id
+              << ") at " << velocity << " rev/s. Ctrl+C to stop.\n";
 
-    const auto period = std::chrono::milliseconds(50);  // 20 Hz
-    auto start = std::chrono::steady_clock::now();
-    int cycle = 0;
-    bool clean_exit = true;
-
-    while (!g_stop &&
-           std::chrono::duration_cast<std::chrono::seconds>(
-               std::chrono::steady_clock::now() - start).count() < duration) {
-        auto next = std::chrono::steady_clock::now() + period;
-
+    // ----- Main loop -----
+    while (!stop_flag.load(std::memory_order_relaxed)) {
         moteus::PositionMode::Command cmd;
         cmd.position = std::numeric_limits<double>::quiet_NaN();
         cmd.velocity = velocity;
@@ -88,44 +84,40 @@ int main(int argc, char** argv) {
 
         if (result) {
             const auto& v = result->values;
-            std::printf("%5d | %+7.3f | %+7.3f | %+7.3f | %6.2f | %4.1f | %5d | %4d\n",
-                        cycle, v.position, v.velocity, v.torque,
-                        v.voltage, v.temperature,
-                        static_cast<int>(v.fault),
-                        static_cast<int>(v.mode));
+            std::cout << "ID " << id
+                      << "  mode=" << static_cast<int>(v.mode)
+                      << "  pos="  << v.position
+                      << "  vel="  << v.velocity
+                      << "  trq="  << v.torque
+                      << "  V="    << v.voltage
+                      << "  T="    << v.temperature
+                      << "  flt="  << static_cast<int>(v.fault)
+                      << "\n";
         } else {
-            std::printf("%5d | NO RESPONSE\n", cycle);
+            std::cout << "ID " << id << "  NO RESPONSE\n";
         }
 
-        cycle++;
-
-        // Sleep in short chunks so Ctrl+C is responsive (won't wait
-        // the full 50ms before noticing the signal).
-        while (!g_stop && std::chrono::steady_clock::now() < next) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        }
+        std::this_thread::sleep_for(cycle_period);
     }
 
-    // ---- Clean shutdown ----
-    // Reached whether by timeout, Ctrl+C, or fall-through.
-    // Try multiple times in case CAN is briefly unresponsive.
-    if (g_stop) {
-        std::cout << "\n[Ctrl+C received - stopping motor]\n";
-    } else {
-        std::cout << "\nDuration elapsed - stopping motor\n";
-    }
+    // ----- Clean shutdown -----
+    std::cout << "\nCtrl+C received. Stopping motor...\n";
 
+    // Two paths in parallel, belt-and-braces:
+    //   1) Command zero velocity so the loop closes properly
+    //   2) Then SetStop() to disable the bridges
+    moteus::PositionMode::Command zero_cmd;
+    zero_cmd.position = std::numeric_limits<double>::quiet_NaN();
+    zero_cmd.velocity = 0.0;
     for (int i = 0; i < 3; ++i) {
-        try {
-            controller.SetStop();
-            std::this_thread::sleep_for(std::chrono::milliseconds(20));
-        } catch (const std::exception& e) {
-            std::cerr << "SetStop attempt " << (i + 1)
-                      << " failed: " << e.what() << "\n";
-            clean_exit = false;
-        }
+        controller.SetPosition(zero_cmd);
+        std::this_thread::sleep_for(20ms);
+    }
+    for (int i = 0; i < 3; ++i) {
+        controller.SetStop();
+        std::this_thread::sleep_for(20ms);
     }
 
-    std::cout << "Completed " << cycle << " cycles.\n";
-    return clean_exit ? 0 : 1;
+    std::cout << "Motor stopped. Exiting.\n";
+    return 0;
 }
