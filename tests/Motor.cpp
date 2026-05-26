@@ -1,10 +1,10 @@
 // motor_test.cc
 // Minimal moteus single-motor test via pi3hat.
-// Only the specified bus is registered in the router, so this is a
-// clean baseline for diagnosing the empty-bus wedge bug: if it works
-// here but fails in your real code, your real code is hitting empty buses.
+// Ctrl+C cleanly stops the motor before exit.
 
+#include <atomic>
 #include <chrono>
+#include <csignal>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -13,6 +13,15 @@
 #include "pi3hat_moteus_transport.h"
 
 using namespace mjbots;
+
+// Signal flag - must be sig_atomic_t for signal-handler safety.
+// std::atomic<bool> happens to be lock-free for bool on every platform
+// you'd run this on, so it's fine here too.
+std::atomic<bool> g_stop{false};
+
+void HandleSignal(int /*signum*/) {
+    g_stop = true;
+}
 
 int main(int argc, char** argv) {
     int bus = 1;
@@ -28,7 +37,8 @@ int main(int argc, char** argv) {
         else if (a == "--duration" && i + 1 < argc) duration = std::stoi(argv[++i]);
         else if (a == "-h" || a == "--help") {
             std::cerr << "Usage: " << argv[0]
-                      << " --bus N --id N --vel V [--duration S]\n";
+                      << " --bus N --id N --vel V [--duration S]\n"
+                      << "Ctrl+C to stop cleanly.\n";
             return 0;
         } else {
             std::cerr << "Unknown arg: " << a << "\n";
@@ -36,11 +46,15 @@ int main(int argc, char** argv) {
         }
     }
 
+    // Install signal handlers BEFORE constructing transport, so even
+    // if init hangs we can still bail out somewhat cleanly.
+    std::signal(SIGINT, HandleSignal);
+    std::signal(SIGTERM, HandleSignal);
+
     std::cout << "Bus " << bus << ", ID " << id
               << ", velocity " << velocity << " rev/s, "
-              << duration << "s\n";
+              << duration << "s (Ctrl+C to stop early)\n";
 
-    // Configure transport with ONLY this one bus
     pi3hat::Pi3HatMoteusTransport::Options topts;
     topts.servo_map[id] = bus;
     auto transport = std::make_shared<pi3hat::Pi3HatMoteusTransport>(topts);
@@ -50,7 +64,6 @@ int main(int argc, char** argv) {
     copts.id = id;
     moteus::Controller controller(copts);
 
-    // Clear any latched fault
     controller.SetStop();
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
@@ -60,8 +73,10 @@ int main(int argc, char** argv) {
     const auto period = std::chrono::milliseconds(50);  // 20 Hz
     auto start = std::chrono::steady_clock::now();
     int cycle = 0;
+    bool clean_exit = true;
 
-    while (std::chrono::duration_cast<std::chrono::seconds>(
+    while (!g_stop &&
+           std::chrono::duration_cast<std::chrono::seconds>(
                std::chrono::steady_clock::now() - start).count() < duration) {
         auto next = std::chrono::steady_clock::now() + period;
 
@@ -83,10 +98,34 @@ int main(int argc, char** argv) {
         }
 
         cycle++;
-        std::this_thread::sleep_until(next);
+
+        // Sleep in short chunks so Ctrl+C is responsive (won't wait
+        // the full 50ms before noticing the signal).
+        while (!g_stop && std::chrono::steady_clock::now() < next) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
     }
 
-    std::cout << "\nStopping...\n";
-    controller.SetStop();
-    return 0;
+    // ---- Clean shutdown ----
+    // Reached whether by timeout, Ctrl+C, or fall-through.
+    // Try multiple times in case CAN is briefly unresponsive.
+    if (g_stop) {
+        std::cout << "\n[Ctrl+C received - stopping motor]\n";
+    } else {
+        std::cout << "\nDuration elapsed - stopping motor\n";
+    }
+
+    for (int i = 0; i < 3; ++i) {
+        try {
+            controller.SetStop();
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        } catch (const std::exception& e) {
+            std::cerr << "SetStop attempt " << (i + 1)
+                      << " failed: " << e.what() << "\n";
+            clean_exit = false;
+        }
+    }
+
+    std::cout << "Completed " << cycle << " cycles.\n";
+    return clean_exit ? 0 : 1;
 }
