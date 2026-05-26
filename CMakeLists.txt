@@ -47,4 +47,5 @@ add_subdirectory(Logger)
 build_executable(RobotFramework RobotFramework.cpp)
 build_executable(Motor_test tests/MultiMotor.cpp)
 build_executable(pi3hat_tool mjbots/pi3hat/pi3hat_tool.cc)
+build_executable(SingleMotorTest tests/Motor.cpp)
 
