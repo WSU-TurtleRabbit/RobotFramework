@@ -10,7 +10,11 @@ The motivation is straightforward: upstream mjbots libraries can and do change. 
 
 The libraries were not modified or re-implemented. They are a direct copy-paste from the official mjbots repositories, taken from the `lib/cpp/moteus` and `lib/cpp/pi3hat` subdirectories respectively. This keeps the code identical to the upstream version we validated against, while still isolating us from future upstream changes.
 
-on the pi3hat.h we have made a modifaction to enable_aux = false this was to adress an aux error. 
+on the pi3hat.h we have made a modifaction to enable_aux = false this was to adress an aux error called "processor "aux" has incorrect CAN SPI version 255 != [2,3,4]". 
+
+This error seems to only effect the new pi3hats purchased on 3/11/2026
+
+To use pi3hat_tools if the same error mentioned before appears use --disable-aux argument to disable it for the pi3hat.  
 ### Source Repositories
 
 - **moteus:** https://github.com/mjbots/moteus — copied from `lib/cpp/moteus`
