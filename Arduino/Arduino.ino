@@ -1,13 +1,18 @@
 // Arduino Code you will put into the Arduino Nano Every 
-
-
+///
+//==============================================================
+//  WARNING: The way the kicker get activated it different between 
+//  Different Robots, The old perf board, is driven by a low Pulse 
+//  The new kicker is dirven by a HIGH Pulse 
+//===============================================================
+///
 const int kickerOutputPin = 5; // Digital pin connected to kicker
 const int dribblerPin = 3; 
 
 int dribblerPower = 1600;
 int dribblerStopPin = 1500; 
 int kickerPulseTime = 10; // Pulse duration for kicker
-bool pinStatus = HIGH; // Variable to store the pin status of kicker
+bool pinStatus = LOW; // Variable to store the pin status of kicker Chnage to high for old kicker
 
 unsigned long pervious_time = 0;
 int kicker_timeout = 5000;
@@ -35,15 +40,15 @@ void loop() {
       unsigned long current_time = millis();
       if (current_time - pervious_time < kicker_timeout){  // it will kick evey 5 seconds
       Serial.print(current_time - pervious_time);
-      Serial.println("Kicking frequnecy is too fast"); // Deactivate kicker
+      Serial.println(" Kicking frequnecy is too fast"); // Deactivate kicker
       
       // pervious_time = current_time;
       }
       else{
       Serial.println("Kicking");
-      digitalWrite(kickerOutputPin, LOW); // Activate kicker
+      digitalWrite(kickerOutputPin, HIGH); // Change to Low for old kicker 
       delay(kickerPulseTime); // Pulse duration
-      digitalWrite(kickerOutputPin, HIGH);
+      digitalWrite(kickerOutputPin, LOW); //Change to HIGH for old kicker
       pervious_time = current_time;
       }
     } else if (incomingByte == 'D') { // If 'D' is typed
