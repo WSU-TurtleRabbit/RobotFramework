@@ -20,6 +20,7 @@ struct MotorTelemetry
     double voltage;
     double velocity;
     double current;
+    // double position;
     int mode;
 };
 

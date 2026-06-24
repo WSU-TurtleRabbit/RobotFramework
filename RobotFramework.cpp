@@ -78,6 +78,8 @@ int main(int argc, char **argv)
 
     int mode = 0;
 
+    double zero = 0.0;
+
     double current_limit;
     // double temperture_limit;
 
@@ -156,13 +158,14 @@ int main(int argc, char **argv)
         logger.log("rframework", std::string("Failed to load configs: ") + (e.what()), LogLevel::WARN);
 
         // Fallback defaults
-        interval_reciver = 20;
+        interval_reciver = 5;
         interval_sender = 1000;
         interval_arduino = 100;
         interval_camera = 200;
         interval_motor = 20;
 
         current_limit = 5.0;
+
 
         logger.log("rframework", std::string("Failed to load configs: ") + (e.what()), LogLevel::WARN);
         logger.log("rframework", std::string("Using fallback values:") + (e.what()), LogLevel::WARN);
@@ -271,7 +274,7 @@ int main(int argc, char **argv)
             if (msg == "TIMEOUT")
             {
                 logger.log("rframework", "reciever", "UDP TIMEOUT", LogLevel::WARN);
-                velocity_map = {{1, 0.0}, {2, 0.0}, {3, 0.0}, {4, 0.0}}; // Stop wheels
+                velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}}; // Stop wheels
             }
             else
             {
@@ -335,6 +338,8 @@ int main(int argc, char **argv)
                     {"current", r.current},
                     {"mode", static_cast<double>(r.mode)}};
                 logger.log("rframework", sub, data, "", LogLevel::INFO);
+
+                // std::cout << "Motor ID: " << motor_id << " Position is: " << r.position << " Mode is: "<< r.mode<< " Velocity is: " << r.velocity<< " Current is: "<< r.current<<"\n";
 
                 if (r.current > current_limit)
                 {

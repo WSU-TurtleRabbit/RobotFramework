@@ -62,8 +62,11 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
         mt.voltage = parsed.voltage;
         mt.velocity = parsed.velocity;
         mt.current = parsed.q_current;
+        // mt.position = parsed.position;
         mt.mode = static_cast<int>(parsed.mode);
         servo_data[frame.source] = mt;
+
+        // std::cout<< "Current is: " << parsed.q_current<< "\n"; 
     }
     // std::cout << servo_data << "\n";
 
@@ -86,7 +89,7 @@ std::map<int,int> Telemetry::YAML_Load_MotorMap(const std::string& path) {
     catch (const std::exception& e) {
         std::cerr << "Error loading motor config: " << e.what() << std::endl;
         // optional: fallback default mapping
-        motor_map = {{1,1},{2,2},{3,2},{4,1}};
+        motor_map = {{1,1},{2,2},{3,3},{4,4}};
     }
 
     return motor_map;

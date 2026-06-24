@@ -26,7 +26,7 @@ int main() {
     using namespace std::chrono_literals;
 
     // ----- Config -----
-    const double test_velocity = 1.0;   // rev/s — same value to all 4 motors
+    const double test_velocity = 1;   // rev/s — same value to all 4 motors
     const auto   cycle_period  = 20ms;  // 50 Hz control loop
 
     // Motor ID → commanded velocity. Telemetry::cycle() expects this map.
