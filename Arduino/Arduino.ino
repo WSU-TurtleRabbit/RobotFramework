@@ -25,6 +25,7 @@ Servo esc;
 void setup() {
   pinMode(kickerOutputPin, OUTPUT); // Set kicker pin as output
   Serial.begin(115200); // Initialize serial communication
+  // digitalWrite(kickerOutputPin, HIGH); // Used for old robot  
 
   // Attach the dribbler to the pin
   esc.attach(dribblerPin);
