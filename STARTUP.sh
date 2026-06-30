@@ -59,11 +59,15 @@ read_config() {
     WIFI_PASS="$(read_yaml "$STARTUP_CFG" password)"
     WIFI_IFACE="$(read_yaml "$STARTUP_CFG" interface)"
     WIFI_POWER_SAVE="$(read_yaml "$STARTUP_CFG" power_save)"
-    WIFI_DISCONNECT_BUILTIN="$(read_yaml "$STARTUP_CFG" disconnect_builtin)"
+    WIFI_DISCONNECT_OTHER="$(read_yaml "$STARTUP_CFG" disconnect_other)"
     WIFI_STATIC_IP="$(read_yaml "$STARTUP_CFG" static_ip)"
     WIFI_GATEWAY="$(read_yaml "$STARTUP_CFG" gateway)"
     ROBOT_ID="$(read_yaml "$STARTUP_CFG" id)"
     ROBOT_MODE="$(read_yaml "$STARTUP_CFG" mode)"
+    REQUIRE_NETWORK="$(read_yaml "$STARTUP_CFG" require_network)"
+    [ -n "$REQUIRE_NETWORK" ] || REQUIRE_NETWORK="true"
+    ROBOT_USE_TMUX="$(read_yaml "$STARTUP_CFG" use_tmux)"
+    [ -n "$ROBOT_USE_TMUX" ] || ROBOT_USE_TMUX="true"
     STATUS_PORT="$(read_yaml "$STARTUP_CFG" port)"
     STATUS_HOST="$(read_yaml "$STARTUP_CFG" host)"
     [ -n "$STATUS_PORT" ] || STATUS_PORT="50513"
@@ -136,13 +140,25 @@ wait_for_interface() {
     return 1
 }
 
-disconnect_builtin_nic() {
-    log "Disabling auto-connect and disconnecting wlan0..."
-    nmcli dev set wlan0 autoconnect no &>/dev/null || true
-    nmcli dev disconnect wlan0 &>/dev/null || true
-    ip link set wlan0 down &>/dev/null \
-        && log "✓ wlan0 down." \
-        || log "Warning: could not bring wlan0 down."
+disconnect_other_nic() {
+    local active="$1"
+    local other
+
+    case "$active" in
+        wlan0) other="wlan1" ;;
+        wlan1) other="wlan0" ;;
+        *)
+            log "Cannot determine other interface for $active — skipping disconnect."
+            return 0
+            ;;
+    esac
+
+    log "Disabling auto-connect and disconnecting $other..."
+    nmcli dev set "$other" autoconnect no &>/dev/null || true
+    nmcli dev disconnect "$other" &>/dev/null || true
+    ip link set "$other" down &>/dev/null \
+        && log "✓ $other down." \
+        || log "Warning: could not bring $other down."
 }
 
 disable_power_save() {
@@ -158,7 +174,7 @@ disable_power_save() {
 }
 
 connect_wifi() {
-    local ssid="$1" pass="$2" iface="$3" power_save="$4" disconnect_builtin="$5"
+    local ssid="$1" pass="$2" iface="$3" power_save="$4" disconnect_other="$5"
 
     log "Connecting to WiFi: $ssid (interface: ${iface:-auto}) ..."
 
@@ -173,9 +189,9 @@ connect_wifi() {
         return 0
     fi
 
-    # Disconnect built-in NIC so it doesn't take priority over the dongle.
-    if [ "${disconnect_builtin}" = "true" ]; then
-        disconnect_builtin_nic
+    # Disconnect the other interface so it doesn't compete.
+    if [ "${disconnect_other}" = "true" ] && [ -n "$iface" ]; then
+        disconnect_other_nic "$iface"
     fi
 
     # Disable power save before connecting so the link stays stable.
@@ -260,9 +276,8 @@ Restart=on-failure
 RestartSec=10
 # Give the binary time to shut down cleanly on Ctrl-C / SIGTERM.
 TimeoutStopSec=15
-# Re-enable wlan0 when the service stops so SSH access is restored.
-ExecStopPost=/usr/bin/ip link set wlan0 up
-ExecStopPost=/usr/bin/nmcli dev set wlan0 autoconnect yes
+# Re-enable the other interface when the service stops so SSH access is restored.
+ExecStopPost=/usr/bin/bash ${SCRIPT_DIR}/STARTUP.sh --restore
 # Log everything (startup script + RobotFramework binary) to a single file.
 StandardOutput=append:${SCRIPT_DIR}/logs/service.log
 StandardError=append:${SCRIPT_DIR}/logs/service.log
@@ -347,13 +362,44 @@ action_now() {
         exec sudo -E bash "${BASH_SOURCE[0]}" --now
     fi
 
-    connect_wifi "$WIFI_SSID" "$WIFI_PASS" "$WIFI_IFACE" "$WIFI_POWER_SAVE" "$WIFI_DISCONNECT_BUILTIN"
+    if ! connect_wifi "$WIFI_SSID" "$WIFI_PASS" "$WIFI_IFACE" "$WIFI_POWER_SAVE" "$WIFI_DISCONNECT_OTHER"; then
+        if [ "$REQUIRE_NETWORK" = "true" ]; then
+            die "Network connection failed — RobotFramework will not start (require_network: true)."
+        fi
+        log "Warning: network connection failed, continuing anyway (require_network: false)."
+    fi
     send_boot_status "$STATUS_HOST" "$STATUS_PORT"
 
     log "Starting RobotFramework (-${ROBOT_MODE})..."
-    log "Press Ctrl+C to stop."
     cd "${SCRIPT_DIR}/build" || die "build/ directory not found"
-    exec "./RobotFramework" "-${ROBOT_MODE}"
+
+    if [ "$ROBOT_USE_TMUX" = "true" ] && command -v tmux &>/dev/null; then
+        # Kill any stale session from a previous run.
+        tmux kill-session -t robotframework 2>/dev/null || true
+        log "Launching in tmux session 'robotframework'."
+        log "Detach with Ctrl+B then D. Reattach with: tmux attach -t robotframework"
+        tmux new-session -d -s robotframework "./RobotFramework -${ROBOT_MODE}"
+        tmux attach -t robotframework
+    else
+        [ "$ROBOT_USE_TMUX" = "true" ] && log "tmux not found — running directly."
+        log "Press Ctrl+C to stop."
+        exec "./RobotFramework" "-${ROBOT_MODE}"
+    fi
+}
+
+action_restore() {
+    # Called by ExecStopPost — brings the other interface back up after service stops.
+    read_config
+    local other
+    case "$WIFI_IFACE" in
+        wlan0) other="wlan1" ;;
+        wlan1) other="wlan0" ;;
+        *) return 0 ;;
+    esac
+    log "Restoring $other after service stop..."
+    ip link set "$other" up &>/dev/null || true
+    nmcli dev set "$other" autoconnect yes &>/dev/null || true
+    log "✓ $other restored."
 }
 
 action_run_service() {
@@ -363,7 +409,12 @@ action_run_service() {
     log "RobotFramework service starting"
     log "========================================"
     read_config
-    connect_wifi "$WIFI_SSID" "$WIFI_PASS" "$WIFI_IFACE" "$WIFI_POWER_SAVE" "$WIFI_DISCONNECT_BUILTIN"
+    if ! connect_wifi "$WIFI_SSID" "$WIFI_PASS" "$WIFI_IFACE" "$WIFI_POWER_SAVE" "$WIFI_DISCONNECT_OTHER"; then
+        if [ "$REQUIRE_NETWORK" = "true" ]; then
+            die "Network connection failed — RobotFramework will not start (require_network: true)."
+        fi
+        log "Warning: network connection failed, continuing anyway (require_network: false)."
+    fi
     send_boot_status "$STATUS_HOST" "$STATUS_PORT"
     log "Handing off to RobotFramework (-${ROBOT_MODE})..."
     cd "${SCRIPT_DIR}/build" || die "build/ directory not found"
@@ -394,6 +445,7 @@ case "${1:-}" in
     --status)       action_status ;;
     --logs)         action_logs ;;
     --now)          action_now ;;
+    --restore)      action_restore ;;        # internal — called by ExecStopPost
     --run-service)  action_run_service ;;   # internal — called by systemd
     *)              print_usage ;;
 esac

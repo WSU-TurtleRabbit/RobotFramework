@@ -7,8 +7,9 @@ wifi:
   interface: "wlan1"
   # Set to false to disable power save mode on the interface (recommended for robots).
   power_save: false
-  # Disconnect the built-in NIC (wlan0) so it doesn't overtake the dongle.
-  disconnect_builtin: true
+  # Disconnect the other WiFi interface so it doesn't compete.
+  # e.g. if interface is wlan1, this disconnects wlan0 and vice versa.
+  disconnect_other: true
   # Static IP for this robot in CIDR notation (e.g. 192.168.1.101/24).
   # Leave empty to use DHCP instead.
   static_ip: ""
@@ -19,6 +20,11 @@ robot:
   id: "A"
   # Mode passed to RobotFramework. Options: safe | capped | unsafe
   mode: "safe"
+  # If true, RobotFramework will not launch if WiFi connection fails.
+  require_network: true
+  # Wrap RobotFramework in a tmux session when using --now, so you can
+  # detach and reattach. Falls back to direct exec if tmux is not installed.
+  use_tmux: true
 
 status:
   # UDP port to send the boot status message to.

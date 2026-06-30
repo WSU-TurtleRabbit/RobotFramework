@@ -235,8 +235,9 @@ int main(int argc, char **argv)
         logger.log("rframework", "camball", "Camera thread started", LogLevel::INFO);
     }
 
-    // --- Setup signal handler to catch Ctrl+C ---
+    // --- Setup signal handler to catch Ctrl+C and systemd stop ---
     std::signal(SIGINT, signalHandler);
+    std::signal(SIGTERM, signalHandler);
 
     // --- Stop all motors initially to clear faults ---
     for (const auto &pair : telemetry.controllers)
@@ -435,6 +436,9 @@ int main(int argc, char **argv)
 // --- Signal handler for Ctrl+C ---
 void signalHandler(int signum)
 {
-    std::cout << "\nSIGINT received. Stopping safely...\n";
+    if (signum == SIGTERM)
+        std::cout << "\nSIGTERM received. Stopping safely...\n";
+    else
+        std::cout << "\nSIGINT received. Stopping safely...\n";
     manual_stop_flag.store(true);
 }
