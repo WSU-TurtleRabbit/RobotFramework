@@ -13,8 +13,27 @@
 #        bash ./STARTUP.sh --now       # connect to WiFi and launch right now (no install)
 #        bash ./STARTUP.sh             # show this help
 #
+# Internal flags (called by systemd, not for direct use):
+#   --run-service   called by ExecStart on boot — connects WiFi and launches binary
+#   --restore       called by ExecStopPost on shutdown — restores the other WiFi interface
+#
 # Configuration lives in config/Startup.yaml.
 # Logs are written to logs/service.log.
+#
+# System changes made at runtime and how to revert them:
+#
+#   WiFi interface (other than the active one) is brought down:
+#     sudo ip link set wlan0 up
+#     sudo nmcli dev set wlan0 autoconnect yes
+#
+#   Power save is disabled on the active interface:
+#     sudo iw dev wlan1 set power_save on
+#
+#   NM connection profile is re-bound to the active interface:
+#     sudo nmcli con modify "YourSSID" connection.interface-name ""
+#
+#   systemd service installed to /etc/systemd/system/robotframework.service:
+#     sudo bash ./STARTUP.sh --disable
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR" || exit 1
