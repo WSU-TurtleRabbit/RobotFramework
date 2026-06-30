@@ -1,0 +1,28 @@
+# Startup configuration — edit this file to change boot behaviour.
+
+wifi:
+  ssid: "RAM_5G"
+  password: ""
+  # Which interface to use. wlan0 = built-in NIC, wlan1 = Realtek dongle.
+  interface: "wlan1"
+  # Set to false to disable power save mode on the interface (recommended for robots).
+  power_save: false
+  # Disconnect the built-in NIC (wlan0) so it doesn't overtake the dongle.
+  disconnect_builtin: true
+  # Static IP for this robot in CIDR notation (e.g. 192.168.1.101/24).
+  # Leave empty to use DHCP instead.
+  static_ip: ""
+  gateway: ""
+
+robot:
+  # Unique identifier for this robot (e.g. A, B, C).
+  id: "A"
+  # Mode passed to RobotFramework. Options: safe | capped | unsafe
+  mode: "safe"
+
+status:
+  # UDP port to send the boot status message to.
+  port: 50513
+  # Destination host. 255.255.255.255 broadcasts to the whole subnet,
+  # or set a specific IP if you know the receiver's address.
+  host: "255.255.255.255"
