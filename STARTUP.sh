@@ -205,11 +205,14 @@ connect_wifi() {
     if nmcli -t -f NAME con show | grep -qxF "$ssid"; then
         if [ -n "$WIFI_STATIC_IP" ]; then
             nmcli con modify "$ssid" \
+                connection.interface-name "$iface" \
                 ipv4.method manual \
                 ipv4.addresses "$WIFI_STATIC_IP" \
                 ipv4.gateway "${WIFI_GATEWAY:-}" &>/dev/null
         else
-            nmcli con modify "$ssid" ipv4.method auto ipv4.addresses "" ipv4.gateway "" &>/dev/null
+            nmcli con modify "$ssid" \
+                connection.interface-name "$iface" \
+                ipv4.method auto ipv4.addresses "" ipv4.gateway "" &>/dev/null
         fi
         nmcli con up "$ssid" "${iface_args[@]}" \
             || { log "Could not bring up $ssid."; return 1; }
