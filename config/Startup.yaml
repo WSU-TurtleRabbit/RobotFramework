@@ -2,7 +2,7 @@
 
 wifi:
   ssid: "RAM_5G"
-  password: ""
+  password: "turtlerabbit"
   # Which interface to use. wlan0 = built-in NIC, wlan1 = Realtek dongle.
   interface: "wlan1"
   # Set to false to disable power save mode on the interface (recommended for robots).
