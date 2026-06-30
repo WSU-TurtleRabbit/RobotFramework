@@ -91,7 +91,8 @@ read_config() {
 send_boot_status() {
     local host="$1" port="$2"
     local ip
-    ip="$(hostname -I | awk '{print $1}')"
+    ip="$(ip -4 addr show "${WIFI_IFACE:-wlan1}" 2>/dev/null | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)"
+    [ -n "$ip" ] || ip="$(hostname -I | awk '{print $1}')"
 
     log "Sending boot status → $host:$port (id=${ROBOT_ID:-?} ip=$ip mode=${ROBOT_MODE:-safe})"
 
@@ -122,24 +123,26 @@ s.close()
 wait_for_interface() {
     local iface="$1"
     local i=0
-    log "Waiting for interface $iface to be ready..."
+    log "Waiting for NetworkManager to recognise $iface..."
     while [ $i -lt 30 ]; do
-        if ip link show "$iface" &>/dev/null; then
+        if nmcli -t -f DEVICE,STATE dev 2>/dev/null | grep -q "^${iface}:"; then
             log "✓ Interface $iface is ready."
             return 0
         fi
         sleep 1
         i=$((i + 1))
     done
-    log "✗ Interface $iface did not appear after 30 s."
+    log "✗ Interface $iface did not appear in NetworkManager after 30 s."
     return 1
 }
 
 disconnect_builtin_nic() {
-    log "Disconnecting built-in WiFi (wlan0)..."
-    nmcli dev disconnect wlan0 &>/dev/null \
-        && log "✓ wlan0 disconnected." \
-        || log "Warning: wlan0 may already be disconnected."
+    log "Disabling auto-connect and disconnecting wlan0..."
+    nmcli dev set wlan0 autoconnect no &>/dev/null || true
+    nmcli dev disconnect wlan0 &>/dev/null || true
+    ip link set wlan0 down &>/dev/null \
+        && log "✓ wlan0 down." \
+        || log "Warning: could not bring wlan0 down."
 }
 
 disable_power_save() {
@@ -192,6 +195,11 @@ connect_wifi() {
         [ -n "$WIFI_GATEWAY" ] && ip_args+=(gw4 "$WIFI_GATEWAY")
     fi
 
+    # Scan for networks before connecting so NM has fresh results.
+    log "Scanning for networks on $iface..."
+    nmcli dev wifi rescan ifname "$iface" &>/dev/null || true
+    sleep 3
+
     # If a connection profile already exists for this SSID, update its IP
     # settings then bring it up. Otherwise create a new profile.
     if nmcli -t -f NAME con show | grep -qxF "$ssid"; then
@@ -203,9 +211,10 @@ connect_wifi() {
         else
             nmcli con modify "$ssid" ipv4.method auto ipv4.addresses "" ipv4.gateway "" &>/dev/null
         fi
-        nmcli con up "$ssid" "${iface_args[@]}" &>/dev/null || true
+        nmcli con up "$ssid" "${iface_args[@]}" \
+            || { log "Could not bring up $ssid."; return 1; }
     else
-        nmcli dev wifi connect "$ssid" password "$pass" "${iface_args[@]}" "${ip_args[@]}" &>/dev/null \
+        nmcli dev wifi connect "$ssid" password "$pass" "${iface_args[@]}" "${ip_args[@]}" \
             || { log "Could not connect to $ssid on ${iface:-any interface}."; return 1; }
     fi
 
@@ -248,6 +257,9 @@ Restart=on-failure
 RestartSec=10
 # Give the binary time to shut down cleanly on Ctrl-C / SIGTERM.
 TimeoutStopSec=15
+# Re-enable wlan0 when the service stops so SSH access is restored.
+ExecStopPost=/usr/bin/ip link set wlan0 up
+ExecStopPost=/usr/bin/nmcli dev set wlan0 autoconnect yes
 # Log everything (startup script + RobotFramework binary) to a single file.
 StandardOutput=append:${SCRIPT_DIR}/logs/service.log
 StandardError=append:${SCRIPT_DIR}/logs/service.log
