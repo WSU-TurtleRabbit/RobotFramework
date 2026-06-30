@@ -119,6 +119,22 @@ s.close()
 # WiFi
 # ---------------------------------------------------------------------------
 
+wait_for_interface() {
+    local iface="$1"
+    local i=0
+    log "Waiting for interface $iface to be ready..."
+    while [ $i -lt 30 ]; do
+        if ip link show "$iface" &>/dev/null; then
+            log "✓ Interface $iface is ready."
+            return 0
+        fi
+        sleep 1
+        i=$((i + 1))
+    done
+    log "✗ Interface $iface did not appear after 30 s."
+    return 1
+}
+
 disconnect_builtin_nic() {
     log "Disconnecting built-in WiFi (wlan0)..."
     nmcli dev disconnect wlan0 &>/dev/null \
@@ -142,6 +158,12 @@ connect_wifi() {
     local ssid="$1" pass="$2" iface="$3" power_save="$4" disconnect_builtin="$5"
 
     log "Connecting to WiFi: $ssid (interface: ${iface:-auto}) ..."
+
+    # Wait for the interface to exist before touching nmcli.
+    # The Realtek dongle can take several seconds to initialise after boot.
+    if [ -n "$iface" ]; then
+        wait_for_interface "$iface" || return 1
+    fi
 
     if ! command -v nmcli &>/dev/null; then
         log "nmcli not found — skipping WiFi step (configure manually)."
@@ -214,6 +236,8 @@ Description=RobotFramework Auto-Start
 # Wait until NetworkManager is up before we try to connect to WiFi ourselves.
 After=NetworkManager.service
 Wants=NetworkManager.service
+# Delay startup to give the kernel time to initialise USB WiFi dongles.
+ExecStartPre=/bin/sleep 5
 
 [Service]
 Type=simple
@@ -313,7 +337,8 @@ action_now() {
 
     log "Starting RobotFramework (-${ROBOT_MODE})..."
     log "Press Ctrl+C to stop."
-    exec "./$BINARY" "-${ROBOT_MODE}"
+    cd "${SCRIPT_DIR}/build" || die "build/ directory not found"
+    exec "./RobotFramework" "-${ROBOT_MODE}"
 }
 
 action_run_service() {
@@ -326,7 +351,8 @@ action_run_service() {
     connect_wifi "$WIFI_SSID" "$WIFI_PASS" "$WIFI_IFACE" "$WIFI_POWER_SAVE" "$WIFI_DISCONNECT_BUILTIN"
     send_boot_status "$STATUS_HOST" "$STATUS_PORT"
     log "Handing off to RobotFramework (-${ROBOT_MODE})..."
-    exec "${SCRIPT_DIR}/${BINARY}" "-${ROBOT_MODE}"
+    cd "${SCRIPT_DIR}/build" || die "build/ directory not found"
+    exec "./RobotFramework" "-${ROBOT_MODE}"
 }
 
 print_usage() {
