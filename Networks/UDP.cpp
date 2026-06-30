@@ -45,15 +45,25 @@ UDP::UDP() {
 
 std::string UDP::receive() {
 
-    int latest_msg = recvfrom(sockfd, buffer.data(), buffer_size , 0, (struct sockaddr*)&client_addr, &len);
-    if (latest_msg < 0) {
-        Msg_found = false;
-    return "TIMEOUT";  // Or handle timeout/error
+    ssize_t bytes;
+    ssize_t last_bytes = -1;
 
+    // Drain all queued packets, keep only the newest
+    while (true) {
+        bytes = recvfrom(sockfd, buffer.data(), buffer_size - 1, MSG_DONTWAIT,
+                         (struct sockaddr*)&client_addr, &len);
+        if (bytes < 0) break;
+        last_bytes = bytes;
     }
-    buffer[latest_msg] = '\0';
+
+    if (last_bytes < 0) {
+        Msg_found = false;
+        return "TIMEOUT";
+    }
+
+    buffer[last_bytes] = '\0';
     Msg_found = true;
-    return std::string(buffer.data());
+    return std::string(buffer.data(), last_bytes);
 
 };
 
