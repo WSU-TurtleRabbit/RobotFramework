@@ -283,7 +283,7 @@ int main(int argc, char **argv)
                     velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}}; // Stop wheels
                 }
             }
-            else if (msg == "STOP");
+            else if (msg == "STOP")
             {
                 logger.log("rframework", "reciever", "UDP STOP", LogLevel::HATE);
                 velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}}; // Stop wheels
