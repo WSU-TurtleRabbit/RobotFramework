@@ -1,7 +1,8 @@
 intervals:
-  Motor_interval: 20
+  Motor_interval: 10      # was 20 (50Hz) -> 10 (100Hz) motor command/telemetry cycle
   Arduino_interval: 100
-  Reciver_interval: 20
+  Reciver_interval: 5     # was 20 -> 5: read+drain UDP at 200Hz so the wheel target
+                          # is always the freshest command (drain loop keeps newest)
   Sender_interval: 1000
   Camera_interval: 200
   Idle_interval: 3000

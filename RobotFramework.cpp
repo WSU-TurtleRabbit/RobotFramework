@@ -24,6 +24,7 @@
 #include "moteus.h"
 #include "pi3hat_moteus_transport.h"
 #include "wheel_math.h"
+#include "heading_control.h"
 #include "decode.h"
 #include "UDP.h"
 #include "detect_ball.h"
@@ -205,6 +206,29 @@ int main(int argc, char **argv)
     // Set mode of Wheel_math based on flags
     m.setMode(mode);
 
+    // --- Gyro heading-hold controller (keeps "drive straight" straight) ---
+    HeadingController heading;
+    try {
+        YAML::Node h = YAML::LoadFile("../config/Safety.yaml")["heading"];
+        if (h) {
+            if (h["enabled"])    heading.enabled    = h["enabled"].as<bool>();
+            if (h["kp"])         heading.kp         = h["kp"].as<double>();
+            if (h["kd"])         heading.kd         = h["kd"].as<double>();
+            if (h["w_deadband"]) heading.w_deadband = h["w_deadband"].as<double>();
+            if (h["yaw_sign"])   heading.yaw_sign   = h["yaw_sign"].as<double>();
+        }
+    } catch (const std::exception& e) {
+        logger.log("rframework", std::string("heading config load: ") + e.what(), LogLevel::WARN);
+    }
+    logger.log("rframework",
+        std::string("heading-hold ") + (heading.enabled ? "ENABLED" : "disabled") +
+        " (kp=" + std::to_string(heading.kp) + " kd=" + std::to_string(heading.kd) +
+        " sign=" + std::to_string(heading.yaw_sign) + ")", LogLevel::INFO);
+
+    // Latest raw body-frame command; wheel velocities are computed in the motor
+    // block (with heading correction), not in the receiver.
+    double cmd_vx = 0.0, cmd_vy = 0.0, cmd_w = 0.0;
+
     // --- Initialize Arduino ---
     logger.log("rframework", "arduino", "Searching for Arduino...", LogLevel::INFO);
     a.findArduino();
@@ -280,10 +304,11 @@ int main(int argc, char **argv)
                 if (timeout_count >= TIMEOUT_LIMIT)
                 {
                     logger.log("rframework", "reciever", "UDP TIMEOUT - stopping motors", LogLevel::WARN);
+                    cmd_vx = cmd_vy = cmd_w = 0.0;                                // stop
                     velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}}; // Stop wheels
                 }
             }
-            else if (msg == "STOP");
+            else if (msg == "STOP")
             {
                 logger.log("rframework", "reciever", "UDP STOP", LogLevel::HATE);
                 velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}}; // Stop wheels
@@ -302,13 +327,11 @@ int main(int argc, char **argv)
                 // std::cout << msg << "\n";
                 logger.log("rframework", "reciever", std::string("Message Recieved: ") + msg, LogLevel::INFO);
                 cmd.decode_cmd(msg); // Decode velocity commands
-                wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
-                // Map velocities to motors
-                velocity_map = {
-                    {1, wheel_velocity[0]},
-                    {2, wheel_velocity[1]},
-                    {3, wheel_velocity[2]},
-                    {4, wheel_velocity[3]}};
+                // Store the raw body-frame command. Wheel velocities (with gyro
+                // heading correction) are computed in the motor block below.
+                cmd_vx = cmd.velocity_x;
+                cmd_vy = cmd.velocity_y;
+                cmd_w  = cmd.velocity_w;
 
                 last_known_message = current_time;
             }
@@ -340,7 +363,36 @@ int main(int argc, char **argv)
         // --- Motor Telemetry and Safety Check ---
         if (current_time - last_motor_time >= MotorInterval)
         {
-            auto servo_status = telemetry.cycle(velocity_map); // Send commands & receive telemetry
+            // Gyro heading-hold: correct the commanded yaw rate with the IMU so a
+            // "drive straight" command stays straight. Uses the attitude read on
+            // the previous cycle; passes through until the IMU has a reading.
+            // Only hold heading while the robot is actually being driven. At rest
+            // (no command / UDP timeout) stay passive and re-capture the heading,
+            // so the robot never drives itself to "correct" while sitting idle.
+            bool driving = std::fabs(cmd_vx) > 0.02 || std::fabs(cmd_vy) > 0.02 ||
+                           std::fabs(cmd_w)  > 0.02;
+            double w_out = cmd_w;
+            if (heading.enabled && telemetry.attitude_ok && driving) {
+                w_out = heading.update(cmd_w, telemetry.yaw_rad(),
+                                       telemetry.yaw_rate_rps());
+            } else {
+                heading.reset();
+            }
+            wheel_velocity = m.calculate(cmd_vx, cmd_vy, w_out);
+            velocity_map = {
+                {1, wheel_velocity[0]}, {2, wheel_velocity[1]},
+                {3, wheel_velocity[2]}, {4, wheel_velocity[3]}};
+
+            auto servo_status = telemetry.cycle(velocity_map); // Send commands & read IMU
+
+            if (heading.enabled) {
+                logger.log("rframework", "heading",
+                    std::map<std::string, double>{
+                        {"yaw_deg", telemetry.yaw_rad() * 180.0 / M_PI},
+                        {"yaw_rate_dps", telemetry.yaw_rate_rps() * 180.0 / M_PI},
+                        {"w_cmd", cmd_w}, {"w_out", w_out}},
+                    "", LogLevel::INFO);
+            }
 
             float voltage[4];
             int i = 0;

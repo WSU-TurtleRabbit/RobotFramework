@@ -6,3 +6,16 @@ velocityLimit:
 currentLimit: 5.0 # Amps
 
 faultyGrace: 1500 # milliseconds
+
+# --- Gyro heading-hold (IMU) : keeps the robot driving dead-straight ---
+# When you command translation with ~no rotation, the robot holds its heading
+# using the pi3hat gyro instead of drifting. Bench-tune before enabling:
+#   1) set enabled: true, keep kp low; 2) drive straight on the ground and watch;
+#   3) if it SPINS/runs away, flip yaw_sign (1.0 <-> -1.0); 4) raise kp until it
+#   holds straight without wobbling, add kd if it oscillates.
+heading:
+  enabled: false      # turn on once verified on the bench
+  kp: 4.0             # rad/s per rad of heading error
+  kd: 0.10            # damping on measured yaw rate
+  w_deadband: 0.20    # rad/s: above this = deliberate turn (pass through)
+  yaw_sign: 1.0       # flip to -1.0 if the feedback is the wrong way round

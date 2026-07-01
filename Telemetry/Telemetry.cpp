@@ -44,12 +44,18 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
         command_frames.push_back(pair.second->MakePosition(position_command));
     }
 
-    // Send all commands in one BlockingCycle and collect replies
+    // Send all commands AND read the pi3hat IMU attitude in one CAN cycle.
+    // Passing &attitude sets request_attitude in the transport, so the gyro/AHRS
+    // data comes back "for free" alongside the moteus replies.
     std::vector<mjbots::moteus::CanFdFrame> replies;
 
     if (!command_frames.empty())
     {
-        transport->BlockingCycle(command_frames.data(), command_frames.size(), &replies);
+        mjbots::moteus::BlockingCallback cbk;
+        transport->Cycle(command_frames.data(), command_frames.size(),
+                         &replies, &attitude, nullptr, nullptr, cbk.callback());
+        cbk.Wait();
+        attitude_ok = true;
     }
 
     // Parse replies into a map keyed by responding CAN ID (frame.source)
@@ -93,4 +99,18 @@ std::map<int,int> Telemetry::YAML_Load_MotorMap(const std::string& path) {
     }
 
     return motor_map;
+}
+
+// Heading (yaw) about the vertical axis, from the fused attitude quaternion.
+double Telemetry::yaw_rad() const
+{
+    const auto& q = attitude.attitude;   // quaternion (w, x, y, z)
+    return std::atan2(2.0 * (q.w * q.z + q.x * q.y),
+                      1.0 - 2.0 * (q.y * q.y + q.z * q.z));
+}
+
+// Yaw rate (rad/s) from the gyro (rate_dps.z is deg/s about the vertical axis).
+double Telemetry::yaw_rate_rps() const
+{
+    return attitude.rate_dps.z * (M_PI / 180.0);
 }

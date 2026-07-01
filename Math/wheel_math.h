@@ -15,7 +15,10 @@ private:
     // Wheel orientation (degrees)
     const double W1_ANG = 30;
     const double W2_ANG = -45;
-    const double W3_ANG = -130;
+    const double W3_ANG = -135;   // was -130 (typo). Wheel 3 sits at -135 deg (its
+                                  // position is (-52.14,-52.14) = -135, mirror of
+                                  // wheel 2 at -45). The 5 deg error coupled vx/vy/w
+                                  // and made "drive straight" curve to the side.
     const double W4_ANG = 150;
 
     // Max velocity limits
