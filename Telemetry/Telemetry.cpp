@@ -19,6 +19,11 @@ Telemetry::Telemetry()
         opts.id = p.first;
         opts.bus = p.second;
         opts.transport = transport;
+        // Actually transmit the velocity/accel limits: without setting the
+        // format resolution these command fields default to kIgnore and are
+        // never put on the wire.
+        opts.position_format.velocity_limit = mjbots::moteus::kFloat;
+        opts.position_format.accel_limit    = mjbots::moteus::kFloat;
         controllers[opts.id] = std::make_shared<mjbots::moteus::Controller>(opts);
     }
 
@@ -26,6 +31,23 @@ Telemetry::Telemetry()
     for (const auto &pair : controllers)
     {
         pair.second->SetStop();
+    }
+
+    // Push the current limit to every controller. moteus has no per-command
+    // current-limit register, so this goes over the diagnostic channel and
+    // sets the running config (not persisted to flash — see Telemetry.h).
+    for (const auto &pair : controllers)
+    {
+        try
+        {
+            pair.second->DiagnosticCommand(
+                "conf set servo.max_current_A " + std::to_string(current_limit_A));
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "Failed to set current limit on id " << pair.first
+                      << ": " << e.what() << std::endl;
+        }
     }
 }
 
@@ -41,6 +63,9 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
         position_command.position = std::numeric_limits<double>::quiet_NaN();
         auto it = velocity_map.find(pair.first);
         position_command.velocity = (it != velocity_map.end()) ? it->second : 0.0;
+        // Default motion limits sent with every command (rev/s, rev/s^2).
+        position_command.velocity_limit = velocity_limit;
+        position_command.accel_limit    = accel_limit;
         command_frames.push_back(pair.second->MakePosition(position_command));
     }
 
