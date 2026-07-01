@@ -267,6 +267,8 @@ int main(int argc, char **argv)
 
 
         static auto last_known_message = current_time;
+        static int timeout_count = 0;
+        static const int TIMEOUT_LIMIT = 3; // 3 x 20ms = 60ms grace before stopping
 
         // --- UDP Receiver ---
         if (current_time - last_reciver_time >= Reciver_interval)
@@ -274,8 +276,12 @@ int main(int argc, char **argv)
             msg = UDP.receive(); // Receive new message
             if (msg == "TIMEOUT")
             {
-                logger.log("rframework", "reciever", "UDP TIMEOUT", LogLevel::WARN);
-                velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}}; // Stop wheels
+                timeout_count++;
+                if (timeout_count >= TIMEOUT_LIMIT)
+                {
+                    logger.log("rframework", "reciever", "UDP TIMEOUT - stopping motors", LogLevel::WARN);
+                    velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}}; // Stop wheels
+                }
             }
             else if (msg == "STOP");
             {
@@ -292,6 +298,7 @@ int main(int argc, char **argv)
             }
             else
             {
+                timeout_count = 0;
                 // std::cout << msg << "\n";
                 logger.log("rframework", "reciever", std::string("Message Recieved: ") + msg, LogLevel::INFO);
                 cmd.decode_cmd(msg); // Decode velocity commands
@@ -302,7 +309,7 @@ int main(int argc, char **argv)
                     {2, wheel_velocity[1]},
                     {3, wheel_velocity[2]},
                     {4, wheel_velocity[3]}};
-                
+
                 last_known_message = current_time;
             }
             last_reciver_time = current_time;
