@@ -35,6 +35,9 @@ private:
     std::vector<char> buffer;
 
     bool Msg_found;
+    // True once at least one packet has been received: only then does
+    // client_addr hold a real peer we can send telemetry back to.
+    bool has_peer;
 
 public:
     UDP();
