@@ -5,3 +5,8 @@ intervals:
   Sender_interval: 1000
   Camera_interval: 200
   Idle_interval: 3000
+
+# This robot's id on the command channel. Commands addressed to another id
+# are ignored (the robot must not drive on a teammate's command).
+# -1 = accept any id (historical behavior, useful on the bench).
+Robot_id: -1

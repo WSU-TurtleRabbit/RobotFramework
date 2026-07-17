@@ -86,6 +86,9 @@ int main(int argc, char **argv)
     // --- Interval times (ms) for periodic tasks ---
     int interval_reciver, interval_sender, interval_arduino, interval_camera, interval_motor;
 
+    // This robot's command-channel id (config Robot_id; -1 = accept any).
+    int robot_id = -1;
+
     // --- Logger ---
     Logger logger("logs");
     logger.initialize({"rframework"});
@@ -149,6 +152,10 @@ int main(int argc, char **argv)
         interval_camera = interval_values["Camera_interval"].as<int>();
         interval_motor = interval_values["Motor_interval"].as<int>();
 
+        // Optional: which command-channel id this robot answers to.
+        if (config["Robot_id"])
+            robot_id = config["Robot_id"].as<int>();
+
         logger.log("rframework", "Successfully loaded configs!", LogLevel::INFO);
     }
     catch (const std::exception &e)
@@ -177,7 +184,8 @@ int main(int argc, char **argv)
         {"Arduino Interval", interval_arduino},
         {"Camera Interval", interval_camera},
         {"Motor Interval", interval_motor},
-        {"Current Limit", current_limit}};
+        {"Current Limit", current_limit},
+        {"Robot Id", robot_id}};
     logger.log("rframework", configData, LogLevel::INFO);
 
     // --- Convert intervals to chrono durations ---
@@ -211,9 +219,8 @@ int main(int argc, char **argv)
     logger.log("rframework", "arduino", "Connecting to Arduino port...", LogLevel::INFO);
     a.connect(a.getPort());
 
-    cmd.kick = false;
-    cmd.dribble = false;
-
+    // Only accept commands addressed to this robot (-1 = accept any).
+    cmd.expected_id = robot_id;
 
     // if (a.isConnected())
     // {
@@ -283,34 +290,63 @@ int main(int argc, char **argv)
                     velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}}; // Stop wheels
                 }
             }
-            else if (msg == "STOP")
-            {
-                logger.log("rframework", "reciever", "UDP STOP", LogLevel::HATE);
-                velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}}; // Stop wheels
-                
-                for (const auto &pair : telemetry.controllers)
-                {
-                    pair.second->SetStop();
-                }
-                a.disconnect();
-                
-                std::exit(0);                 
-            }
             else
             {
-                timeout_count = 0;
-                // std::cout << msg << "\n";
-                logger.log("rframework", "reciever", std::string("Message Recieved: ") + msg, LogLevel::INFO);
-                cmd.decode_cmd(msg); // Decode velocity commands
-                wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
-                // Map velocities to motors
-                velocity_map = {
-                    {1, wheel_velocity[0]},
-                    {2, wheel_velocity[1]},
-                    {3, wheel_velocity[2]},
-                    {4, wheel_velocity[3]}};
+                // Strict decode: a packet either classifies cleanly or the
+                // robot's motion state is left untouched.
+                switch (cmd.decode_cmd(msg))
+                {
+                case CmdType::Velocity:
+                    timeout_count = 0;
+                    logger.log("rframework", "reciever", std::string("Message Recieved: ") + msg, LogLevel::INFO);
+                    wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
+                    // Map velocities to motors
+                    velocity_map = {
+                        {1, wheel_velocity[0]},
+                        {2, wheel_velocity[1]},
+                        {3, wheel_velocity[2]},
+                        {4, wheel_velocity[3]}};
 
-                last_known_message = current_time;
+                    last_known_message = current_time;
+                    break;
+
+                case CmdType::Stop:
+                    logger.log("rframework", "reciever", "UDP STOP", LogLevel::HATE);
+                    velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}}; // Stop wheels
+
+                    for (const auto &pair : telemetry.controllers)
+                    {
+                        pair.second->SetStop();
+                    }
+                    a.disconnect();
+
+                    std::exit(0);
+                    break;
+
+                case CmdType::Ping:
+                    // Link discovery only — deliberately NOT a drive command,
+                    // so a robot fed only PINGs still times out and stops.
+                    logger.log("rframework", "reciever", "PING received", LogLevel::INFO);
+                    break;
+
+                case CmdType::Calibrate:
+                    // No onboard commissioner in this framework (yet).
+                    logger.log("rframework", "reciever", "CALIBRATE received (not supported, ignored)", LogLevel::WARN);
+                    break;
+
+                case CmdType::WrongId:
+                    logger.log("rframework", "reciever",
+                        std::string("Command for robot ") + std::to_string(cmd.id) +
+                        " ignored (this is robot " + std::to_string(robot_id) + ")",
+                        LogLevel::WARN);
+                    break;
+
+                case CmdType::Malformed:
+                default:
+                    logger.log("rframework", "reciever",
+                        std::string("Malformed packet rejected: ") + msg, LogLevel::WARN);
+                    break;
+                }
             }
             last_reciver_time = current_time;
         }
