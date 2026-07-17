@@ -47,6 +47,7 @@ UDP::UDP() {
 
     Msg_found = false;
     has_peer = false;
+    tx_err_count = 0;
     len = sizeof(client_addr);
 };
 
@@ -98,8 +99,40 @@ void UDP::send(const std::string& message) {
     target_addr.sin_port = htons(sender_port);
     target_addr.sin_addr = client_addr.sin_addr; // copy the IP from the sender
 
-    sendto(sockfd, message.c_str(), message.size(), 0,
-           (struct sockaddr*)&target_addr, sizeof(target_addr));
+    const ssize_t sent = sendto(sockfd, message.c_str(), message.size(), 0,
+                                (struct sockaddr*)&target_addr, sizeof(target_addr));
+    if (sent < 0) {
+        tx_err_count++;
+    }
+}
+
+std::string UDP::local_ip() {
+    if (!has_peer) {
+        return "0.0.0.0";
+    }
+    // Connect a scratch datagram socket toward the peer: the kernel picks
+    // the outbound interface, and getsockname reveals its address. Nothing
+    // is transmitted.
+    int probe = socket(AF_INET, SOCK_DGRAM, 0);
+    if (probe < 0) {
+        return "0.0.0.0";
+    }
+    struct sockaddr_in peer = client_addr;
+    peer.sin_family = AF_INET;
+    peer.sin_port = htons(sender_port);
+    std::string result = "0.0.0.0";
+    if (connect(probe, (struct sockaddr*)&peer, sizeof(peer)) == 0) {
+        struct sockaddr_in self;
+        socklen_t self_len = sizeof(self);
+        if (getsockname(probe, (struct sockaddr*)&self, &self_len) == 0) {
+            char buf[INET_ADDRSTRLEN] = {0};
+            if (inet_ntop(AF_INET, &self.sin_addr, buf, sizeof(buf)) != nullptr) {
+                result = buf;
+            }
+        }
+    }
+    close(probe);
+    return result;
 }
 
 int UDP::getBufferSize() {

@@ -30,6 +30,7 @@
 #include "detect_ball.h"
 #include "arduino.h"
 #include "Telemetry.h"
+#include "telemetry_wire.h"
 #include "arduino.h"
 #include "MotionBridge.h"
 #include "motion_config_yaml.h"
@@ -95,9 +96,13 @@ int main(int argc, char **argv)
 
     // --- Interval times (ms) for periodic tasks ---
     int interval_reciver, interval_sender, interval_arduino, interval_camera, interval_motor;
+    // Telemetry v2 cadence, ms.
+    int interval_telemetry = 200;
 
     // This robot's command-channel id (config Robot_id; -1 = accept any).
     int robot_id = -1;
+    // Physical identity letter reported as rid= in telemetry.
+    std::string robot_rid = "?";
 
     // --- Logger ---
     Logger logger("logs");
@@ -181,10 +186,16 @@ int main(int argc, char **argv)
         interval_arduino = interval_values["Arduino_interval"].as<int>();
         interval_camera = interval_values["Camera_interval"].as<int>();
         interval_motor = interval_values["Motor_interval"].as<int>();
+        // v2 telemetry cadence; older configs fall back to Sender_interval.
+        interval_telemetry = interval_values["Telemetry_interval"]
+                                 ? interval_values["Telemetry_interval"].as<int>()
+                                 : interval_sender;
 
         // Optional: which command-channel id this robot answers to.
         if (config["Robot_id"])
             robot_id = config["Robot_id"].as<int>();
+        if (config["Robot_rid"])
+            robot_rid = config["Robot_rid"].as<std::string>();
 
         logger.log("rframework", "Successfully loaded configs!", LogLevel::INFO);
     }
@@ -202,6 +213,7 @@ int main(int argc, char **argv)
         // 100 Hz control tick; 4 ms (250 Hz) is the target once validated
         // on hardware.
         interval_motor = 10;
+        interval_telemetry = 200;
 
         // safety_cfg keeps its built-in defaults.
 
@@ -232,7 +244,7 @@ int main(int argc, char **argv)
     static auto Reciver_interval = std::chrono::milliseconds(interval_reciver);
     static auto CameraInterval = std::chrono::milliseconds(interval_camera);
     static auto MotorInterval = std::chrono::milliseconds(interval_motor);
-    static auto Sender_interval = std::chrono::milliseconds(interval_sender);
+    static auto Telemetry_interval = std::chrono::milliseconds(interval_telemetry);
     static auto Arduino_interval = std::chrono::milliseconds(interval_arduino);
 
     static auto Motor_Command_interval = std::chrono::milliseconds(500);
@@ -263,6 +275,19 @@ int main(int argc, char **argv)
     // Monotonic ms of the last VALID drive command (v1 or MV2) for the
     // staleness gate; nullopt until one arrives.
     std::optional<uint64_t> last_valid_cmd_ms;
+
+    // --- Telemetry v2 bookkeeping ---
+    const auto process_start = std::chrono::steady_clock::now();
+    uint32_t telem_seq = 0;      // telemetry packet counter
+    uint64_t cmd_rx_count = 0;   // valid drive commands received
+    int last_cmd_id = -1;        // robot id in the last valid command
+    BodyTwist odo_twist;         // latest FK wheel-odometry body twist
+    double vmin_last = 0.0;      // lowest single-motor voltage, last cycle
+    double last_cycle_ms = 0.0;  // CAN cycle duration, ms
+    std::map<int, MotorTelemetry> last_servo_status;  // latest motor replies
+    // Motor-tick period stats over the current telemetry window.
+    double loop_ms_sum = 0.0, loop_ms_min = 1e9, loop_ms_max = 0.0;
+    int loop_ms_n = 0;
 
     // --- Initialize Arduino ---
     logger.log("rframework", "arduino", "Searching for Arduino...", LogLevel::INFO);
@@ -381,6 +406,8 @@ int main(int argc, char **argv)
                     last_cmd_twist = shaped;
                     last_valid_cmd_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                         current_time.time_since_epoch()).count();
+                    cmd_rx_count++;
+                    last_cmd_id = cmd.id;
                     break;
                 }
 
@@ -399,6 +426,8 @@ int main(int argc, char **argv)
                         timeout_count = 0;
                         last_known_message = current_time;
                         last_valid_cmd_ms = rx_ms;
+                        cmd_rx_count++;
+                        last_cmd_id = bridge.last_robot_id();
                         break;
                     case rf::Mv2Accept::WrongId:
                         logger.log("rframework", "reciever", "MV2 frame for another robot ignored", LogLevel::WARN);
@@ -497,6 +526,20 @@ int main(int argc, char **argv)
             const uint64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                 current_time.time_since_epoch()).count();
 
+            // Loop-health stats for telemetry (period achieved + jitter).
+            if (loop_ms_n > 0 || motor_dt > 0.0)
+            {
+                const double dt_ms = motor_dt * 1000.0;
+                loop_ms_sum += dt_ms;
+                loop_ms_min = std::min(loop_ms_min, dt_ms);
+                loop_ms_max = std::max(loop_ms_max, dt_ms);
+                loop_ms_n++;
+            }
+
+            // Wheel odometry (FK) from the previous cycle's measured
+            // velocities — executor input and telemetry odo_vx/vy/w.
+            odo_twist = m.kinematics().forward(measured_rev_s);
+
             bool energize = true;
 
             if (bridge.active())
@@ -504,12 +547,11 @@ int main(int argc, char **argv)
                 // Onboard trajectory following: wheel odometry + gyro in,
                 // shaped body twist out, at the motor rate — wheel motion no
                 // longer depends on Wi-Fi cadence.
-                const BodyTwist odo = m.kinematics().forward(measured_rev_s);
                 const double imu_yaw_radps = telemetry.attitude_present
                     ? telemetry.imu_yaw_dps * (M_PI / 180.0)
                     : std::nan("");
                 const phx::ExecOutput out = bridge.tick(
-                    now_ms, motor_dt, phx::Twist{odo.vx, odo.vy, odo.w}, imu_yaw_radps);
+                    now_ms, motor_dt, phx::Twist{odo_twist.vx, odo_twist.vy, odo_twist.w}, imu_yaw_radps);
 
                 // Operator envelope on top of the executor's mode caps —
                 // direction-preserving, so the trajectory bends nowhere.
@@ -541,7 +583,11 @@ int main(int argc, char **argv)
                 }
             }
 
+            const auto cycle_begin = std::chrono::steady_clock::now();
             auto servo_status = telemetry.cycle(velocity_map, energize); // Send commands & receive telemetry
+            last_cycle_ms = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - cycle_begin).count();
+            last_servo_status = servo_status;
 
             // Stash measured velocities for the next tick's odometry.
             measured_rev_s = {0.0, 0.0, 0.0, 0.0};
@@ -554,12 +600,16 @@ int main(int argc, char **argv)
 
             float voltage[4] = {0.0f, 0.0f, 0.0f, 0.0f};
             int i = 0;
+            vmin_last = 0.0;
 
             for (const auto &pair : servo_status)
             {
                 const auto &r = pair.second;
                 if (i < 4)
                     voltage[i] = r.voltage;
+                if (std::isfinite(r.voltage) && r.voltage > 0.0 &&
+                    (vmin_last <= 0.0 || r.voltage < vmin_last))
+                    vmin_last = r.voltage;
                 int motor_id = pair.first;
 
                 std::string sub = std::string("motor-") + std::to_string(motor_id);
@@ -631,25 +681,89 @@ int main(int argc, char **argv)
             last_motor_time = current_time;
         }
 
-        // --- UDP Telemetry Sender ---
-        if (current_time - last_sender_time >= Sender_interval)
+        // --- UDP Telemetry Sender (protocol v2, key=value CSV) ---
+        // v1 keys come first so pre-v2 dashboards still parse; mv=2 is the
+        // capability flag the server gates MV2 pose-target frames on.
+        if (current_time - last_sender_time >= Telemetry_interval)
         {
-            // key=value telemetry so external PC can parse deterministically.
-            // Fields: state, voltage, ball (0/1), px, py, radius, bearing, conf, ts_ms.
-            auto ts_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            const uint64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                 current_time.time_since_epoch()).count();
-            std::string msg =
-                "state=active"
-                ",voltage=" + std::to_string(sender_msg.voltage) +
-                ",ball="    + (sender_msg.obs.found ? "1" : "0") +
-                ",px="      + std::to_string(sender_msg.obs.px) +
-                ",py="      + std::to_string(sender_msg.obs.py) +
-                ",r="       + std::to_string(sender_msg.obs.radius) +
-                ",bearing=" + std::to_string(sender_msg.obs.bearing) +
-                ",conf="    + std::to_string(sender_msg.obs.confidence) +
-                ",ts_ms="   + std::to_string(ts_ms);
-            logger.log("rframework", "sender", msg, LogLevel::INFO);
-            UDP.send(msg);
+
+            rf::TelemetrySnapshot snap;
+            // v1 core.
+            snap.state = supervisor.estop() ? "estop" : "active";
+            snap.voltage = sender_msg.voltage;
+            snap.ball_found = sender_msg.obs.found;
+            snap.ball_px = sender_msg.obs.px;
+            snap.ball_py = sender_msg.obs.py;
+            snap.ball_radius = sender_msg.obs.radius;
+            snap.ball_bearing = sender_msg.obs.bearing;
+            snap.ball_confidence = sender_msg.obs.confidence;
+            snap.robot_ts_ms = now_ms;
+            // v2 identity & link.
+            snap.rid = robot_rid;
+            snap.seq = telem_seq++;
+            snap.up_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                current_time - process_start).count();
+            snap.ifip = UDP.local_ip();
+            snap.vmin = vmin_last;
+            snap.m_exp = static_cast<uint32_t>(telemetry.controllers.size());
+            snap.cmd_age_ms = last_valid_cmd_ms
+                ? static_cast<int64_t>(now_ms - *last_valid_cmd_ms) : -1;
+            snap.cmd_rx = cmd_rx_count;
+            snap.cmd_last_id = last_cmd_id;
+            snap.arduino_connected = a.isConnected();
+            snap.camera_running = camera_thread.joinable();
+            snap.estop = supervisor.estop();
+            snap.tx_err = UDP.tx_errors();
+            snap.cycle_ms = last_cycle_ms;
+            // Per-motor block: every expected motor appears; the ones that
+            // replied carry live numbers.
+            for (const auto &pair : telemetry.controllers)
+            {
+                rf::MotorTelem mt;
+                mt.id = pair.first;
+                auto it = last_servo_status.find(pair.first);
+                if (it != last_servo_status.end())
+                {
+                    mt.ok = true;
+                    mt.mode = it->second.mode;
+                    mt.fault = it->second.fault;
+                    mt.temperature = it->second.temperature;
+                    mt.voltage = it->second.voltage;
+                    mt.velocity = it->second.velocity;
+                    mt.current = std::isfinite(it->second.current) ? it->second.current : 0.0;
+                    snap.m_ok++;
+                }
+                snap.motors.push_back(mt);
+            }
+            // v2+ additive: IMU (our CCW+ convention), odometry, loop health.
+            snap.imu_yaw_dps = telemetry.attitude_present
+                ? telemetry.imu_yaw_dps * motion_settings.imu_yaw_rate_sign
+                : std::nan("");
+            snap.heading_deg = telemetry.imu_heading_deg;
+            snap.odo_vx = odo_twist.vx;
+            snap.odo_vy = odo_twist.vy;
+            snap.odo_w = odo_twist.w;
+            if (loop_ms_n > 0)
+            {
+                snap.loop_ms = loop_ms_sum / loop_ms_n;
+                snap.loop_jitter_ms = loop_ms_max - loop_ms_min;
+            }
+            loop_ms_sum = 0.0;
+            loop_ms_min = 1e9;
+            loop_ms_max = 0.0;
+            loop_ms_n = 0;
+            snap.imu_ok = telemetry.attitude_present;
+            // MV2 executor status.
+            snap.mv_seq = bridge.mv_seq();
+            snap.wd_state = bridge.wd_state();
+            snap.mv_kind = bridge.kind_word();
+            snap.tgt_dist_mm = bridge.tgt_dist_mm();
+
+            const std::string wire = snap.encode();
+            logger.log("rframework", "sender", wire, LogLevel::INFO);
+            UDP.send(wire);
             last_sender_time = current_time;
         }
 

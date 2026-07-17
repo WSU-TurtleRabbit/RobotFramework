@@ -103,9 +103,20 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
         cbk.Wait();
 
         attitude_present = pi3hat_output.attitude_present;
-        imu_yaw_dps = attitude_present
-                          ? attitude.rate_dps.z
-                          : std::numeric_limits<double>::quiet_NaN();
+        if (attitude_present)
+        {
+            imu_yaw_dps = attitude.rate_dps.z;
+            // Yaw Euler angle from the attitude quaternion, degrees.
+            const auto &q = attitude.attitude;
+            imu_heading_deg = std::atan2(2.0 * (q.w * q.z + q.x * q.y),
+                                         1.0 - 2.0 * (q.y * q.y + q.z * q.z)) *
+                              (180.0 / M_PI);
+        }
+        else
+        {
+            imu_yaw_dps = std::numeric_limits<double>::quiet_NaN();
+            imu_heading_deg = std::numeric_limits<double>::quiet_NaN();
+        }
     }
 
     // Parse replies into a map keyed by responding CAN ID (frame.source)

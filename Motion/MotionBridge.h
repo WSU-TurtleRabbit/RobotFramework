@@ -58,6 +58,11 @@ public:
     const char* kind_word() const { return exec_.kind_word(); }
     int wd_state() const { return static_cast<int>(last_wd_); }  // 0/1/2
     int64_t tgt_dist_mm() const;                                  // -1 = no MOVE
+    // Robot id of the active MV2 command (-1 = none) for cmd_last_id.
+    int last_robot_id() const {
+        const auto& c = exec_.active_cmd();
+        return c ? static_cast<int>(c->robot_id) : -1;
+    }
 
 private:
     phx::MoveExecutor exec_;

@@ -50,9 +50,11 @@ public:
 
     // pi3hat IMU sample from the most recent cycle(). Yaw rate is the RAW
     // gyro z-axis in deg/s (mounting polarity is applied downstream via
-    // config imu.yaw_rate_sign).
+    // config imu.yaw_rate_sign). Heading is the attitude quaternion's yaw
+    // Euler angle in degrees.
     bool attitude_present = false;
     double imu_yaw_dps = std::numeric_limits<double>::quiet_NaN();
+    double imu_heading_deg = std::numeric_limits<double>::quiet_NaN();
 
     // controllers keyed by CAN ID
     std::map<int, std::shared_ptr<mjbots::moteus::Controller>> controllers;

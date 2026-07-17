@@ -5,6 +5,9 @@ intervals:
   Motor_interval: 10
   Arduino_interval: 100
   Reciver_interval: 20
+  # Telemetry v2 send cadence (ms). Falls back to the legacy Sender_interval
+  # key when absent.
+  Telemetry_interval: 200
   Sender_interval: 1000
   Camera_interval: 200
   Idle_interval: 3000
@@ -13,3 +16,7 @@ intervals:
 # are ignored (the robot must not drive on a teammate's command).
 # -1 = accept any id (historical behavior, useful on the bench).
 Robot_id: -1
+
+# Physical robot identity letter reported as rid= in telemetry (asset tag,
+# not the command id — swapping electronics between shells keeps this).
+Robot_rid: "?"

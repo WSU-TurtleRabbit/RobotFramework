@@ -38,6 +38,8 @@ private:
     // True once at least one packet has been received: only then does
     // client_addr hold a real peer we can send telemetry back to.
     bool has_peer;
+    // Failed sendto() calls (telemetry v2 `tx_err`).
+    unsigned long long tx_err_count;
 
 public:
     UDP();
@@ -49,6 +51,12 @@ public:
     int getBufferSize();
     int getRecieverPort();
     int getSenderPort();
+
+    // Telemetry v2 link stats.
+    unsigned long long tx_errors() const { return tx_err_count; }
+    // Best-effort local IP of the interface that routes to the current
+    // peer ("0.0.0.0" until a peer is known).
+    std::string local_ip();
 };
 
 #endif // UDP_H
