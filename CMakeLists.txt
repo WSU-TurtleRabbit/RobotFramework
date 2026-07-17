@@ -21,14 +21,15 @@ target_link_libraries(COMMON_LIBS INTERFACE
     ${OpenCV_LIBS}
     BallDetection
     Arduino
-    Networks 
+    Networks
     wheel_math
-    moteus 
-    pi3hat 
+    Motion
+    moteus
+    pi3hat
     bcm_host
     Telemetry
     Logger
-    atomic 
+    atomic
     yaml-cpp
 )
 
@@ -45,6 +46,7 @@ add_subdirectory(BallDetection)
 add_subdirectory(Arduino)
 add_subdirectory(Networks)
 add_subdirectory(Math)
+add_subdirectory(Motion)
 add_subdirectory(Telemetry)
 add_subdirectory(Logger)
 

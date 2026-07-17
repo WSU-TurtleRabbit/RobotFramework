@@ -41,6 +41,13 @@ public:
     // Calculate motor velocity setpoints (rev/s, motor ids 1..4 in order)
     // from the desired body twist, applying the mode's limit policy.
     std::vector<double> calculate(double velocity_x, double velocity_y, double velocity_w);
+
+    // Same, but ALWAYS applies the CAPPED policy (uniform scale-to-fit, so
+    // the twist's direction is preserved) regardless of the operator mode.
+    // Used for the onboard executor's output: its per-mode profiles already
+    // bound speed, and a SAFE-mode hard stop mid-trajectory would fight the
+    // shaper. Interim until the safety supervisor owns envelope shaping.
+    std::vector<double> calculateCapped(double velocity_x, double velocity_y, double velocity_w);
 };
 
 #endif

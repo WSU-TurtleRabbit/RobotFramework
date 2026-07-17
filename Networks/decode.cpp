@@ -56,8 +56,14 @@ CmdType cmdDecoder::decode_cmd(const std::string& message) {
         if (f[0] == "STOP") return CmdType::Stop;
         if (f[0] == "PING") return CmdType::Ping;
         if (f[0] == "CALIBRATE") return CmdType::Calibrate;
-        return CmdType::Malformed;
     }
+
+    // MV2 pose-target frames are parsed (strictly) by MotionBridge; here we
+    // only classify so the main loop can route the raw payload. An MV2 line
+    // must never fall through to the v1 decoder.
+    if (!f.empty() && f[0] == "MV2") return CmdType::Move;
+
+    if (f.size() == 1) return CmdType::Malformed;
 
     // v1 velocity frame: exactly 7 fields, all well-formed, or reject the
     // WHOLE packet.

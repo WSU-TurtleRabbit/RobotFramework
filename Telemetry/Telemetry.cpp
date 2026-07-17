@@ -25,6 +25,20 @@ Telemetry::Telemetry()
         std::cerr << "Error loading Safety config for watchdog: " << e.what() << std::endl;
     }
 
+    // Optional moteus-level velocity/accel shaping (rev/s, rev/s^2).
+    try
+    {
+        YAML::Node m_config = YAML::LoadFile("../config/Motor.yaml");
+        if (m_config["velocityLimit"])
+            velocity_limit_rev_s = m_config["velocityLimit"].as<double>();
+        if (m_config["accelLimit"])
+            accel_limit_rev_s2 = m_config["accelLimit"].as<double>();
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Error loading Motor config for limits: " << e.what() << std::endl;
+    }
+
     // Create controllers for each motor ID / bus pair, using the shared transport
     for (const auto &p : servo_map)
     {
@@ -46,7 +60,8 @@ Telemetry::Telemetry()
     }
 }
 
-std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velocity_map)
+std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velocity_map,
+                                               bool energize)
 {
     // Build command frames
     std::vector<mjbots::moteus::CanFdFrame> command_frames;
@@ -54,6 +69,12 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
 
     for (const auto &pair : controllers)
     {
+        if (!energize)
+        {
+            // Coast: cut motor output but keep querying telemetry.
+            command_frames.push_back(pair.second->MakeStop());
+            continue;
+        }
         mjbots::moteus::PositionMode::Command position_command;
         position_command.position = std::numeric_limits<double>::quiet_NaN();
         auto it = velocity_map.find(pair.first);
@@ -61,15 +82,30 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
         // Hardware failsafe: the motor stops itself if no further command
         // arrives within this window (loop hang, process kill, CAN drop).
         position_command.watchdog_timeout = watchdog_timeout_s;
+        // Controller-level smoothing between 100 Hz updates (NaN = default).
+        position_command.velocity_limit = velocity_limit_rev_s;
+        position_command.accel_limit = accel_limit_rev_s2;
         command_frames.push_back(pair.second->MakePosition(position_command));
     }
 
-    // Send all commands in one BlockingCycle and collect replies
+    // Send all commands in one transaction and collect replies, sampling the
+    // pi3hat IMU in the same pass (the transport requests attitude whenever
+    // a destination struct is supplied).
     std::vector<mjbots::moteus::CanFdFrame> replies;
 
     if (!command_frames.empty())
     {
-        transport->BlockingCycle(command_frames.data(), command_frames.size(), &replies);
+        mjbots::pi3hat::Attitude attitude;
+        mjbots::pi3hat::Pi3Hat::Output pi3hat_output;
+        mjbots::moteus::BlockingCallback cbk;
+        transport->Cycle(command_frames.data(), command_frames.size(), &replies,
+                         &attitude, &pi3hat_output, nullptr, cbk.callback());
+        cbk.Wait();
+
+        attitude_present = pi3hat_output.attitude_present;
+        imu_yaw_dps = attitude_present
+                          ? attitude.rate_dps.z
+                          : std::numeric_limits<double>::quiet_NaN();
     }
 
     // Parse replies into a map keyed by responding CAN ID (frame.source)

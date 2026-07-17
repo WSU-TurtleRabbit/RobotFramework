@@ -28,9 +28,16 @@ inline mjbots::moteus::Query::Format robot_query_format() {
 // per-command watchdog explicitly — a hardware-level failsafe independent of
 // any software path: motors stop themselves `watchdog_timeout` seconds after
 // the last command frame.
+//
+// velocity_limit / accel_limit let moteus itself bound each setpoint change
+// (rev/s and rev/s^2): controller-level smoothing between our 100 Hz updates
+// and a runaway backstop. NaN command values leave them at the controller
+// default, so enabling the registers is behavior-neutral until configured.
 inline mjbots::moteus::PositionMode::Format robot_position_format() {
     mjbots::moteus::PositionMode::Format f;
     f.watchdog_timeout = mjbots::moteus::kFloat;
+    f.velocity_limit = mjbots::moteus::kFloat;
+    f.accel_limit = mjbots::moteus::kFloat;
     return f;
 }
 

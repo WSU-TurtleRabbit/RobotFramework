@@ -81,6 +81,24 @@ std::vector<double> Wheel_math::calculate(double velocity_x, double velocity_y, 
     return {rev_s[0], rev_s[1], rev_s[2], rev_s[3]};
 }
 
+std::vector<double> Wheel_math::calculateCapped(double velocity_x, double velocity_y, double velocity_w) {
+    // Uniform scale into the configured limits: direction preserved.
+    double scale = 1;
+    if (std::abs(velocity_x) > X_LIMIT) {
+        scale = std::min(scale, X_LIMIT / std::abs(velocity_x));
+    }
+    if (std::abs(velocity_y) > Y_LIMIT) {
+        scale = std::min(scale, Y_LIMIT / std::abs(velocity_y));
+    }
+    if (std::abs(velocity_w) > W_LIMIT) {
+        scale = std::min(scale, W_LIMIT / std::abs(velocity_w));
+    }
+
+    const std::array<double, 4> rev_s = kin.inverse(
+        BodyTwist{velocity_x * scale, velocity_y * scale, velocity_w * scale});
+    return {rev_s[0], rev_s[1], rev_s[2], rev_s[3]};
+}
+
 void Wheel_math::setMode(int base_mode)
 {
     mode = base_mode;

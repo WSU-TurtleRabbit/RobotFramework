@@ -1,5 +1,8 @@
 intervals:
-  Motor_interval: 20
+  # Motor/control tick (ms). 10 ms = 100 Hz: the MV2 executor shapes motion
+  # at this rate. 4 ms (250 Hz, the rate proven on the Rust robot) is the
+  # target once validated on this hardware.
+  Motor_interval: 10
   Arduino_interval: 100
   Reciver_interval: 20
   Sender_interval: 1000

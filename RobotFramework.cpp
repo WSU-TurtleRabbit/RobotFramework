@@ -31,6 +31,10 @@
 #include "arduino.h"
 #include "Telemetry.h"
 #include "arduino.h"
+#include "MotionBridge.h"
+#include "motion_config_yaml.h"
+#include <array>
+#include <cstdint>
 #include <yaml-cpp/yaml.h>
 #include "Logger/Logger.h"
 
@@ -172,7 +176,9 @@ int main(int argc, char **argv)
         interval_sender = 1000;
         interval_arduino = 100;
         interval_camera = 200;
-        interval_motor = 20;
+        // 100 Hz control tick; 4 ms (250 Hz) is the target once validated
+        // on hardware.
+        interval_motor = 10;
 
         current_limit = 5.0;
         current_grace_ms = 300.0;
@@ -201,6 +207,9 @@ int main(int argc, char **argv)
 
     static auto Motor_Command_interval = std::chrono::milliseconds(500);
 
+    // --- Onboard motion (MV2 pose-target executor) config ---
+    rf::MotionSettings motion_settings = rf::loadMotionSettings("../config/Motion.yaml");
+
     // --- Initialize modules ---
     BallDetection detect; // Camera detection
     UDP UDP;              // UDP communication
@@ -208,6 +217,8 @@ int main(int argc, char **argv)
     cmdDecoder cmd;       // Decode incoming commands
     Telemetry telemetry;  // Motor telemetry
     Arduino a;            // Arduino controller
+    // Onboard trajectory following: MV2 frames in, shaped body twists out.
+    rf::MotionBridge bridge(motion_settings.config, motion_settings.imu_yaw_rate_sign, robot_id);
 
     std::string msg;                    // Incoming UDP message
     std::vector<double> wheel_velocity; // Calculated wheel velocities
@@ -287,11 +298,17 @@ int main(int argc, char **argv)
             msg = UDP.receive(); // Receive new message
             if (msg == "TIMEOUT")
             {
-                timeout_count++;
-                if (timeout_count >= TIMEOUT_LIMIT)
+                // Legacy v1 path: N empty polls -> stop. While the MV2
+                // executor is active its own watchdog tiers (Fresh -> BRAKE
+                // -> COAST) replace this: braking is shaped, not a cliff.
+                if (!bridge.active())
                 {
-                    logger.log("rframework", "reciever", "UDP TIMEOUT - stopping motors", LogLevel::WARN);
-                    velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}}; // Stop wheels
+                    timeout_count++;
+                    if (timeout_count >= TIMEOUT_LIMIT)
+                    {
+                        logger.log("rframework", "reciever", "UDP TIMEOUT - stopping motors", LogLevel::WARN);
+                        velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}}; // Stop wheels
+                    }
                 }
             }
             else
@@ -302,6 +319,13 @@ int main(int argc, char **argv)
                 {
                 case CmdType::Velocity:
                     timeout_count = 0;
+                    // A v1 velocity command takes the robot back to direct
+                    // (legacy) control; the executor stands down.
+                    if (bridge.active())
+                    {
+                        bridge.clear();
+                        logger.log("rframework", "reciever", "v1 command - leaving MV2 mode", LogLevel::INFO);
+                    }
                     logger.log("rframework", "reciever", std::string("Message Recieved: ") + msg, LogLevel::INFO);
                     wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
                     // Map velocities to motors
@@ -313,6 +337,33 @@ int main(int argc, char **argv)
 
                     last_known_message = current_time;
                     break;
+
+                case CmdType::Move:
+                {
+                    if (!motion_settings.enabled)
+                    {
+                        logger.log("rframework", "reciever", "MV2 frame ignored (motion disabled in config)", LogLevel::WARN);
+                        break;
+                    }
+                    const uint64_t rx_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        current_time.time_since_epoch()).count();
+                    switch (bridge.accept_frame(msg, rx_ms))
+                    {
+                    case rf::Mv2Accept::Accepted:
+                        timeout_count = 0;
+                        last_known_message = current_time;
+                        break;
+                    case rf::Mv2Accept::WrongId:
+                        logger.log("rframework", "reciever", "MV2 frame for another robot ignored", LogLevel::WARN);
+                        break;
+                    case rf::Mv2Accept::Malformed:
+                    default:
+                        logger.log("rframework", "reciever",
+                            std::string("Malformed MV2 frame rejected: ") + msg, LogLevel::WARN);
+                        break;
+                    }
+                    break;
+                }
 
                 case CmdType::Stop:
                     logger.log("rframework", "reciever", "UDP STOP", LogLevel::HATE);
@@ -380,7 +431,51 @@ int main(int argc, char **argv)
         // --- Motor Telemetry and Safety Check ---
         if (current_time - last_motor_time >= MotorInterval)
         {
-            auto servo_status = telemetry.cycle(velocity_map); // Send commands & receive telemetry
+            // Measured wheel velocities (rev/s, motor id i -> index i-1) from
+            // the PREVIOUS cycle's replies — the executor's odometry input.
+            static std::array<double, 4> measured_rev_s = {0.0, 0.0, 0.0, 0.0};
+            // Actual elapsed time between motor ticks (the loop timer is
+            // approximate; the executor integrates with the real dt).
+            static auto last_motor_tick_wall = current_time;
+            const double motor_dt =
+                std::chrono::duration<double>(current_time - last_motor_tick_wall).count();
+            last_motor_tick_wall = current_time;
+
+            bool energize = true;
+
+            if (bridge.active())
+            {
+                // Onboard trajectory following: wheel odometry + gyro in,
+                // shaped body twist out, at the motor rate — wheel motion no
+                // longer depends on Wi-Fi cadence.
+                const uint64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    current_time.time_since_epoch()).count();
+                const BodyTwist odo = m.kinematics().forward(measured_rev_s);
+                const double imu_yaw_radps = telemetry.attitude_present
+                    ? telemetry.imu_yaw_dps * (M_PI / 180.0)
+                    : std::nan("");
+                const phx::ExecOutput out = bridge.tick(
+                    now_ms, motor_dt, phx::Twist{odo.vx, odo.vy, odo.w}, imu_yaw_radps);
+
+                wheel_velocity = m.calculateCapped(out.twist.lin.x, out.twist.lin.y, out.twist.ang);
+                velocity_map = {
+                    {1, wheel_velocity[0]},
+                    {2, wheel_velocity[1]},
+                    {3, wheel_velocity[2]},
+                    {4, wheel_velocity[3]}};
+                energize = out.energize;
+            }
+
+            auto servo_status = telemetry.cycle(velocity_map, energize); // Send commands & receive telemetry
+
+            // Stash measured velocities for the next tick's odometry.
+            measured_rev_s = {0.0, 0.0, 0.0, 0.0};
+            for (const auto &pair : servo_status)
+            {
+                const int id = pair.first;
+                if (id >= 1 && id <= 4 && std::isfinite(pair.second.velocity))
+                    measured_rev_s[id - 1] = pair.second.velocity;
+            }
 
             float voltage[4];
             int i = 0;
@@ -468,23 +563,30 @@ int main(int argc, char **argv)
         {
             if (a.isConnected())
             {
-                if (cmd.kick)
+                // In MV2 mode the executor's frames carry kick/dribble:
+                // kick is edge-triggered (once per server pulse), dribble is
+                // level-held. The v1 path keeps its historical behavior.
+                const bool mv2 = bridge.active();
+                const bool want_kick = mv2 ? bridge.take_kick() : cmd.kick;
+                const bool want_dribble = mv2 ? bridge.dribble() : cmd.dribble;
+
+                if (want_kick)
                 {
                     a.sendCommand(kick); // Kick
                     logger.log("rframework", "arduino", "Sent kick", LogLevel::HATE);
                     cmd.kick = false;
                 }
-                else if (cmd.dribble)
+                else if (want_dribble)
                 {
                     a.sendCommand(dribble); // Dribble
                     logger.log("rframework", "arduino", "Sent dribble", LogLevel::LOVE);
-                
+
                 }
                 else
                 {
                     a.sendCommand(stop_dribble); // Stop
                     logger.log("rframework", "arduino", "Sent stop dribble", LogLevel::INFO);
-                    
+
 
                 }
             }
