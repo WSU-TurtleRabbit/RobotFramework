@@ -24,6 +24,7 @@ target_link_libraries(COMMON_LIBS INTERFACE
     Networks
     wheel_math
     Motion
+    Safety
     moteus
     pi3hat
     bcm_host
@@ -47,6 +48,7 @@ add_subdirectory(Arduino)
 add_subdirectory(Networks)
 add_subdirectory(Math)
 add_subdirectory(Motion)
+add_subdirectory(Safety)
 add_subdirectory(Telemetry)
 add_subdirectory(Logger)
 

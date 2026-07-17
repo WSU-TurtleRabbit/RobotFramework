@@ -33,8 +33,10 @@
 #include "arduino.h"
 #include "MotionBridge.h"
 #include "motion_config_yaml.h"
+#include "supervisor.h"
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <yaml-cpp/yaml.h>
 #include "Logger/Logger.h"
 
@@ -85,9 +87,11 @@ int main(int argc, char **argv)
 
     double zero = 0.0;
 
-    double current_limit;
-    double current_grace_ms; // sustained over-current window before tripping
-    // double temperture_limit;
+    // Safety policy (Safety/supervisor.h); defaults ported from phoenix-rf,
+    // overridden by config/Safety.yaml below.
+    rf::SafetyConfig safety_cfg;
+    double current_grace_ms = 300.0; // sustained over-current window
+    double fault_grace_ms = 50.0;    // window for fault/temp/voltage trips
 
     // --- Interval times (ms) for periodic tasks ---
     int interval_reciver, interval_sender, interval_arduino, interval_camera, interval_motor;
@@ -139,7 +143,10 @@ int main(int argc, char **argv)
         logger.log("rframework", "Starting in SAFE mode", LogLevel::INFO);
     }
 
-    // Enter the mode into the Wheel_math model
+    // CLI flag -> supervisor drive mode.
+    safety_cfg.mode = (mode == 2)   ? rf::DriveMode::Unsafe
+                      : (mode == 1) ? rf::DriveMode::Capped
+                                    : rf::DriveMode::Safe;
 
     // --- Load YAML config ---
     logger.log("rframework", "Loading configs...", LogLevel::INFO);
@@ -150,8 +157,24 @@ int main(int argc, char **argv)
         YAML::Node s_config = YAML::LoadFile("../config/Safety.yaml"); // Safety Config file
         YAML::Node interval_values = config["intervals"];
 
-        current_limit = s_config["currentLimit"].as<double>();
-        current_grace_ms = s_config["currentGraceMs"] ? s_config["currentGraceMs"].as<double>() : 300.0;
+        // Safety supervisor: envelope + trip thresholds (defaults kept when
+        // a key is absent).
+        if (s_config["envelope"])
+        {
+            YAML::Node env = s_config["envelope"];
+            if (env["safeLinear"]) safety_cfg.safe_linear_mps = env["safeLinear"].as<double>();
+            if (env["safeAngular"]) safety_cfg.safe_angular_rps = env["safeAngular"].as<double>();
+            if (env["cappedLinear"]) safety_cfg.capped_linear_mps = env["cappedLinear"].as<double>();
+            if (env["cappedAngular"]) safety_cfg.capped_angular_rps = env["cappedAngular"].as<double>();
+        }
+        if (s_config["currentLimit"]) safety_cfg.trip_current_a = s_config["currentLimit"].as<double>();
+        if (s_config["currentGraceMs"]) current_grace_ms = s_config["currentGraceMs"].as<double>();
+        if (s_config["faultGraceMs"]) fault_grace_ms = s_config["faultGraceMs"].as<double>();
+        if (s_config["commandTimeoutMs"]) safety_cfg.command_timeout_ms = s_config["commandTimeoutMs"].as<uint64_t>();
+        if (s_config["tripTempC"]) safety_cfg.trip_temp_c = s_config["tripTempC"].as<double>();
+        if (s_config["minBusVoltage"]) safety_cfg.min_bus_voltage = s_config["minBusVoltage"].as<double>();
+        if (s_config["recoveryS"]) safety_cfg.recovery_s = s_config["recoveryS"].as<double>();
+        if (s_config["watchdogTimeout"]) safety_cfg.watchdog_s = s_config["watchdogTimeout"].as<double>();
 
         interval_reciver = interval_values["Reciver_interval"].as<int>();
         interval_sender = interval_values["Sender_interval"].as<int>();
@@ -180,13 +203,18 @@ int main(int argc, char **argv)
         // on hardware.
         interval_motor = 10;
 
-        current_limit = 5.0;
-        current_grace_ms = 300.0;
-
+        // safety_cfg keeps its built-in defaults.
 
         logger.log("rframework", std::string("Failed to load configs: ") + (e.what()), LogLevel::WARN);
         logger.log("rframework", std::string("Using fallback values:") + (e.what()), LogLevel::WARN);
     }
+
+    // Grace windows are configured in milliseconds (robust to control-rate
+    // changes) but the supervisor counts consecutive TICKS, like safety.rs.
+    safety_cfg.current_grace_ticks = static_cast<uint32_t>(
+        std::max(1.0, current_grace_ms / std::max(1, interval_motor)));
+    safety_cfg.fault_grace_ticks = static_cast<uint32_t>(
+        std::max(1.0, fault_grace_ms / std::max(1, interval_motor)));
 
     configData = {
         {"Reciever Interval", interval_reciver},
@@ -194,7 +222,9 @@ int main(int argc, char **argv)
         {"Arduino Interval", interval_arduino},
         {"Camera Interval", interval_camera},
         {"Motor Interval", interval_motor},
-        {"Current Limit", current_limit},
+        {"Current Limit", safety_cfg.trip_current_a},
+        {"Current Grace Ticks", static_cast<double>(safety_cfg.current_grace_ticks)},
+        {"Fault Grace Ticks", static_cast<double>(safety_cfg.fault_grace_ticks)},
         {"Robot Id", robot_id}};
     logger.log("rframework", configData, LogLevel::INFO);
 
@@ -219,14 +249,20 @@ int main(int argc, char **argv)
     Arduino a;            // Arduino controller
     // Onboard trajectory following: MV2 frames in, shaped body twists out.
     rf::MotionBridge bridge(motion_settings.config, motion_settings.imu_yaw_rate_sign, robot_id);
+    // Safety supervisor: envelope shaping, protective trips, auto-recovery.
+    rf::Supervisor supervisor(safety_cfg);
 
     std::string msg;                    // Incoming UDP message
     std::vector<double> wheel_velocity; // Calculated wheel velocities
     std::map<int, double> velocity_map; // Motor ID → velocity map
     Telemetry_msg sender_msg;           // Telemetry message to send
 
-    // Set mode of Wheel_math based on flags
-    m.setMode(mode);
+    // Last commanded body twist (post-envelope) — the supervisor's
+    // "operator idle" input for auto-recovery.
+    BodyTwist last_cmd_twist;
+    // Monotonic ms of the last VALID drive command (v1 or MV2) for the
+    // staleness gate; nullopt until one arrives.
+    std::optional<uint64_t> last_valid_cmd_ms;
 
     // --- Initialize Arduino ---
     logger.log("rframework", "arduino", "Searching for Arduino...", LogLevel::INFO);
@@ -245,8 +281,6 @@ int main(int argc, char **argv)
     // {
     //     logger.log("rframework", "arduino", "No arduino found", LogLevel::WARN);
     // }
-
-    bool emergency_stop = false; // Flag to stop robot on emergency
 
     // --- Start camera detection thread ---
     std::thread camera_thread;
@@ -275,8 +309,11 @@ int main(int argc, char **argv)
         std::to_string(UDP.getRecieverPort()), LogLevel::LOVE);
 
     // --- Main control loop ---
+    // Protective trips no longer kill the process: the supervisor latches a
+    // recoverable estop (coast + auto-recovery / STOP clears). Only SIGINT/
+    // SIGTERM end the loop.
     logger.log("rframework", "Entering main control loop", LogLevel::LOVE);
-    while (!emergency_stop && !manual_stop_flag.load(std::memory_order_relaxed))
+    while (!manual_stop_flag.load(std::memory_order_relaxed))
     {
         auto current_time = std::chrono::steady_clock::now();
 
@@ -318,6 +355,7 @@ int main(int argc, char **argv)
                 switch (cmd.decode_cmd(msg))
                 {
                 case CmdType::Velocity:
+                {
                     timeout_count = 0;
                     // A v1 velocity command takes the robot back to direct
                     // (legacy) control; the executor stands down.
@@ -327,7 +365,11 @@ int main(int argc, char **argv)
                         logger.log("rframework", "reciever", "v1 command - leaving MV2 mode", LogLevel::INFO);
                     }
                     logger.log("rframework", "reciever", std::string("Message Recieved: ") + msg, LogLevel::INFO);
-                    wheel_velocity = m.calculate(cmd.velocity_x, cmd.velocity_y, cmd.velocity_w);
+                    // Drive-mode envelope: direction-preserving scale-to-fit
+                    // (SAFE no longer hard-stops on an over-limit command).
+                    const BodyTwist shaped = supervisor.shape_twist(
+                        BodyTwist{cmd.velocity_x, cmd.velocity_y, cmd.velocity_w});
+                    wheel_velocity = m.calculate(shaped.vx, shaped.vy, shaped.w);
                     // Map velocities to motors
                     velocity_map = {
                         {1, wheel_velocity[0]},
@@ -336,7 +378,11 @@ int main(int argc, char **argv)
                         {4, wheel_velocity[3]}};
 
                     last_known_message = current_time;
+                    last_cmd_twist = shaped;
+                    last_valid_cmd_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        current_time.time_since_epoch()).count();
                     break;
+                }
 
                 case CmdType::Move:
                 {
@@ -352,6 +398,7 @@ int main(int argc, char **argv)
                     case rf::Mv2Accept::Accepted:
                         timeout_count = 0;
                         last_known_message = current_time;
+                        last_valid_cmd_ms = rx_ms;
                         break;
                     case rf::Mv2Accept::WrongId:
                         logger.log("rframework", "reciever", "MV2 frame for another robot ignored", LogLevel::WARN);
@@ -366,16 +413,22 @@ int main(int argc, char **argv)
                 }
 
                 case CmdType::Stop:
-                    logger.log("rframework", "reciever", "UDP STOP", LogLevel::HATE);
+                    // Operator STOP: safe-stop the motors and clear any
+                    // latched safety trip — the daemon KEEPS RUNNING so the
+                    // operator can resume without an SSH round-trip (ported
+                    // semantics from phoenix-rf; this used to exit(0)).
+                    logger.log("rframework", "reciever", "UDP STOP - safe stop, latches cleared", LogLevel::HATE);
                     velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}}; // Stop wheels
+                    wheel_velocity = {zero, zero, zero, zero};
+                    last_cmd_twist = BodyTwist{};
+                    last_valid_cmd_ms.reset();
+                    bridge.clear();     // executor stands down (coast)
+                    supervisor.clear(); // operator recovery of latched trips
 
                     for (const auto &pair : telemetry.controllers)
                     {
                         pair.second->SetStop();
                     }
-                    a.disconnect();
-
-                    std::exit(0);
                     break;
 
                 case CmdType::Ping:
@@ -441,6 +494,9 @@ int main(int argc, char **argv)
                 std::chrono::duration<double>(current_time - last_motor_tick_wall).count();
             last_motor_tick_wall = current_time;
 
+            const uint64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                current_time.time_since_epoch()).count();
+
             bool energize = true;
 
             if (bridge.active())
@@ -448,8 +504,6 @@ int main(int argc, char **argv)
                 // Onboard trajectory following: wheel odometry + gyro in,
                 // shaped body twist out, at the motor rate — wheel motion no
                 // longer depends on Wi-Fi cadence.
-                const uint64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    current_time.time_since_epoch()).count();
                 const BodyTwist odo = m.kinematics().forward(measured_rev_s);
                 const double imu_yaw_radps = telemetry.attitude_present
                     ? telemetry.imu_yaw_dps * (M_PI / 180.0)
@@ -457,13 +511,34 @@ int main(int argc, char **argv)
                 const phx::ExecOutput out = bridge.tick(
                     now_ms, motor_dt, phx::Twist{odo.vx, odo.vy, odo.w}, imu_yaw_radps);
 
-                wheel_velocity = m.calculateCapped(out.twist.lin.x, out.twist.lin.y, out.twist.ang);
+                // Operator envelope on top of the executor's mode caps —
+                // direction-preserving, so the trajectory bends nowhere.
+                const BodyTwist shaped = supervisor.shape_twist(
+                    BodyTwist{out.twist.lin.x, out.twist.lin.y, out.twist.ang});
+                wheel_velocity = m.calculate(shaped.vx, shaped.vy, shaped.w);
                 velocity_map = {
                     {1, wheel_velocity[0]},
                     {2, wheel_velocity[1]},
                     {3, wheel_velocity[2]},
                     {4, wheel_velocity[3]}};
                 energize = out.energize;
+                last_cmd_twist = BodyTwist{out.desired.lin.x, out.desired.lin.y, out.desired.ang};
+            }
+
+            // Safety gate: a latched trip coasts the motors; a stale v1
+            // command holds zero (the MV2 path has its own richer brake/
+            // coast tiers, so only the estop latch applies there).
+            if (supervisor.estop())
+            {
+                velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}};
+                energize = false;
+            }
+            else if (!bridge.active())
+            {
+                if (supervisor.motion_gate(now_ms, last_valid_cmd_ms).has_value())
+                {
+                    velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}};
+                }
             }
 
             auto servo_status = telemetry.cycle(velocity_map, energize); // Send commands & receive telemetry
@@ -477,21 +552,14 @@ int main(int argc, char **argv)
                     measured_rev_s[id - 1] = pair.second.velocity;
             }
 
-            float voltage[4];
+            float voltage[4] = {0.0f, 0.0f, 0.0f, 0.0f};
             int i = 0;
-
-            // Sustained-overcurrent trip: consecutive over-limit readings per
-            // motor before stopping. Acceleration transients spike past the
-            // limit for a few cycles and must not nuisance-stop the robot;
-            // a stall stays over it for the whole grace window.
-            static std::map<int, int> overcurrent_ticks;
-            static const int current_grace_ticks =
-                std::max(1, static_cast<int>(current_grace_ms / std::max(1, interval_motor)));
 
             for (const auto &pair : servo_status)
             {
                 const auto &r = pair.second;
-                voltage[i] = r.voltage;
+                if (i < 4)
+                    voltage[i] = r.voltage;
                 int motor_id = pair.first;
 
                 std::string sub = std::string("motor-") + std::to_string(motor_id);
@@ -506,30 +574,57 @@ int main(int argc, char **argv)
 
                 // std::cout << "Motor ID: " << motor_id << " Position is: " << r.position << " Mode is: "<< r.mode<< " Velocity is: " << r.velocity<< " Current is: "<< r.current<<"\n";
 
-                // The gate works now that q_current is actually requested
-                // (it used to compare NaN > limit, which never fired).
-                if (std::abs(r.current) > current_limit)
-                {
-                    int &over = overcurrent_ticks[motor_id];
-                    over++;
-                    if (over >= current_grace_ticks)
-                    {
-                        logger.log("rframework", sub, "Sustained overcurrent detected", LogLevel::CRIT);
-                        emergency_stop = true;
-                    }
-                }
-                else
-                {
-                    overcurrent_ticks[motor_id] = 0;
-                }
                 i++;
             }
 
             // Compute average voltage
             float sum = 0;
-            for (int i = 0; i < 4; i++)
-                sum += voltage[i];
+            for (int j = 0; j < 4; j++)
+                sum += voltage[j];
             sender_msg.voltage = sum / 4;
+
+            // --- Safety supervisor: per-motor trips with grace counts ---
+            // (The old inline gate compared NaN > limit — see the motor:
+            // commit — and hard-exited the process; trips now latch a
+            // RECOVERABLE estop.)
+            std::vector<rf::MotorObs> motor_obs;
+            for (const auto &pair : telemetry.controllers)
+            {
+                rf::MotorObs o;
+                o.id = pair.first;
+                auto it = servo_status.find(pair.first);
+                if (it != servo_status.end())
+                {
+                    o.replied = true;
+                    o.fault = it->second.fault;
+                    o.temperature = it->second.temperature;
+                    o.current = std::isfinite(it->second.current) ? it->second.current : 0.0;
+                }
+                motor_obs.push_back(o);
+            }
+            for (const rf::StopReason &r : supervisor.observe(motor_obs, sender_msg.voltage))
+            {
+                logger.log("rframework",
+                    std::string("SAFETY TRIP: ") + r.word() +
+                    (r.motor ? (std::string(" motor ") + std::to_string(r.motor)) : std::string()),
+                    LogLevel::CRIT);
+            }
+
+            // Auto-recovery: after recoveryS healthy seconds with the
+            // operator commanding zero (or gone stale), the latch releases.
+            const bool cmd_stale = !last_valid_cmd_ms ||
+                (now_ms - *last_valid_cmd_ms > supervisor.config().command_timeout_ms);
+            const bool operator_idle = cmd_stale ||
+                (std::abs(last_cmd_twist.vx) + std::abs(last_cmd_twist.vy) +
+                     std::abs(last_cmd_twist.w) < 0.02 && !cmd.kick);
+            if (auto released = supervisor.try_recover(now_ms, operator_idle))
+            {
+                for (const rf::StopReason &r : *released)
+                {
+                    logger.log("rframework",
+                        std::string("SAFETY RECOVERED: ") + r.word(), LogLevel::DONE);
+                }
+            }
 
             // std::cout << sender_msg.voltage << "\n";
 
@@ -596,13 +691,13 @@ int main(int argc, char **argv)
         std::this_thread::sleep_for(std::chrono::milliseconds(1)); // Reduce CPU load
     }
 
-    // --- Emergency Stop ---
+    // --- Shutdown (SIGINT/SIGTERM) ---
     for (const auto &pair : telemetry.controllers)
     {
         pair.second->SetStop();
     }
     a.disconnect();
-    logger.log("rframework", "Emergency stop activated, shutting down", LogLevel::HATE);
+    logger.log("rframework", "Shutting down, motors stopped", LogLevel::HATE);
 
     // Stop camera thread and join
     stop_camera_thread.store(true, std::memory_order_relaxed);
@@ -611,7 +706,7 @@ int main(int argc, char **argv)
         camera_thread.join();
     }
 
-    std::cout << "Emergency Stop has been activated\n";
+    std::cout << "RobotFramework stopped safely\n";
     logger.closeAll();
 }
 

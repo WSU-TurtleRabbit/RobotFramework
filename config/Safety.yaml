@@ -1,9 +1,23 @@
-velocityLimit:
-  xLimit: 2 # m/s
-  yLimit: 2 # m/s
-  wLimit: 3.15 # rads/s
+# Safety supervisor configuration. Defaults in Safety/supervisor.h; this file
+# overrides. Values follow the set proven on the Rust robot (phoenix-rf),
+# with the envelope kept at this robot's historical limits.
 
-currentLimit: 5.0 # Amps
+# Operator drive-mode speed envelope, DIRECTION-PRESERVING: the commanded
+# body twist is scaled to fit (the translation vector as a unit, so diagonals
+# are never bent toward an axis). SAFE mode shapes instead of hard-stopping;
+# UNSAFE disables the envelope (fault trips and watchdogs still apply).
+envelope:
+  safeLinear: 2.0 # m/s   (historical xLimit/yLimit)
+  safeAngular: 3.15 # rad/s (historical wLimit)
+  cappedLinear: 2.5 # m/s
+  cappedAngular: 6.0 # rad/s
+
+# A valid drive command older than this stops the robot (legacy v1 path; the
+# MV2 executor has its own richer brake/coast watchdog tiers).
+commandTimeoutMs: 250 # milliseconds
+
+# --- Per-motor protective trips (latched; recoverable) ---
+currentLimit: 5.0 # Amps — sustained per-motor overcurrent
 
 # Sustained over-current window: q-current legitimately spikes past the trip
 # level for tens of milliseconds during hard acceleration, so the trip only
@@ -11,9 +25,19 @@ currentLimit: 5.0 # Amps
 # not on a transient.
 currentGraceMs: 300 # milliseconds
 
+# Consecutive-bad window for the other trips (fault codes, temperature,
+# voltage) — one noisy sample must not stop a match.
+faultGraceMs: 50 # milliseconds
+
+tripTempC: 70.0 # C — protective stop below the moteus 75 C hard fault
+minBusVoltage: 10.0 # V — under-voltage cutoff (sagging battery)
+
+# Auto-recovery hold-off: a latched trip clears itself after everything has
+# been healthy (with hysteresis) for this long while the operator commands
+# zero. 0 disables auto-recovery (latch until STOP or restart).
+recoveryS: 3.0 # seconds
+
 # moteus per-command hardware watchdog, seconds: if the Pi control loop
 # stalls or the process dies, each motor stops itself this long after the
 # last command frame — a failsafe independent of any software path.
 watchdogTimeout: 0.1 # seconds
-
-faultyGrace: 1500 # milliseconds
