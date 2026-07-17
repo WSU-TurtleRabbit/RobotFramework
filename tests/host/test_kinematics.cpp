@@ -71,6 +71,43 @@ PHX_TEST(kin_scale_is_physical_direct_drive_rev_s) {
     CHECK(k.peak_motor_rev_s(BodyTwist{1.0, 0.0, 0.0}) <= rev_per_mps + 1e-9);
 }
 
+PHX_TEST(kin_forward_pure_rotation_has_no_net_translation) {
+    const Kinematics k;
+    const auto wheels = k.inverse(BodyTwist{0.0, 0.0, 1.5});
+    const BodyTwist est = k.forward(wheels);
+    CHECK_NEAR(est.vx, 0.0, 1e-6);
+    CHECK_NEAR(est.vy, 0.0, 1e-6);
+    CHECK_NEAR(est.w, 1.5, 1e-6);
+}
+
+PHX_TEST(kin_inverse_forward_roundtrip_twist_grid) {
+    // The wheel odometry (FK) must reproduce any commanded twist that IK
+    // emitted — across a grid of translations, rotations, and mixtures.
+    const Kinematics k;
+    const double vxs[] = {-0.6, -0.2, 0.0, 0.3, 0.5, 1.2};
+    const double vys[] = {-0.4, 0.0, 0.1, 0.4};
+    const double ws[] = {-1.2, 0.0, 0.8, 2.0};
+    for (const double vx : vxs) {
+        for (const double vy : vys) {
+            for (const double w : ws) {
+                const BodyTwist t{vx, vy, w};
+                const BodyTwist est = k.forward(k.inverse(t));
+                CHECK_NEAR(est.vx, t.vx, 1e-6);
+                CHECK_NEAR(est.vy, t.vy, 1e-6);
+                CHECK_NEAR(est.w, t.w, 1e-6);
+            }
+        }
+    }
+}
+
+PHX_TEST(kin_forward_zero_wheels_is_zero_twist) {
+    const Kinematics k;
+    const BodyTwist est = k.forward({0.0, 0.0, 0.0, 0.0});
+    CHECK(est.vx == 0.0);
+    CHECK(est.vy == 0.0);
+    CHECK(est.w == 0.0);
+}
+
 PHX_TEST(kin_sign_flip_inverts_that_wheel_only) {
     Kinematics k;
     const auto base = k.inverse(BodyTwist{0.0, 0.0, 1.0});

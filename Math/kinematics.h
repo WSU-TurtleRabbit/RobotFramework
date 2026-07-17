@@ -95,6 +95,12 @@ struct Kinematics {
     // Index i corresponds to motor id i+1.
     std::array<double, 4> inverse(const BodyTwist& t) const;
 
+    // Forward kinematics: measured motor velocities (rev/s) -> best-fit body
+    // twist, least squares over the over-determined 4x3 system (J^T J x =
+    // J^T b via a 3x3 cofactor inverse). This is the wheel-odometry input to
+    // the onboard motion executor and a telemetry cross-check.
+    BodyTwist forward(const std::array<double, 4>& motor_rev_s) const;
+
     // Peak motor speed (rev/s magnitude) that inverse() would demand — useful
     // for pre-scaling a command into a motor speed budget without bending
     // its direction.
