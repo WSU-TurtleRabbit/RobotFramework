@@ -1,4 +1,5 @@
 #include "Telemetry.h"
+#include "motor_formats.h"
 #include <yaml-cpp/yaml.h>
 #include <limits>
 
@@ -12,6 +13,18 @@ Telemetry::Telemetry()
     // A shared transport instance used for the Cycle method
     transport = std::make_shared<mjbots::pi3hat::Pi3HatMoteusTransport>(toptions);
 
+    // moteus hardware watchdog (seconds); fallback keeps the header default.
+    try
+    {
+        YAML::Node s_config = YAML::LoadFile("../config/Safety.yaml");
+        if (s_config["watchdogTimeout"])
+            watchdog_timeout_s = s_config["watchdogTimeout"].as<double>();
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Error loading Safety config for watchdog: " << e.what() << std::endl;
+    }
+
     // Create controllers for each motor ID / bus pair, using the shared transport
     for (const auto &p : servo_map)
     {
@@ -19,6 +32,10 @@ Telemetry::Telemetry()
         opts.id = p.first;
         opts.bus = p.second;
         opts.transport = transport;
+        // Ask for q-phase current (the stock format ignores it, which made
+        // every current reading NaN) and arm the per-command watchdog.
+        opts.query_format = rf::robot_query_format();
+        opts.position_format = rf::robot_position_format();
         controllers[opts.id] = std::make_shared<mjbots::moteus::Controller>(opts);
     }
 
@@ -41,6 +58,9 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
         position_command.position = std::numeric_limits<double>::quiet_NaN();
         auto it = velocity_map.find(pair.first);
         position_command.velocity = (it != velocity_map.end()) ? it->second : 0.0;
+        // Hardware failsafe: the motor stops itself if no further command
+        // arrives within this window (loop hang, process kill, CAN drop).
+        position_command.watchdog_timeout = watchdog_timeout_s;
         command_frames.push_back(pair.second->MakePosition(position_command));
     }
 
@@ -61,9 +81,10 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
         mt.temperature = parsed.temperature;
         mt.voltage = parsed.voltage;
         mt.velocity = parsed.velocity;
-        mt.current = parsed.q_current;
+        mt.current = parsed.q_current; // real amps now that the query requests it
         // mt.position = parsed.position;
         mt.mode = static_cast<int>(parsed.mode);
+        mt.fault = static_cast<int>(parsed.fault);
         servo_data[frame.source] = mt;
 
         // std::cout<< "Current is: " << parsed.q_current<< "\n"; 

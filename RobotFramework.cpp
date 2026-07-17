@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <unistd.h>
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <map>
@@ -81,6 +82,7 @@ int main(int argc, char **argv)
     double zero = 0.0;
 
     double current_limit;
+    double current_grace_ms; // sustained over-current window before tripping
     // double temperture_limit;
 
     // --- Interval times (ms) for periodic tasks ---
@@ -145,6 +147,7 @@ int main(int argc, char **argv)
         YAML::Node interval_values = config["intervals"];
 
         current_limit = s_config["currentLimit"].as<double>();
+        current_grace_ms = s_config["currentGraceMs"] ? s_config["currentGraceMs"].as<double>() : 300.0;
 
         interval_reciver = interval_values["Reciver_interval"].as<int>();
         interval_sender = interval_values["Sender_interval"].as<int>();
@@ -172,6 +175,7 @@ int main(int argc, char **argv)
         interval_motor = 20;
 
         current_limit = 5.0;
+        current_grace_ms = 300.0;
 
 
         logger.log("rframework", std::string("Failed to load configs: ") + (e.what()), LogLevel::WARN);
@@ -381,6 +385,14 @@ int main(int argc, char **argv)
             float voltage[4];
             int i = 0;
 
+            // Sustained-overcurrent trip: consecutive over-limit readings per
+            // motor before stopping. Acceleration transients spike past the
+            // limit for a few cycles and must not nuisance-stop the robot;
+            // a stall stays over it for the whole grace window.
+            static std::map<int, int> overcurrent_ticks;
+            static const int current_grace_ticks =
+                std::max(1, static_cast<int>(current_grace_ms / std::max(1, interval_motor)));
+
             for (const auto &pair : servo_status)
             {
                 const auto &r = pair.second;
@@ -393,15 +405,27 @@ int main(int argc, char **argv)
                     {"voltage", r.voltage},
                     {"velocity", r.velocity},
                     {"current", r.current},
-                    {"mode", static_cast<double>(r.mode)}};
+                    {"mode", static_cast<double>(r.mode)},
+                    {"fault", static_cast<double>(r.fault)}};
                 logger.log("rframework", sub, data, "", LogLevel::INFO);
 
                 // std::cout << "Motor ID: " << motor_id << " Position is: " << r.position << " Mode is: "<< r.mode<< " Velocity is: " << r.velocity<< " Current is: "<< r.current<<"\n";
 
-                if (r.current > current_limit)
+                // The gate works now that q_current is actually requested
+                // (it used to compare NaN > limit, which never fired).
+                if (std::abs(r.current) > current_limit)
                 {
-                    logger.log("rframework", sub, "Overcurrent detected", LogLevel::CRIT);
-                    emergency_stop = true;
+                    int &over = overcurrent_ticks[motor_id];
+                    over++;
+                    if (over >= current_grace_ticks)
+                    {
+                        logger.log("rframework", sub, "Sustained overcurrent detected", LogLevel::CRIT);
+                        emergency_stop = true;
+                    }
+                }
+                else
+                {
+                    overcurrent_ticks[motor_id] = 0;
                 }
                 i++;
             }

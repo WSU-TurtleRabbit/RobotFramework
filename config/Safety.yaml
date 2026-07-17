@@ -5,4 +5,15 @@ velocityLimit:
 
 currentLimit: 5.0 # Amps
 
+# Sustained over-current window: q-current legitimately spikes past the trip
+# level for tens of milliseconds during hard acceleration, so the trip only
+# fires after this long of CONSECUTIVE over-limit readings (a real stall),
+# not on a transient.
+currentGraceMs: 300 # milliseconds
+
+# moteus per-command hardware watchdog, seconds: if the Pi control loop
+# stalls or the process dies, each motor stops itself this long after the
+# last command frame — a failsafe independent of any software path.
+watchdogTimeout: 0.1 # seconds
+
 faultyGrace: 1500 # milliseconds

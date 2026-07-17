@@ -21,8 +21,26 @@ add_executable(host_tests
     main.cpp
     test_decode.cpp
     test_kinematics.cpp
+    test_motor_formats.cpp
     ${RF_ROOT}/Networks/decode.cpp
     ${RF_ROOT}/Math/kinematics.cpp
 )
 
-target_include_directories(host_tests PRIVATE ${RF_ROOT})
+# mjbots/moteus is on the include path for moteus_protocol.h only — it is
+# hardware-free (the pi3hat transport headers are NOT, and stay Pi-only).
+target_include_directories(host_tests PRIVATE
+    ${RF_ROOT}
+    ${RF_ROOT}/mjbots/moteus
+)
+
+if(MSVC)
+    # moteus_multiplex.h guards on the GCC/Clang predefined macro
+    # __ORDER_LITTLE_ENDIAN__. MSVC never defines it, but every MSVC target
+    # is little-endian, so defining it here is truthful (GCC's value: 1234).
+    # _USE_MATH_DEFINES exposes M_PI from MSVC's <cmath> for the same header.
+    target_compile_definitions(host_tests PRIVATE
+        __ORDER_LITTLE_ENDIAN__=1234
+        __BYTE_ORDER__=1234
+        _USE_MATH_DEFINES
+    )
+endif()
