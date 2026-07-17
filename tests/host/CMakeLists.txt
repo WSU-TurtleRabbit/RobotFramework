@@ -20,7 +20,9 @@ set(RF_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 add_executable(host_tests
     main.cpp
     test_decode.cpp
+    test_kinematics.cpp
     ${RF_ROOT}/Networks/decode.cpp
+    ${RF_ROOT}/Math/kinematics.cpp
 )
 
 target_include_directories(host_tests PRIVATE ${RF_ROOT})

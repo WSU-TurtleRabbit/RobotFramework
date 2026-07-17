@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.25)
 
 project(RobotFramework)
 
+# The pure logic modules (Math/kinematics, Motion/, ...) are shared with the
+# host test suite (tests/host) and use C++20 (<numbers>, std::optional, ...).
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 find_package(OpenCV REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
