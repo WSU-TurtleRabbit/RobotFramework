@@ -24,6 +24,7 @@ add_executable(host_tests
     test_controller.cpp
     test_estimator.cpp
     test_kinematics.cpp
+    test_match_bridge.cpp
     test_matchctrl.cpp
     test_motor_formats.cpp
     test_wire.cpp
@@ -39,6 +40,7 @@ add_executable(host_tests
     ${RF_ROOT}/Motion/actuators.cpp
     ${RF_ROOT}/Motion/controller.cpp
     ${RF_ROOT}/Motion/estimator.cpp
+    ${RF_ROOT}/Motion/match_bridge.cpp
     ${RF_ROOT}/Motion/skills.cpp
     ${RF_ROOT}/Motion/trajectory.cpp
     ${RF_ROOT}/Motion/phx/wire.cpp

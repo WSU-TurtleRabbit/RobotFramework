@@ -101,6 +101,14 @@ public:
     EstimatorOutput output() const;
     bool has_fix() const { return has_fix_; }
 
+    // Incremented every time a vision fix is applied as a SNAP (first fix,
+    // recovery from timeout/rejection-run): the motion pipeline re-anchors
+    // its trajectory reference on these.
+    uint32_t snap_count() const { return snap_count_; }
+
+    // Full reset (NaN recovery / operator): back to the no-fix zero state.
+    void reset();
+
     // Corrected state at the LAST vision measurement's own timepoint — what
     // TIGERs report in MatchFeedback (pos + vel of the matched time slot).
     struct TimedState {
@@ -141,6 +149,7 @@ private:
     double last_vision_t_s = -1e9;
     int consecutive_rejects_ = 0;
     uint32_t rejected_total_ = 0;
+    uint32_t snap_count_ = 0;
     double k_pos_ = 0.0, k_vel_ = 0.0;  // steady-state Kalman gains
     std::optional<TimedState> last_meas_;
 };

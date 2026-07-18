@@ -12,6 +12,19 @@ FusionEstimator::FusionEstimator(const EstimatorConfig& cfg) : cfg_(cfg) {
     compute_gains();
 }
 
+void FusionEstimator::reset() {
+    for (Slot& s : ring_) s = Slot{};
+    head_ = 0;
+    ticks_ = 0;
+    started_ = false;
+    has_fix_ = false;
+    last_vision_t_s = -1e9;
+    consecutive_rejects_ = 0;
+    rejected_total_ = 0;
+    last_meas_.reset();
+    // snap_count_ is kept: consumers compare, they don't absolute-count.
+}
+
 // Steady-state Kalman gains for the constant-velocity model
 //   x' = x + v*dt, v' = v + process,  z = x + noise
 // via Riccati iteration (converged long before 2000 steps at our rates).
@@ -162,6 +175,7 @@ void FusionEstimator::on_vision(const VisionPose& pose, double pos_delay_s) {
     last_vision_t_s = ring_[head_].t_s;
     has_fix_ = true;
     consecutive_rejects_ = 0;
+    if (snap) ++snap_count_;
 
     // Replay from the corrected slot to the present through the stored
     // gyro/odometry inputs, then drag every slot toward the corrected
