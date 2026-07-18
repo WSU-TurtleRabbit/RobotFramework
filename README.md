@@ -3,23 +3,27 @@ Robot Client in C++
 
 ## Onboard motion, protocol, and safety
 
-The robot now runs its own trajectory executor: the server streams **MV2
-pose-target frames** and the robot generates and follows the motion locally
-at the motor rate, with wheel-odometry + gyro pose estimation, S-curve
-shaping, and a brake/coast command watchdog. A recoverable safety supervisor
-(speed envelope, per-motor trips, auto-recovery) and telemetry protocol v2
-(`mv=2` capability flag) complete the loop. The executor and constants are
-ported from the team's hardware-proven phoenix-rf / phoenix-core stack.
+The robot runs the **TIGERs Mannheim MatchCtrl architecture**: the server
+sends one binary MatchCtrl frame per robot per camera tick (freshest vision
+pose + its measured age + a skill), and the robot owns all the fast motion
+itself — delayed-vision fusion (time-slot ring + replay), per-tick
+bang-bang trajectory regeneration, and a Panthera-style
+feedforward+P control cascade ending in per-wheel velocity setpoints on the
+moteus controllers, at 250 Hz. The kicker fires on the robot's own
+ball-contact signal; MatchFeedback reports the matched-slot pose, traction,
+kicker charge model, battery, and health. Safety tiers: 1 s command loss →
+onboard EMERGENCY ramp, vision timeout → dead reckoning, motion gated until
+the first vision fix, plus the recoverable per-motor supervisor.
 
-* [docs/MOTION.md](docs/MOTION.md) — architecture, modes, tuning table
-* [docs/PROTOCOL.md](docs/PROTOCOL.md) — MV2 + telemetry v2 wire formats
-* `tests/host/` — Pi-free unit tests for all pure logic (decoder,
-  kinematics, executor, safety, telemetry): `cmake -S tests/host -B
-  tests/host/build && cmake --build tests/host/build && ./tests/host/build/host_tests`
+* [docs/MOTION.md](docs/MOTION.md) — the cascade, config knobs, commissioning
+* [docs/PROTOCOL.md](docs/PROTOCOL.md) — MatchCtrl/MatchFeedback wire formats
+* `tests/host/` — Pi-free unit tests for all pure logic (wire, skills,
+  estimator, trajectory, controller, bridge, feedback, kinematics, safety):
+  `cmake -S tests/host -B tests/host/build && cmake --build tests/host/build && ./tests/host/build/host_tests`
 
-Legacy 7-field velocity commands still work unchanged; a v1 command takes
-the robot back to direct control. Operator `STOP` now safe-stops and clears
-safety latches while the daemon keeps running.
+Legacy 7-field velocity commands and `STOP`/`PING` still work as bench
+fallbacks; a v1 command takes the robot back to direct control until the
+next MatchCtrl frame.
 
 ## Building on the Pi
 
