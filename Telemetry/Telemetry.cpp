@@ -61,7 +61,8 @@ Telemetry::Telemetry()
 }
 
 std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velocity_map,
-                                               bool energize)
+                                               bool energize,
+                                               const std::map<int, double> *ff_torque_nm)
 {
     // Build command frames
     std::vector<mjbots::moteus::CanFdFrame> command_frames;
@@ -79,10 +80,17 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
         position_command.position = std::numeric_limits<double>::quiet_NaN();
         auto it = velocity_map.find(pair.first);
         position_command.velocity = (it != velocity_map.end()) ? it->second : 0.0;
+        // Optional model feedforward torque (0.0 when not provided).
+        if (ff_torque_nm != nullptr)
+        {
+            auto ff = ff_torque_nm->find(pair.first);
+            position_command.feedforward_torque =
+                (ff != ff_torque_nm->end()) ? ff->second : 0.0;
+        }
         // Hardware failsafe: the motor stops itself if no further command
         // arrives within this window (loop hang, process kill, CAN drop).
         position_command.watchdog_timeout = watchdog_timeout_s;
-        // Controller-level smoothing between 100 Hz updates (NaN = default).
+        // Controller-level smoothing between updates (NaN = default).
         position_command.velocity_limit = velocity_limit_rev_s;
         position_command.accel_limit = accel_limit_rev_s2;
         command_frames.push_back(pair.second->MakePosition(position_command));

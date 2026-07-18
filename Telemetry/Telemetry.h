@@ -33,10 +33,13 @@ public:
     // Send one command to every motor and collect telemetry replies, all in
     // a single CAN transaction that also samples the pi3hat IMU.
     // energize=false sends STOP frames instead of velocity commands (coast:
-    // motor output cut, telemetry keeps flowing) — the MV2 executor's COAST
-    // watchdog tier and DISABLE use this.
+    // motor output cut, telemetry keeps flowing) — the EMERGENCY landed
+    // state and the first-vision gate use this.
+    // ff_torque_nm: optional per-motor feedforward torque (the MatchCtrl
+    // cascade's model FF; nullptr = 0 N-m, neutral).
     std::map<int, MotorTelemetry> cycle(const std::map<int, double>& velocity_map,
-                                        bool energize = true);
+                                        bool energize = true,
+                                        const std::map<int, double>* ff_torque_nm = nullptr);
 
     // moteus per-command watchdog, seconds (config/Safety.yaml
     // `watchdogTimeout`): motors self-stop this long after the last command

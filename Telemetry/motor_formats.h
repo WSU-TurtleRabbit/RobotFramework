@@ -33,11 +33,16 @@ inline mjbots::moteus::Query::Format robot_query_format() {
 // (rev/s and rev/s^2): controller-level smoothing between our 100 Hz updates
 // and a runaway backstop. NaN command values leave them at the controller
 // default, so enabling the registers is behavior-neutral until configured.
+//
+// feedforward_torque is enabled so the MatchCtrl cascade's optional model
+// feedforward can reach the motors; it defaults to 0.0 N-m (neutral) and is
+// only set when the model FF is identified and switched on.
 inline mjbots::moteus::PositionMode::Format robot_position_format() {
     mjbots::moteus::PositionMode::Format f;
     f.watchdog_timeout = mjbots::moteus::kFloat;
     f.velocity_limit = mjbots::moteus::kFloat;
     f.accel_limit = mjbots::moteus::kFloat;
+    f.feedforward_torque = mjbots::moteus::kFloat;
     return f;
 }
 

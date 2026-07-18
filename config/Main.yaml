@@ -1,16 +1,11 @@
 intervals:
-  # Motor/control tick (ms). 10 ms = 100 Hz: the MV2 executor shapes motion
-  # at this rate. 4 ms (250 Hz, the rate proven on the Rust robot) is the
-  # target once validated on this hardware.
-  Motor_interval: 10
+  # Motor/control tick (ms) — the MatchCtrl cascade rate. 4 ms (250 Hz) is
+  # the target, proven on this hardware by phoenix-rf (250 Hz loop, ~0.7 ms
+  # CAN cycle, ~0.014 ms jitter). 10 ms (100 Hz) works but wastes the
+  # estimator/trajectory/control fidelity.
+  Motor_interval: 4
   Arduino_interval: 100
-  Reciver_interval: 20
-  # Telemetry v2 send cadence (ms). Falls back to the legacy Sender_interval
-  # key when absent.
-  Telemetry_interval: 200
-  Sender_interval: 1000
   Camera_interval: 200
-  Idle_interval: 3000
 
 # This robot's id on the command channel. Commands addressed to another id
 # are ignored (the robot must not drive on a teammate's command).

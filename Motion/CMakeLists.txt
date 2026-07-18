@@ -1,7 +1,11 @@
 add_library(Motion
-    MotionBridge.cpp
-    motion_config_yaml.cpp
-    phx/wire.cpp
+    skills.cpp
+    estimator.cpp
+    trajectory.cpp
+    controller.cpp
+    actuators.cpp
+    match_bridge.cpp
+    match_config_yaml.cpp
 )
 
 target_include_directories(Motion

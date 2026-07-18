@@ -20,21 +20,17 @@ set(RF_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 add_executable(host_tests
     main.cpp
     test_actuators.cpp
-    test_decode.cpp
     test_controller.cpp
+    test_decode.cpp
     test_estimator.cpp
     test_kinematics.cpp
     test_match_bridge.cpp
     test_match_feedback.cpp
     test_matchctrl.cpp
     test_motor_formats.cpp
-    test_wire.cpp
-    test_executor.cpp
-    test_motion_bridge.cpp
     test_safety.cpp
     test_skills.cpp
     test_trajectory.cpp
-    test_telemetry_wire.cpp
     ${RF_ROOT}/Networks/decode.cpp
     ${RF_ROOT}/Networks/matchctrl.cpp
     ${RF_ROOT}/Math/kinematics.cpp
@@ -44,11 +40,8 @@ add_executable(host_tests
     ${RF_ROOT}/Motion/match_bridge.cpp
     ${RF_ROOT}/Motion/skills.cpp
     ${RF_ROOT}/Motion/trajectory.cpp
-    ${RF_ROOT}/Motion/phx/wire.cpp
-    ${RF_ROOT}/Motion/MotionBridge.cpp
     ${RF_ROOT}/Safety/supervisor.cpp
     ${RF_ROOT}/Telemetry/match_feedback.cpp
-    ${RF_ROOT}/Telemetry/telemetry_wire.cpp
 )
 
 # mjbots/moteus is on the include path for moteus_protocol.h only — it is

@@ -40,6 +40,7 @@ MatchAccept MatchBridge::accept(const std::string& datagram, double now_s) {
     }
 
     active_ = true;
+    last_robot_id_ = mc->robot_id;
     have_seq_ = true;
     last_seq_ = mc->seq;
     last_accept_s_ = now_s;

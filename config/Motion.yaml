@@ -1,7 +1,8 @@
-# Onboard MV2 motion executor + IMU configuration.
-# Every knob has a built-in default (Motion/phx/executor.h) — this file only
-# overrides. Values below are the tuned set proven on hardware by the Rust
-# robot (phoenix-rf robot.yaml).
+# Onboard MatchCtrl motion stack configuration (TIGERs Mannheim
+# architecture). Every knob has a built-in default in the modules
+# (Motion/*.h) — this file only overrides. Values below are the tuned set
+# proven on hardware by the Rust robot (phoenix-rf robot.yaml) plus the
+# TIGERs-derived defaults for the new cascade.
 
 imu:
   # Gyro polarity: +1 when the pi3hat gyro reads POSITIVE for a CCW (+w) body
@@ -10,19 +11,79 @@ imu:
   # per robot: drive `+w` and check the reported gyro sign matches.
   yaw_rate_sign: 1.0
 
-motion:
+match:
   enabled: true
-  brake_after_ms: 300      # no fresh MV2 frame -> active smooth stop
-  coast_after_ms: 1200     # still nothing -> cut motor output (coast)
-  brake_decel_mps2: 3.5    # BRAKE strength ("smoothly but quickly")
-  brake_w_decel_radps2: 12.0
-  brake_jerk_mps3: 30.0
-  pose_gain: 0.35          # server-pose blend per frame (lower = smoother)
-  heading_gain: 0.5
-  snap_dist_m: 0.35        # bigger pose error -> snap (teleport/occlusion)
-  # Per-mode limit profiles (speed m/s, accel m/s^2, jerk m/s^3). An MV2
-  # frame can tighten these per-command; it can never loosen them.
-  fast_travel:     { max_speed_mps: 2.5,  max_accel_mps2: 2.5, max_jerk_mps3: 15.0 }
-  ball_approach:   { max_speed_mps: 0.8,  max_accel_mps2: 1.2, max_jerk_mps3: 8.0 }
-  precision_align: { max_speed_mps: 0.35, max_accel_mps2: 1.0, max_jerk_mps3: 6.0 }
-  hold_position:   { max_speed_mps: 0.3,  max_accel_mps2: 1.5, max_jerk_mps3: 10.0 }
+  # No accepted MatchCtrl for this long -> onboard EMERGENCY (controlled
+  # ramp to zero, then motors off). TIGERs run 1 s.
+  command_timeout_s: 1.0
+  # Motion only energizes after the first vision fix (a robot that doesn't
+  # know where it is must not drive).
+  require_vision_fix: true
+  # -1 = take Robot_id from Main.yaml.
+  expected_robot_id: -1
+
+# Delayed-vision fusion (TIGERs fusion_ekf architecture).
+estimator:
+  slots: 128                # time-slot ring (one slot per control tick)
+  capture_delay_s: 0.020    # fixed camera/pipeline delay on top of posDelay
+  vision_timeout_s: 1.0     # beyond -> dead-reckon on encoders + gyro
+  gate_speed_mps: 3.0       # outlier gate: vision jump implying > this
+  gate_min_dist_m: 0.15     # ...never gating below this distance
+  gate_snap_after: 5        # consecutive rejections -> we were lost: snap
+  tracking_gain: 0.5        # drag of INS slots toward the corrected history
+  odo_vel_gain: 0.5         # body-velocity pull toward wheel odometry
+  theta_gain: 0.4           # vision heading correction per fix
+  meas_std_m: 0.005         # vision position noise (Kalman gain model)
+  process_accel_std: 2.0    # motion process noise (Kalman gain model)
+
+# Per-tick trajectory regeneration (pose skills).
+trajectory:
+  cent_acc_max: 2.5         # centrifugal omega cap: |w| <= this / |v_xy|
+  orient_lag_tau_s: 0.05    # low-pass on the orientation target
+  fast_pos_align_rad: 0.25  # FAST_POS: aligned enough for the raised accel
+  final_orient_dist_m: 0.35 # inside this, the final orientation applies
+  drive_dir_min_speed: 0.3  # below, hold heading instead of drive-slaving
+
+# The Panthera-style control cascade.
+controller:
+  kp_pos: 2.5               # 1/s: P on reference-vs-estimate position error
+  pos_err_clamp_m: 0.4      # clamp on the position error vector
+  vel_corr_max_mps: 1.0     # clamp on the added correction velocity
+  kp_heading: 6.0           # rad/s per rad (Robot B proven)
+  kp_yaw_rate: 0.3          # yaw-rate damping vs gyro (Robot B proven)
+  omega_corr_max: 3.0       # clamp on the total omega correction
+  acc_ff_lead_s: 0.04       # trajectory accel FF as a velocity lead
+  emergency_decel_mps2: 8.0 # TIGERs onboard EMERGENCY ramp rate
+  emergency_w_decel_radps2: 30.0
+  out_slew_rev_s2: 120.0    # wheel setpoint slew (matches moteus accel limit)
+  wheel_max_rev_s: 45.0     # wheel saturation (matches moteus velocity limit)
+  # Model feedforward (per-wheel torque): OFF until identified on hardware
+  # via the SINE skill + phoenix-server phoenix/tools/commission.py.
+  model_ff_enabled: false
+  robot_mass_kg: 2.6
+  friction_coulomb_n: 1.5
+  friction_viscous_ns_m: 0.5
+  drivetrain_efficiency: 0.8
+
+# Kicker + dribbler policy (IDENTIFY on the real robots).
+actuators:
+  kick_ms_per_mps: 1.5      # kick speed (m/s) -> solenoid pulse (ms)
+  kick_ms_bias: 2.0
+  kick_pulse_min_ms: 2.0
+  kick_pulse_max_ms: 25.0
+  kicker_recharge_s: 5.2    # > the Arduino's 5 s capacitor guard
+  dribble_us_per_mps: 20.0  # bar speed (m/s) -> ESC us above the 1500 stop
+  # Ball contact (camera stand-in for the IR break-beam).
+  barrier_radius_px: 55.0
+  barrier_bearing_rad: 0.35
+  barrier_min_confidence: 0.3
+  barrier_max_age_s: 0.3
+
+# MatchFeedback reporting.
+feedback:
+  hardware_id: 0            # physical asset id (set per robot!)
+  battery_empty_v: 10.0     # 4S LiPo window for the percent report
+  battery_full_v: 16.8
+  kicker_max_v: 200.0       # nominal scaling constant for the server
+  kicker_recharge_s: 5.0
+  interval_ms: 20           # 50 Hz

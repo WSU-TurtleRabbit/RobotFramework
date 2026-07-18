@@ -1,4 +1,4 @@
-add_library(Networks decode.cpp UDP.cpp)
+add_library(Networks decode.cpp matchctrl.cpp UDP.cpp)
 
 target_include_directories(Networks
     INTERFACE 

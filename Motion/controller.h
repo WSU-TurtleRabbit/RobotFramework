@@ -27,8 +27,8 @@
 
 #include "../Math/kinematics.h"
 #include "estimator.h"
-#include "phx/executor.h"  // phx::TwistShaper (S-curve, proven on Robot B)
 #include "phx/pose.h"
+#include "phx/twist_shaper.h"  // S-curve, proven on Robot B
 #include "skills.h"
 #include "trajectory.h"
 

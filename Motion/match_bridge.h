@@ -79,6 +79,9 @@ public:
     void clear();
 
     bool active() const { return active_; }
+    // Robot id of the last accepted frame (-1 = none); feedback identity
+    // when the bridge accepts any id (bench mode).
+    int last_robot_id() const { return last_robot_id_; }
     const MotionSetpoint& setpoint() const { return sp_; }
     const FusionEstimator& estimator() const { return estimator_; }
     FusionEstimator& estimator() { return estimator_; }
@@ -95,6 +98,7 @@ private:
 
     MotionSetpoint sp_{};                 // active setpoint (Emergency at boot)
     bool active_ = false;                 // a frame has been accepted
+    int last_robot_id_ = -1;
     bool have_seq_ = false;
     uint16_t last_seq_ = 0;
     double last_accept_s_ = -1e9;

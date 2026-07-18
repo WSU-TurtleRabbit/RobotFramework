@@ -4,11 +4,12 @@
 
 // Classification of one received command datagram. Anything that is not a
 // well-formed frame addressed to this robot must never move the robot.
+// (Binary MatchCtrl frames are handled by Networks/matchctrl.h BEFORE this
+// text decoder sees them.)
 enum class CmdType {
     Malformed,  // wrong field count, unparseable / non-finite values, unknown text
     WrongId,    // well-formed frame addressed to a different robot
     Velocity,   // v1 body-velocity command; the decoded fields below are valid
-    Move,       // MV2 pose-target frame — hand the RAW payload to MotionBridge
     Stop,       // bare opcode "STOP": safe-stop
     Ping,       // bare opcode "PING": link discovery, NOT a drive command
     Calibrate,  // bare opcode "CALIBRATE": operator-triggered self-heal

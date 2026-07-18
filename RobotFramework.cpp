@@ -12,6 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// RobotFramework superloop — TIGERs Mannheim MatchCtrl architecture.
+//
+// The server sends ONE MatchCtrl binary frame per robot per camera tick
+// (freshest vision pose + its measured age + a skill). This loop:
+//   1. accepts those frames (strict decode, seq discipline, robot id),
+//   2. runs the onboard cascade at the motor control rate: delayed-vision
+//      fusion, per-tick trajectory regeneration, Panthera-style control,
+//      kicker/dribbler policy — Motion/match_bridge.h owns it,
+//   3. reports MatchFeedback (pose/vel, kicker charge, dribbler traction,
+//      barrier, battery, health) to the server at 50 Hz,
+//   4. keeps the bench fallbacks: legacy v1 text velocity commands and the
+//      STOP/PING opcodes, and the recoverable safety supervisor.
+//
+// Control rate: 250 Hz (4 ms motor tick) — the rate proven on the same
+// hardware by phoenix-rf (250 Hz loop, ~0.7 ms CAN cycle, ~0.014 ms
+// jitter). The estimator's time slots are one control tick each.
+
 #include <unistd.h>
 #include <algorithm>
 #include <cmath>
@@ -30,10 +47,9 @@
 #include "detect_ball.h"
 #include "arduino.h"
 #include "Telemetry.h"
-#include "telemetry_wire.h"
-#include "arduino.h"
-#include "MotionBridge.h"
-#include "motion_config_yaml.h"
+#include "match_bridge.h"
+#include "match_config_yaml.h"
+#include "match_feedback.h"
 #include "supervisor.h"
 #include <array>
 #include <cstdint>
@@ -52,9 +68,15 @@ static_assert(std::is_trivially_copyable<BallObservation>::value,
               "BallObservation must be trivially copyable for std::atomic");
 std::atomic<BallObservation> ball_observation{
     BallObservation{false, 0.f, 0.f, 0.f, 0.f, 0.f}};
+// Monotonic ms when the camera last PRODUCED an observation (the actuator
+// policy's ball-contact age). Stamped every camera iteration, so it also
+// tells a dead camera thread apart from a quiet ball.
+std::atomic<uint64_t> ball_obs_time_ms{0};
 
 // --- Forward declaration for signal handler ---
 void signalHandler(int signum);
+// Camera snapshot logging (defined below).
+void sender_log(Logger &logger, const BallObservation &obs);
 
 // --- Thread function for camera detection ---
 void CameraThread(BallDetection &detector)
@@ -64,25 +86,17 @@ void CameraThread(BallDetection &detector)
         BallObservation obs = detector.observe();
         ball_observation.store(obs, std::memory_order_relaxed);
         ball_detected.store(obs.found, std::memory_order_relaxed);
-        std::this_thread::sleep_for(std::chrono::milliseconds(300)); // Reduce CPU usage
+        ball_obs_time_ms.store(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count(),
+            std::memory_order_relaxed);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // contact latency vs CPU
     }
 }
-
-// --- Struct for telemetry message to send ---
-struct Telemetry_msg
-{
-    bool  ball_present; // True if ball detected
-    float voltage;      // Average motor voltage
-    BallObservation obs; // Onboard detection details
-};
 
 int main(int argc, char **argv)
 {
     using namespace mjbots;
-
-    char kick = 'K';
-    char dribble = 'D';
-    char stop_dribble = 'S';
 
     int mode = 0;
 
@@ -95,19 +109,17 @@ int main(int argc, char **argv)
     double fault_grace_ms = 50.0;    // window for fault/temp/voltage trips
 
     // --- Interval times (ms) for periodic tasks ---
-    int interval_reciver, interval_sender, interval_arduino, interval_camera, interval_motor;
-    // Telemetry v2 cadence, ms.
-    int interval_telemetry = 200;
+    int interval_arduino, interval_camera, interval_motor;
+    // MatchFeedback cadence, ms (default 20 = 50 Hz, TIGERs-rate reporting).
+    int interval_feedback = 20;
 
     // This robot's command-channel id (config Robot_id; -1 = accept any).
     int robot_id = -1;
-    // Physical identity letter reported as rid= in telemetry.
-    std::string robot_rid = "?";
 
     // --- Logger ---
     Logger logger("logs");
     logger.initialize({"rframework"});
-    logger.log("rframework", "--- ROBOTFRAMEWORK STARTING ---", LogLevel::LOVE);
+    logger.log("rframework", "--- ROBOTFRAMEWORK STARTING (MatchCtrl) ---", LogLevel::LOVE);
 
     // --- Initializing mode (SAFE, CAPPED, UNSAFE) ---
     if (argc > 1)
@@ -115,47 +127,40 @@ int main(int argc, char **argv)
         std::string arg = argv[1];
         if (arg == "-s" || arg == "-safe")
         {
-            // Robot will stop and shutdown at set safety speed limits
             mode = 0;
             logger.log("rframework", "Starting in SAFE mode", LogLevel::INFO);
         }
         else if (arg == "-c" || arg == "-capped")
         {
-            // Robot will have speed capped to speed limits
             mode = 1;
             logger.log("rframework", "Starting in CAPPED mode", LogLevel::INFO);
         }
         else if (arg == "-unsafe")
         {
-            // Robot will not follow speed limits
             mode = 2;
             logger.log("rframework", "Starting in UNSAFE mode", LogLevel::WARN);
         }
         else
         {
-            // Fallback on SAFE mode
             mode = 0;
             std::cerr << "Unknown flag or argument: " << argv[1] << std::endl;
-            logger.log("rframework", std::string("Unknown flag or argument: ") + 
+            logger.log("rframework", std::string("Unknown flag or argument: ") +
                 argv[1], LogLevel::WARN);
             logger.log("rframework", "Starting in SAFE mode", LogLevel::INFO);
         }
     }
     else
     {
-        // SAFE mode is default
         mode = 0;
         logger.log("rframework", "Starting in SAFE mode", LogLevel::INFO);
     }
 
-    // CLI flag -> supervisor drive mode.
     safety_cfg.mode = (mode == 2)   ? rf::DriveMode::Unsafe
                       : (mode == 1) ? rf::DriveMode::Capped
                                     : rf::DriveMode::Safe;
 
     // --- Load YAML config ---
     logger.log("rframework", "Loading configs...", LogLevel::INFO);
-    std::map<std::string, double> configData;
     try
     {
         YAML::Node config = YAML::LoadFile("../config/Main.yaml");     // Main control Config file
@@ -181,44 +186,27 @@ int main(int argc, char **argv)
         if (s_config["recoveryS"]) safety_cfg.recovery_s = s_config["recoveryS"].as<double>();
         if (s_config["watchdogTimeout"]) safety_cfg.watchdog_s = s_config["watchdogTimeout"].as<double>();
 
-        interval_reciver = interval_values["Reciver_interval"].as<int>();
-        interval_sender = interval_values["Sender_interval"].as<int>();
         interval_arduino = interval_values["Arduino_interval"].as<int>();
         interval_camera = interval_values["Camera_interval"].as<int>();
+        // The control rate: 4 ms (250 Hz) is the MatchCtrl target — proven
+        // on this hardware by phoenix-rf (0.7 ms CAN cycle). 10 ms (100 Hz)
+        // works but wastes the cascade.
         interval_motor = interval_values["Motor_interval"].as<int>();
-        // v2 telemetry cadence; older configs fall back to Sender_interval.
-        interval_telemetry = interval_values["Telemetry_interval"]
-                                 ? interval_values["Telemetry_interval"].as<int>()
-                                 : interval_sender;
 
         // Optional: which command-channel id this robot answers to.
         if (config["Robot_id"])
             robot_id = config["Robot_id"].as<int>();
-        if (config["Robot_rid"])
-            robot_rid = config["Robot_rid"].as<std::string>();
 
         logger.log("rframework", "Successfully loaded configs!", LogLevel::INFO);
     }
     catch (const std::exception &e)
     {
         std::cerr << "Error loading Interval config: " << e.what() << std::endl;
-
         logger.log("rframework", std::string("Failed to load configs: ") + (e.what()), LogLevel::WARN);
-
-        // Fallback defaults
-        interval_reciver = 5;
-        interval_sender = 1000;
         interval_arduino = 100;
         interval_camera = 200;
-        // 100 Hz control tick; 4 ms (250 Hz) is the target once validated
-        // on hardware.
-        interval_motor = 10;
-        interval_telemetry = 200;
-
-        // safety_cfg keeps its built-in defaults.
-
-        logger.log("rframework", std::string("Failed to load configs: ") + (e.what()), LogLevel::WARN);
-        logger.log("rframework", std::string("Using fallback values:") + (e.what()), LogLevel::WARN);
+        interval_motor = 4;  // 250 Hz MatchCtrl default
+        logger.log("rframework", "Using fallback intervals", LogLevel::WARN);
     }
 
     // Grace windows are configured in milliseconds (robust to control-rate
@@ -228,66 +216,55 @@ int main(int argc, char **argv)
     safety_cfg.fault_grace_ticks = static_cast<uint32_t>(
         std::max(1.0, fault_grace_ms / std::max(1, interval_motor)));
 
-    configData = {
-        {"Reciever Interval", interval_reciver},
-        {"Sender Interval", interval_sender},
-        {"Arduino Interval", interval_arduino},
-        {"Camera Interval", interval_camera},
-        {"Motor Interval", interval_motor},
-        {"Current Limit", safety_cfg.trip_current_a},
-        {"Current Grace Ticks", static_cast<double>(safety_cfg.current_grace_ticks)},
-        {"Fault Grace Ticks", static_cast<double>(safety_cfg.fault_grace_ticks)},
-        {"Robot Id", robot_id}};
-    logger.log("rframework", configData, LogLevel::INFO);
-
-    // --- Convert intervals to chrono durations ---
-    static auto Reciver_interval = std::chrono::milliseconds(interval_reciver);
     static auto CameraInterval = std::chrono::milliseconds(interval_camera);
     static auto MotorInterval = std::chrono::milliseconds(interval_motor);
-    static auto Telemetry_interval = std::chrono::milliseconds(interval_telemetry);
     static auto Arduino_interval = std::chrono::milliseconds(interval_arduino);
 
-    static auto Motor_Command_interval = std::chrono::milliseconds(500);
-
-    // --- Onboard motion (MV2 pose-target executor) config ---
-    rf::MotionSettings motion_settings = rf::loadMotionSettings("../config/Motion.yaml");
+    // --- MatchCtrl motion stack config (config/Motion.yaml) ---
+    rf::MatchSettings motion = rf::loadMatchSettings("../config/Motion.yaml");
+    interval_feedback = motion.feedback_interval_ms;
+    static auto Feedback_interval = std::chrono::milliseconds(interval_feedback);
+    if (motion.bridge.expected_robot_id < 0)
+    {
+        // Match.yaml doesn't override: the command id comes from Main.yaml.
+        motion.bridge.expected_robot_id = robot_id;
+    }
 
     // --- Initialize modules ---
     BallDetection detect; // Camera detection
     UDP UDP;              // UDP communication
     Wheel_math m;         // Wheel velocity calculations
-    cmdDecoder cmd;       // Decode incoming commands
+    cmdDecoder cmd;       // Decode incoming v1 text commands
     Telemetry telemetry;  // Motor telemetry
     Arduino a;            // Arduino controller
-    // Onboard trajectory following: MV2 frames in, shaped body twists out.
-    rf::MotionBridge bridge(motion_settings.config, motion_settings.imu_yaw_rate_sign, robot_id);
+    // The MatchCtrl cascade: skills -> estimator -> trajectory -> controller
+    // -> wheels, with the safety tiers (Motion/match_bridge.h).
+    rf::MatchBridge bridge(motion.bridge, m.kinematics(), motion.estimator,
+                           motion.trajectory, motion.controller, motion.actuators);
+    rf::MatchFeedbackBuilder feedback;
     // Safety supervisor: envelope shaping, protective trips, auto-recovery.
     rf::Supervisor supervisor(safety_cfg);
 
-    std::string msg;                    // Incoming UDP message
+    std::string msg;                    // Incoming UDP datagram
     std::vector<double> wheel_velocity; // Calculated wheel velocities
     std::map<int, double> velocity_map; // Motor ID → velocity map
-    Telemetry_msg sender_msg;           // Telemetry message to send
 
-    // Last commanded body twist (post-envelope) — the supervisor's
-    // "operator idle" input for auto-recovery.
+    // The freshest bridge tick result (feedback + actuators consume it).
+    rf::BridgeTick bt;
+    // Legacy v1 bookkeeping.
     BodyTwist last_cmd_twist;
-    // Monotonic ms of the last VALID drive command (v1 or MV2) for the
-    // staleness gate; nullopt until one arrives.
+    // Monotonic ms of the last valid drive command (MatchCtrl or v1) for
+    // the v1 staleness gate and the supervisor's auto-recovery.
     std::optional<uint64_t> last_valid_cmd_ms;
 
-    // --- Telemetry v2 bookkeeping ---
-    const auto process_start = std::chrono::steady_clock::now();
-    uint32_t telem_seq = 0;      // telemetry packet counter
-    uint64_t cmd_rx_count = 0;   // valid drive commands received
-    int last_cmd_id = -1;        // robot id in the last valid command
-    BodyTwist odo_twist;         // latest FK wheel-odometry body twist
-    double vmin_last = 0.0;      // lowest single-motor voltage, last cycle
-    double last_cycle_ms = 0.0;  // CAN cycle duration, ms
-    std::map<int, MotorTelemetry> last_servo_status;  // latest motor replies
-    // Motor-tick period stats over the current telemetry window.
-    double loop_ms_sum = 0.0, loop_ms_min = 1e9, loop_ms_max = 0.0;
-    int loop_ms_n = 0;
+    // Feedback health snapshot (filled per cycle).
+    rf::FeedbackHealth health;
+    health.robot_id = robot_id;
+    health.hardware_id = motion.hardware_id;
+    health.battery_empty_v = motion.battery_empty_v;
+    health.battery_full_v = motion.battery_full_v;
+    health.kicker_max_v = motion.kicker_max_v;
+    health.kicker_recharge_s = motion.kicker_recharge_s;
 
     // --- Initialize Arduino ---
     logger.log("rframework", "arduino", "Searching for Arduino...", LogLevel::INFO);
@@ -295,23 +272,13 @@ int main(int argc, char **argv)
     logger.log("rframework", "arduino", "Connecting to Arduino port...", LogLevel::INFO);
     a.connect(a.getPort());
 
-    // Only accept commands addressed to this robot (-1 = accept any).
+    // Only accept v1 commands addressed to this robot (-1 = accept any).
     cmd.expected_id = robot_id;
-
-    // if (a.isConnected())
-    // {
-    //     logger.log("rframework", "arduino", std::string("Port found at ") + (a.getPort()), LogLevel::DONE);
-    // }
-    // else
-    // {
-    //     logger.log("rframework", "arduino", "No arduino found", LogLevel::WARN);
-    // }
 
     // --- Start camera detection thread ---
     std::thread camera_thread;
     if (detect.open_cam() > 0)
     {
-        // I didnt detach this beacsue it wanted to close it later on.
         camera_thread = std::thread(CameraThread, std::ref(detect));
         logger.log("rframework", "camball", "Camera thread started", LogLevel::INFO);
     }
@@ -327,249 +294,182 @@ int main(int argc, char **argv)
     }
     logger.log("rframework", "Sent stop to all controllers", LogLevel::DONE);
 
-    // --- Log UDP ports ---
-    logger.log("rframework", std::string("Sending port at: ") + 
+    logger.log("rframework", std::string("Sending port at: ") +
         std::to_string(UDP.getSenderPort()), LogLevel::LOVE);
-    logger.log("rframework", std::string("Recieving port at: ") + 
+    logger.log("rframework", std::string("Recieving port at: ") +
         std::to_string(UDP.getRecieverPort()), LogLevel::LOVE);
 
     // --- Main control loop ---
-    // Protective trips no longer kill the process: the supervisor latches a
-    // recoverable estop (coast + auto-recovery / STOP clears). Only SIGINT/
-    // SIGTERM end the loop.
-    logger.log("rframework", "Entering main control loop", LogLevel::LOVE);
+    logger.log("rframework", "Entering main control loop (MatchCtrl)", LogLevel::LOVE);
     while (!manual_stop_flag.load(std::memory_order_relaxed))
     {
         auto current_time = std::chrono::steady_clock::now();
 
-        // Static timers for periodic tasks
-        static auto last_reciver_time = current_time;
         static auto last_motor_time = current_time;
         static auto last_camera_time = current_time;
-        static auto last_sender_time = current_time;
+        static auto last_feedback_time = current_time;
         static auto last_arduino_time = current_time;
 
-
-        static auto last_known_message = current_time;
-        static int timeout_count = 0;
-        static const int TIMEOUT_LIMIT = 3; // 3 x 20ms = 60ms grace before stopping
-
-        // --- UDP Receiver ---
-        if (current_time - last_reciver_time >= Reciver_interval)
+        // --- UDP receive (every superloop iteration): MatchCtrl binary
+        // first, legacy v1 text as the bench fallback. The socket drain
+        // keeps only the newest datagram (TIGERs' 1-deep latest-wins queue
+        // semantics; seq discipline is inside the bridge).
+        msg = UDP.receive();
+        if (msg != "TIMEOUT")
         {
-            msg = UDP.receive(); // Receive new message
-            if (msg == "TIMEOUT")
+            const double now_s = std::chrono::duration<double>(
+                current_time.time_since_epoch()).count();
+            rf::MatchAccept acc = rf::MatchAccept::Malformed;
+            if (motion.enabled)
             {
-                // Legacy v1 path: N empty polls -> stop. While the MV2
-                // executor is active its own watchdog tiers (Fresh -> BRAKE
-                // -> COAST) replace this: braking is shaped, not a cliff.
-                if (!bridge.active())
-                {
-                    timeout_count++;
-                    if (timeout_count >= TIMEOUT_LIMIT)
-                    {
-                        logger.log("rframework", "reciever", "UDP TIMEOUT - stopping motors", LogLevel::WARN);
-                        velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}}; // Stop wheels
-                    }
-                }
+                acc = bridge.accept(msg, now_s);
             }
-            else
+            switch (acc)
             {
-                // Strict decode: a packet either classifies cleanly or the
-                // robot's motion state is left untouched.
+            case rf::MatchAccept::Accepted:
+                last_valid_cmd_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    current_time.time_since_epoch()).count();
+                break;
+            case rf::MatchAccept::WrongId:
+                logger.log("rframework", "reciever", "MatchCtrl for another robot ignored", LogLevel::WARN);
+                break;
+            case rf::MatchAccept::StaleSeq:
+                break;  // duplicate/reordered: dropped silently by design
+            case rf::MatchAccept::Malformed:
+            default:
+                // Not a binary MatchCtrl frame: the legacy text channel.
                 switch (cmd.decode_cmd(msg))
                 {
                 case CmdType::Velocity:
                 {
-                    timeout_count = 0;
                     // A v1 velocity command takes the robot back to direct
-                    // (legacy) control; the executor stands down.
+                    // (legacy) control; the MatchCtrl bridge stands down.
                     if (bridge.active())
                     {
                         bridge.clear();
-                        logger.log("rframework", "reciever", "v1 command - leaving MV2 mode", LogLevel::INFO);
+                        logger.log("rframework", "reciever", "v1 command - leaving MatchCtrl mode", LogLevel::INFO);
                     }
-                    logger.log("rframework", "reciever", std::string("Message Recieved: ") + msg, LogLevel::INFO);
-                    // Drive-mode envelope: direction-preserving scale-to-fit
-                    // (SAFE no longer hard-stops on an over-limit command).
                     const BodyTwist shaped = supervisor.shape_twist(
                         BodyTwist{cmd.velocity_x, cmd.velocity_y, cmd.velocity_w});
                     wheel_velocity = m.calculate(shaped.vx, shaped.vy, shaped.w);
-                    // Map velocities to motors
                     velocity_map = {
                         {1, wheel_velocity[0]},
                         {2, wheel_velocity[1]},
                         {3, wheel_velocity[2]},
                         {4, wheel_velocity[3]}};
-
-                    last_known_message = current_time;
                     last_cmd_twist = shaped;
                     last_valid_cmd_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                         current_time.time_since_epoch()).count();
-                    cmd_rx_count++;
-                    last_cmd_id = cmd.id;
                     break;
                 }
-
-                case CmdType::Move:
-                {
-                    if (!motion_settings.enabled)
-                    {
-                        logger.log("rframework", "reciever", "MV2 frame ignored (motion disabled in config)", LogLevel::WARN);
-                        break;
-                    }
-                    const uint64_t rx_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        current_time.time_since_epoch()).count();
-                    switch (bridge.accept_frame(msg, rx_ms))
-                    {
-                    case rf::Mv2Accept::Accepted:
-                        timeout_count = 0;
-                        last_known_message = current_time;
-                        last_valid_cmd_ms = rx_ms;
-                        cmd_rx_count++;
-                        last_cmd_id = bridge.last_robot_id();
-                        break;
-                    case rf::Mv2Accept::WrongId:
-                        logger.log("rframework", "reciever", "MV2 frame for another robot ignored", LogLevel::WARN);
-                        break;
-                    case rf::Mv2Accept::Malformed:
-                    default:
-                        logger.log("rframework", "reciever",
-                            std::string("Malformed MV2 frame rejected: ") + msg, LogLevel::WARN);
-                        break;
-                    }
-                    break;
-                }
-
                 case CmdType::Stop:
-                    // Operator STOP: safe-stop the motors and clear any
-                    // latched safety trip — the daemon KEEPS RUNNING so the
-                    // operator can resume without an SSH round-trip (ported
-                    // semantics from phoenix-rf; this used to exit(0)).
+                    // Operator STOP: safe-stop the motors and clear every
+                    // latch — the daemon KEEPS RUNNING.
                     logger.log("rframework", "reciever", "UDP STOP - safe stop, latches cleared", LogLevel::HATE);
-                    velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}}; // Stop wheels
-                    wheel_velocity = {zero, zero, zero, zero};
+                    velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}};
                     last_cmd_twist = BodyTwist{};
                     last_valid_cmd_ms.reset();
-                    bridge.clear();     // executor stands down (coast)
-                    supervisor.clear(); // operator recovery of latched trips
-
+                    bridge.clear();
+                    supervisor.clear();
                     for (const auto &pair : telemetry.controllers)
                     {
                         pair.second->SetStop();
                     }
                     break;
-
                 case CmdType::Ping:
-                    // Link discovery only — deliberately NOT a drive command,
-                    // so a robot fed only PINGs still times out and stops.
                     logger.log("rframework", "reciever", "PING received", LogLevel::INFO);
                     break;
-
                 case CmdType::Calibrate:
-                    // No onboard commissioner in this framework (yet).
                     logger.log("rframework", "reciever", "CALIBRATE received (not supported, ignored)", LogLevel::WARN);
                     break;
-
                 case CmdType::WrongId:
-                    logger.log("rframework", "reciever",
-                        std::string("Command for robot ") + std::to_string(cmd.id) +
-                        " ignored (this is robot " + std::to_string(robot_id) + ")",
-                        LogLevel::WARN);
-                    break;
-
                 case CmdType::Malformed:
                 default:
                     logger.log("rframework", "reciever",
-                        std::string("Malformed packet rejected: ") + msg, LogLevel::WARN);
+                        std::string("Unrecognized datagram rejected"), LogLevel::WARN);
                     break;
                 }
+                break;
             }
-            last_reciver_time = current_time;
         }
 
-        // --- Camera Ball Detection ---
+        // --- Camera ball observation snapshot ---
         if (current_time - last_camera_time >= CameraInterval)
         {
             BallObservation obs = ball_observation.load(std::memory_order_relaxed);
-            sender_msg.obs = obs;
-            sender_msg.ball_present = obs.found;
-            logger.log("rframework", "camball",
-                std::string("ball_detected=") + (obs.found ? "true" : "false") +
-                " px=" + std::to_string(obs.px) +
-                " py=" + std::to_string(obs.py) +
-                " r="  + std::to_string(obs.radius) +
-                " b="  + std::to_string(obs.bearing) +
-                " c="  + std::to_string(obs.confidence),
-                LogLevel::INFO);
+            sender_log(logger, obs);
             last_camera_time = current_time;
         }
 
-        if (current_time - last_known_message >= Motor_Command_interval)
-        {
-            // velocity_map = {{1, 0.0}, {2, 0.0}, {3, 0.0}, {4, 0.0}}; // Stop wheels
-        }
-
-        // --- Motor Telemetry and Safety Check ---
+        // --- Motor control tick: the MatchCtrl cascade ---
         if (current_time - last_motor_time >= MotorInterval)
         {
             // Measured wheel velocities (rev/s, motor id i -> index i-1) from
-            // the PREVIOUS cycle's replies — the executor's odometry input.
+            // the PREVIOUS cycle's replies — the estimator's odometry input.
             static std::array<double, 4> measured_rev_s = {0.0, 0.0, 0.0, 0.0};
-            // Actual elapsed time between motor ticks (the loop timer is
-            // approximate; the executor integrates with the real dt).
             static auto last_motor_tick_wall = current_time;
             const double motor_dt =
                 std::chrono::duration<double>(current_time - last_motor_tick_wall).count();
             last_motor_tick_wall = current_time;
 
+            const double now_s = std::chrono::duration<double>(
+                current_time.time_since_epoch()).count();
             const uint64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                 current_time.time_since_epoch()).count();
 
-            // Loop-health stats for telemetry (period achieved + jitter).
-            if (loop_ms_n > 0 || motor_dt > 0.0)
-            {
-                const double dt_ms = motor_dt * 1000.0;
-                loop_ms_sum += dt_ms;
-                loop_ms_min = std::min(loop_ms_min, dt_ms);
-                loop_ms_max = std::max(loop_ms_max, dt_ms);
-                loop_ms_n++;
-            }
-
             // Wheel odometry (FK) from the previous cycle's measured
-            // velocities — executor input and telemetry odo_vx/vy/w.
-            odo_twist = m.kinematics().forward(measured_rev_s);
+            // velocities.
+            const BodyTwist odo = m.kinematics().forward(measured_rev_s);
 
             bool energize = true;
 
             if (bridge.active())
             {
-                // Onboard trajectory following: wheel odometry + gyro in,
-                // shaped body twist out, at the motor rate — wheel motion no
-                // longer depends on Wi-Fi cadence.
-                const double imu_yaw_radps = telemetry.attitude_present
-                    ? telemetry.imu_yaw_dps * (M_PI / 180.0)
+                // The MatchCtrl cascade: delayed fusion + trajectory +
+                // control + actuator policy, one call per tick.
+                const double gyro_radps = telemetry.attitude_present
+                    ? telemetry.imu_yaw_dps * (M_PI / 180.0) * motion.imu_yaw_rate_sign
                     : std::nan("");
-                const phx::ExecOutput out = bridge.tick(
-                    now_ms, motor_dt, phx::Twist{odo_twist.vx, odo_twist.vy, odo_twist.w}, imu_yaw_radps);
+                const uint64_t obs_ms = ball_obs_time_ms.load(std::memory_order_relaxed);
+                const BallObservation obs = ball_observation.load(std::memory_order_relaxed);
+                rf::BallContactObs ball;
+                ball.found = obs.found;
+                ball.bearing = obs.bearing;
+                ball.radius = obs.radius;
+                ball.confidence = obs.confidence;
+                ball.age_s = obs_ms > 0
+                    ? std::max(0.0, (static_cast<double>(now_ms) - static_cast<double>(obs_ms)) / 1000.0)
+                    : 1e9;
 
-                // Operator envelope on top of the executor's mode caps —
-                // direction-preserving, so the trajectory bends nowhere.
-                const BodyTwist shaped = supervisor.shape_twist(
-                    BodyTwist{out.twist.lin.x, out.twist.lin.y, out.twist.ang});
-                wheel_velocity = m.calculate(shaped.vx, shaped.vy, shaped.w);
+                bt = bridge.tick(now_s, motor_dt, phx::Twist{odo.vx, odo.vy, odo.w},
+                                 gyro_radps, ball);
                 velocity_map = {
-                    {1, wheel_velocity[0]},
-                    {2, wheel_velocity[1]},
-                    {3, wheel_velocity[2]},
-                    {4, wheel_velocity[3]}};
-                energize = out.energize;
-                last_cmd_twist = BodyTwist{out.desired.lin.x, out.desired.lin.y, out.desired.ang};
+                    {1, bt.ctrl.wheel_rev_s[0]},
+                    {2, bt.ctrl.wheel_rev_s[1]},
+                    {3, bt.ctrl.wheel_rev_s[2]},
+                    {4, bt.ctrl.wheel_rev_s[3]}};
+                energize = bt.ctrl.energize;
+
+                // Kicker fire edge: send IMMEDIATELY (never on the slow
+                // Arduino timer), and consume it so it fires exactly once.
+                if (bt.act.fire_pulse_ms.has_value() && a.isConnected())
+                {
+                    const int pulse = static_cast<int>(
+                        std::clamp(*bt.act.fire_pulse_ms, 1.0, 255.0));
+                    const char cmd_bytes[2] = {'k', static_cast<char>(pulse)};
+                    if (a.sendBytes(cmd_bytes, 2))
+                    {
+                        logger.log("rframework", "arduino",
+                            std::string("KICK fired, pulse ") + std::to_string(pulse) + " ms",
+                            LogLevel::HATE);
+                    }
+                    bt.act.fire_pulse_ms.reset();
+                }
             }
 
-            // Safety gate: a latched trip coasts the motors; a stale v1
-            // command holds zero (the MV2 path has its own richer brake/
-            // coast tiers, so only the estop latch applies there).
+            // Safety gate: a latched trip coasts the motors; on the legacy
+            // v1 path a stale command holds zero (the MatchCtrl bridge has
+            // its own richer emergency tiers).
             if (supervisor.estop())
             {
                 velocity_map = {{1, zero}, {2, zero}, {3, zero}, {4, zero}};
@@ -583,11 +483,17 @@ int main(int argc, char **argv)
                 }
             }
 
-            const auto cycle_begin = std::chrono::steady_clock::now();
-            auto servo_status = telemetry.cycle(velocity_map, energize); // Send commands & receive telemetry
-            last_cycle_ms = std::chrono::duration<double, std::milli>(
-                std::chrono::steady_clock::now() - cycle_begin).count();
-            last_servo_status = servo_status;
+            // Optional model feedforward torque (disabled until identified).
+            std::map<int, double> ff_torque;
+            const std::map<int, double>* ff_ptr = nullptr;
+            if (bridge.active() && motion.controller.model_ff_enabled)
+            {
+                for (int id = 1; id <= 4; ++id)
+                    ff_torque[id] = bt.ctrl.wheel_ff_torque_nm[id - 1];
+                ff_ptr = &ff_torque;
+            }
+
+            auto servo_status = telemetry.cycle(velocity_map, energize, ff_ptr);
 
             // Stash measured velocities for the next tick's odometry.
             measured_rev_s = {0.0, 0.0, 0.0, 0.0};
@@ -598,21 +504,18 @@ int main(int argc, char **argv)
                     measured_rev_s[id - 1] = pair.second.velocity;
             }
 
-            float voltage[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-            int i = 0;
-            vmin_last = 0.0;
-
+            // Bus voltage (average of replying motors) + per-motor logging.
+            float voltage_sum = 0.0f;
+            int voltage_n = 0;
             for (const auto &pair : servo_status)
             {
                 const auto &r = pair.second;
-                if (i < 4)
-                    voltage[i] = r.voltage;
-                if (std::isfinite(r.voltage) && r.voltage > 0.0 &&
-                    (vmin_last <= 0.0 || r.voltage < vmin_last))
-                    vmin_last = r.voltage;
-                int motor_id = pair.first;
-
-                std::string sub = std::string("motor-") + std::to_string(motor_id);
+                if (std::isfinite(r.voltage) && r.voltage > 0.0)
+                {
+                    voltage_sum += r.voltage;
+                    voltage_n++;
+                }
+                std::string sub = std::string("motor-") + std::to_string(pair.first);
                 std::map<std::string, double> data = {
                     {"temperature", r.temperature},
                     {"voltage", r.voltage},
@@ -621,22 +524,11 @@ int main(int argc, char **argv)
                     {"mode", static_cast<double>(r.mode)},
                     {"fault", static_cast<double>(r.fault)}};
                 logger.log("rframework", sub, data, "", LogLevel::INFO);
-
-                // std::cout << "Motor ID: " << motor_id << " Position is: " << r.position << " Mode is: "<< r.mode<< " Velocity is: " << r.velocity<< " Current is: "<< r.current<<"\n";
-
-                i++;
             }
-
-            // Compute average voltage
-            float sum = 0;
-            for (int j = 0; j < 4; j++)
-                sum += voltage[j];
-            sender_msg.voltage = sum / 4;
+            const double avg_voltage =
+                voltage_n > 0 ? static_cast<double>(voltage_sum) / voltage_n : 0.0;
 
             // --- Safety supervisor: per-motor trips with grace counts ---
-            // (The old inline gate compared NaN > limit — see the motor:
-            // commit — and hard-exited the process; trips now latch a
-            // RECOVERABLE estop.)
             std::vector<rf::MotorObs> motor_obs;
             for (const auto &pair : telemetry.controllers)
             {
@@ -652,7 +544,7 @@ int main(int argc, char **argv)
                 }
                 motor_obs.push_back(o);
             }
-            for (const rf::StopReason &r : supervisor.observe(motor_obs, sender_msg.voltage))
+            for (const rf::StopReason &r : supervisor.observe(motor_obs, avg_voltage))
             {
                 logger.log("rframework",
                     std::string("SAFETY TRIP: ") + r.word() +
@@ -660,14 +552,15 @@ int main(int argc, char **argv)
                     LogLevel::CRIT);
             }
 
-            // Auto-recovery: after recoveryS healthy seconds with the
-            // operator commanding zero (or gone stale), the latch releases.
+            // Auto-recovery: healthy for recoveryS seconds with the operator
+            // commanding zero (or gone silent) releases the latch.
             const bool cmd_stale = !last_valid_cmd_ms ||
                 (now_ms - *last_valid_cmd_ms > supervisor.config().command_timeout_ms);
-            const bool operator_idle = cmd_stale ||
-                (std::abs(last_cmd_twist.vx) + std::abs(last_cmd_twist.vy) +
-                     std::abs(last_cmd_twist.w) < 0.02 && !cmd.kick);
-            if (auto released = supervisor.try_recover(now_ms, operator_idle))
+            const bool motion_idle = bridge.active()
+                ? bt.emergency
+                : (cmd_stale || (std::abs(last_cmd_twist.vx) + std::abs(last_cmd_twist.vy) +
+                                     std::abs(last_cmd_twist.w) < 0.02 && !cmd.kick));
+            if (auto released = supervisor.try_recover(now_ms, motion_idle))
             {
                 for (const rf::StopReason &r : *released)
                 {
@@ -676,127 +569,84 @@ int main(int argc, char **argv)
                 }
             }
 
-            // std::cout << sender_msg.voltage << "\n";
+            // Feedback health snapshot for the next send.
+            health.battery_v = avg_voltage;
+            health.estop = supervisor.estop();
+            health.arduino_connected = a.isConnected();
+            health.camera_running = camera_thread.joinable();
+            if (health.robot_id < 0)
+                health.robot_id = bridge.last_robot_id();
 
             last_motor_time = current_time;
         }
 
-        // --- UDP Telemetry Sender (protocol v2, key=value CSV) ---
-        // v1 keys come first so pre-v2 dashboards still parse; mv=2 is the
-        // capability flag the server gates MV2 pose-target frames on.
-        if (current_time - last_sender_time >= Telemetry_interval)
+        // --- MatchFeedback to the server (50 Hz default) ---
+        if (current_time - last_feedback_time >= Feedback_interval)
         {
-            const uint64_t now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            const double now_s = std::chrono::duration<double>(
                 current_time.time_since_epoch()).count();
+            const BallObservation obs = ball_observation.load(std::memory_order_relaxed);
+            rf::BallContactObs ball;
+            ball.found = obs.found;
+            ball.bearing = obs.bearing;
+            ball.radius = obs.radius;
+            ball.confidence = obs.confidence;
+            const uint64_t obs_ms = ball_obs_time_ms.load(std::memory_order_relaxed);
+            const uint64_t now_ms2 = std::chrono::duration_cast<std::chrono::milliseconds>(
+                current_time.time_since_epoch()).count();
+            ball.age_s = obs_ms > 0
+                ? std::max(0.0, (static_cast<double>(now_ms2) - static_cast<double>(obs_ms)) / 1000.0)
+                : 1e9;
 
-            rf::TelemetrySnapshot snap;
-            // v1 core.
-            snap.state = supervisor.estop() ? "estop" : "active";
-            snap.voltage = sender_msg.voltage;
-            snap.ball_found = sender_msg.obs.found;
-            snap.ball_px = sender_msg.obs.px;
-            snap.ball_py = sender_msg.obs.py;
-            snap.ball_radius = sender_msg.obs.radius;
-            snap.ball_bearing = sender_msg.obs.bearing;
-            snap.ball_confidence = sender_msg.obs.confidence;
-            snap.robot_ts_ms = now_ms;
-            // v2 identity & link.
-            snap.rid = robot_rid;
-            snap.seq = telem_seq++;
-            snap.up_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                current_time - process_start).count();
-            snap.ifip = UDP.local_ip();
-            snap.vmin = vmin_last;
-            snap.m_exp = static_cast<uint32_t>(telemetry.controllers.size());
-            snap.cmd_age_ms = last_valid_cmd_ms
-                ? static_cast<int64_t>(now_ms - *last_valid_cmd_ms) : -1;
-            snap.cmd_rx = cmd_rx_count;
-            snap.cmd_last_id = last_cmd_id;
-            snap.arduino_connected = a.isConnected();
-            snap.camera_running = camera_thread.joinable();
-            snap.estop = supervisor.estop();
-            snap.tx_err = UDP.tx_errors();
-            snap.cycle_ms = last_cycle_ms;
-            // Per-motor block: every expected motor appears; the ones that
-            // replied carry live numbers.
-            for (const auto &pair : telemetry.controllers)
-            {
-                rf::MotorTelem mt;
-                mt.id = pair.first;
-                auto it = last_servo_status.find(pair.first);
-                if (it != last_servo_status.end())
-                {
-                    mt.ok = true;
-                    mt.mode = it->second.mode;
-                    mt.fault = it->second.fault;
-                    mt.temperature = it->second.temperature;
-                    mt.voltage = it->second.voltage;
-                    mt.velocity = it->second.velocity;
-                    mt.current = std::isfinite(it->second.current) ? it->second.current : 0.0;
-                    snap.m_ok++;
-                }
-                snap.motors.push_back(mt);
-            }
-            // v2+ additive: IMU (our CCW+ convention), odometry, loop health.
-            snap.imu_yaw_dps = telemetry.attitude_present
-                ? telemetry.imu_yaw_dps * motion_settings.imu_yaw_rate_sign
-                : std::nan("");
-            snap.heading_deg = telemetry.imu_heading_deg;
-            snap.odo_vx = odo_twist.vx;
-            snap.odo_vy = odo_twist.vy;
-            snap.odo_w = odo_twist.w;
-            if (loop_ms_n > 0)
-            {
-                snap.loop_ms = loop_ms_sum / loop_ms_n;
-                snap.loop_jitter_ms = loop_ms_max - loop_ms_min;
-            }
-            loop_ms_sum = 0.0;
-            loop_ms_min = 1e9;
-            loop_ms_max = 0.0;
-            loop_ms_n = 0;
-            snap.imu_ok = telemetry.attitude_present;
-            // MV2 executor status.
-            snap.mv_seq = bridge.mv_seq();
-            snap.wd_state = bridge.wd_state();
-            snap.mv_kind = bridge.kind_word();
-            snap.tgt_dist_mm = bridge.tgt_dist_mm();
-
-            const std::string wire = snap.encode();
-            logger.log("rframework", "sender", wire, LogLevel::INFO);
-            UDP.send(wire);
-            last_sender_time = current_time;
+            const rf::MatchFeedback fb = feedback.build(bridge, bt, health, ball, now_s);
+            const auto bytes = rf::encode_match_feedback(fb);
+            UDP.send(std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size()));
+            last_feedback_time = current_time;
         }
 
-        // --- Arduino Commands ---
+        // --- Arduino commands ---
         if (current_time - last_arduino_time >= Arduino_interval)
         {
             if (a.isConnected())
             {
-                // In MV2 mode the executor's frames carry kick/dribble:
-                // kick is edge-triggered (once per server pulse), dribble is
-                // level-held. The v1 path keeps its historical behavior.
-                const bool mv2 = bridge.active();
-                const bool want_kick = mv2 ? bridge.take_kick() : cmd.kick;
-                const bool want_dribble = mv2 ? bridge.dribble() : cmd.dribble;
-
-                if (want_kick)
+                if (bridge.active())
                 {
-                    a.sendCommand(kick); // Kick
-                    logger.log("rframework", "arduino", "Sent kick", LogLevel::HATE);
-                    cmd.kick = false;
-                }
-                else if (want_dribble)
-                {
-                    a.sendCommand(dribble); // Dribble
-                    logger.log("rframework", "arduino", "Sent dribble", LogLevel::LOVE);
-
+                    // Dribbler level from the actuator policy (speed -> ESC
+                    // microseconds). Sent on change; the fire edge goes
+                    // IMMEDIATELY (see below), not on this slow timer.
+                    static int last_dribble_us = -1;
+                    const int us = bt.act.dribbler_us;
+                    if (us != last_dribble_us)
+                    {
+                        if (us > 0)
+                        {
+                            const char cmd_bytes[2] = {'d', static_cast<char>(us)};
+                            a.sendBytes(cmd_bytes, 2);
+                        }
+                        else
+                        {
+                            a.sendCommand('S');
+                        }
+                        last_dribble_us = us;
+                    }
                 }
                 else
                 {
-                    a.sendCommand(stop_dribble); // Stop
-                    logger.log("rframework", "arduino", "Sent stop dribble", LogLevel::INFO);
-
-
+                    // Legacy v1 actuators.
+                    if (cmd.kick)
+                    {
+                        a.sendCommand('K');
+                        logger.log("rframework", "arduino", "Sent kick", LogLevel::HATE);
+                        cmd.kick = false;
+                    }
+                    else if (cmd.dribble)
+                    {
+                        a.sendCommand('D');
+                    }
+                    else
+                    {
+                        a.sendCommand('S');
+                    }
                 }
             }
             last_arduino_time = current_time;
@@ -822,6 +672,19 @@ int main(int argc, char **argv)
 
     std::cout << "RobotFramework stopped safely\n";
     logger.closeAll();
+}
+
+// Camera snapshot logging (kept out of the hot loop).
+void sender_log(Logger &logger, const BallObservation &obs)
+{
+    logger.log("rframework", "camball",
+        std::string("ball_detected=") + (obs.found ? "true" : "false") +
+        " px=" + std::to_string(obs.px) +
+        " py=" + std::to_string(obs.py) +
+        " r="  + std::to_string(obs.radius) +
+        " b="  + std::to_string(obs.bearing) +
+        " c="  + std::to_string(obs.confidence),
+        LogLevel::INFO);
 }
 
 // --- Signal handler for Ctrl+C ---
