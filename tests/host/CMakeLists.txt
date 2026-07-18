@@ -21,6 +21,7 @@ add_executable(host_tests
     main.cpp
     test_decode.cpp
     test_kinematics.cpp
+    test_matchctrl.cpp
     test_motor_formats.cpp
     test_wire.cpp
     test_executor.cpp
@@ -28,6 +29,7 @@ add_executable(host_tests
     test_safety.cpp
     test_telemetry_wire.cpp
     ${RF_ROOT}/Networks/decode.cpp
+    ${RF_ROOT}/Networks/matchctrl.cpp
     ${RF_ROOT}/Math/kinematics.cpp
     ${RF_ROOT}/Motion/phx/wire.cpp
     ${RF_ROOT}/Motion/MotionBridge.cpp
