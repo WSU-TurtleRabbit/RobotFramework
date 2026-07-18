@@ -62,3 +62,33 @@ if(MSVC)
         _USE_MATH_DEFINES
     )
 endif()
+
+# The interop sim robot: the REAL firmware modules + a plant + a ball,
+# speaking MatchCtrl/MatchFeedback over UDP for the live server check
+# (tests/host/interop_e2e.py). Not part of the unit-test binary.
+add_executable(sim_robot
+    sim_robot.cpp
+    ${RF_ROOT}/Networks/matchctrl.cpp
+    ${RF_ROOT}/Math/kinematics.cpp
+    ${RF_ROOT}/Motion/actuators.cpp
+    ${RF_ROOT}/Motion/controller.cpp
+    ${RF_ROOT}/Motion/estimator.cpp
+    ${RF_ROOT}/Motion/match_bridge.cpp
+    ${RF_ROOT}/Motion/skills.cpp
+    ${RF_ROOT}/Motion/trajectory.cpp
+    ${RF_ROOT}/Telemetry/match_feedback.cpp
+)
+target_include_directories(sim_robot PRIVATE
+    ${RF_ROOT}
+    ${RF_ROOT}/mjbots/moteus
+)
+if(MSVC)
+    target_compile_definitions(sim_robot PRIVATE
+        __ORDER_LITTLE_ENDIAN__=1234
+        __BYTE_ORDER__=1234
+        _USE_MATH_DEFINES
+    )
+endif()
+if(WIN32)
+    target_link_libraries(sim_robot PRIVATE ws2_32)
+endif()
