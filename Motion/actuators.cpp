@@ -56,7 +56,9 @@ ActuatorOutput Actuators::tick(double now_s, const KickerDribbler& kd,
     if (fire) {
         out.fire_pulse_ms = pulse_ms;
         last_fire_s_ = now_s;
+        kick_counter_ = !kick_counter_;  // edge per kick: the server counts
     }
+    out.kick_counter = kick_counter_;
 
     // --- dribbler (level-held) ---
     out.dribbler_speed = kd.dribbler_speed;

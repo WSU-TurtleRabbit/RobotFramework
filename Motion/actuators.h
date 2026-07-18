@@ -67,6 +67,10 @@ struct ActuatorOutput {
     // A kick to fire THIS tick: solenoid pulse in ms (edge-triggered).
     std::optional<double> fire_pulse_ms;
     bool armed = false;  // ARM latched, waiting for ball contact
+    // Toggles on every fire (TIGERs kick counter: an edge = a kick
+    // happened). Owned here — the fire decision is, so re-assembling
+    // feedback from the same tick can't double-count.
+    bool kick_counter = false;
     // Dribbler ESC microseconds above the 1500 us stop (0 = stop).
     int dribbler_us = 0;
     // Feedback signals (MatchFeedback).
@@ -88,11 +92,16 @@ public:
 
     bool ball_contact(const BallContactObs& obs) const;
 
+    // Last fire time (clock fed to tick); -1e9 = never. Drives the kicker
+    // charge model in MatchFeedback.
+    double last_fire_s() const { return last_fire_s_; }
+
 private:
     ActuatorConfig cfg_;
     KickerMode prev_mode_ = KickerMode::Disarm;
     double last_fire_s_ = -1e9;
-    bool barrier_prev_ = false;  // armed fire is edge-triggered on contact
+    bool barrier_prev_ = false;   // armed fire is edge-triggered on contact
+    bool kick_counter_ = false;
 };
 
 }  // namespace rf

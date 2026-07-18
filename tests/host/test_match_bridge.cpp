@@ -10,95 +10,19 @@
 
 #include "Motion/match_bridge.h"
 #include "Motion/phx/testing.h"
+#include "pack_matchctrl.h"
 
 using namespace rf;
+using pack::emergency;
+using pack::global_pos;
+using pack::global_pos_no_vision;
+using pack::header;
+using pack::local_vel;
+using pack::vision;
 
 namespace {
 
 constexpr double kDt = 0.004;
-
-void put16(std::string& f, int off, int16_t v) {
-    f[off] = static_cast<char>(v & 0xFF);
-    f[off + 1] = static_cast<char>((v >> 8) & 0xFF);
-}
-
-std::string pack_header(int robot, uint16_t seq, int skill_id) {
-    std::string f(32, '\0');
-    f[0] = 'P';
-    f[1] = 'X';
-    f[2] = 0x05;
-    f[3] = static_cast<char>(robot);
-    put16(f, 4, static_cast<int16_t>(seq));
-    f[15] = static_cast<char>(skill_id);
-    return f;
-}
-
-void pack_vision(std::string& f, double x, double y, double th, int delay_q62) {
-    put16(f, 6, static_cast<int16_t>(std::lround(x * 1000)));
-    put16(f, 8, static_cast<int16_t>(std::lround(y * 1000)));
-    put16(f, 10, static_cast<int16_t>(std::lround(th * 1000)));
-    f[12] = static_cast<char>(delay_q62);
-}
-
-void pack_no_vision(std::string& f) {
-    put16(f, 6, 0x7FFF);
-    put16(f, 8, 0x7FFF);
-    put16(f, 10, 0x7FFF);
-    f[12] = static_cast<char>(255);
-}
-
-// GLOBAL_POS with limits in raw u8 (vel/5, velW/30, acc/10, accW/100 of 255).
-std::string frame_global_pos(int robot, uint16_t seq, double vx, double vy, double vth,
-                             double tx, double ty, double tth, uint8_t vel = 102,
-                             uint8_t velw = 68, uint8_t acc = 64, uint8_t accw = 102,
-                             int delay_q62 = 160) {
-    std::string f = pack_header(robot, seq, 4);
-    pack_vision(f, vx, vy, vth, delay_q62);
-    put16(f, 16, static_cast<int16_t>(std::lround(tx * 1000)));
-    put16(f, 18, static_cast<int16_t>(std::lround(ty * 1000)));
-    put16(f, 20, static_cast<int16_t>(std::lround(tth * 1000)));
-    f[22] = static_cast<char>(vel);
-    f[23] = static_cast<char>(velw);
-    f[24] = static_cast<char>(acc);
-    f[25] = static_cast<char>(accw);
-    f[29] = static_cast<char>(0x80);  // primary direction: none
-    return f;
-}
-
-std::string frame_local_vel(int robot, uint16_t seq, double vx, double vy, double w,
-                            double px = 0, double py = 0, double pth = 0,
-                            uint8_t acc = 102, uint8_t accw = 51) {
-    std::string f = pack_header(robot, seq, 2);
-    pack_vision(f, px, py, pth, 160);
-    put16(f, 16, static_cast<int16_t>(std::lround(vx * 1000)));
-    put16(f, 18, static_cast<int16_t>(std::lround(vy * 1000)));
-    put16(f, 20, static_cast<int16_t>(std::lround(w * 1000)));
-    f[22] = static_cast<char>(acc);
-    f[23] = static_cast<char>(accw);
-    f[24] = static_cast<char>(255);  // jerk maxed
-    f[25] = static_cast<char>(255);
-    return f;
-}
-
-std::string frame_emergency(int robot, uint16_t seq, double px, double py, double pth) {
-    std::string f = pack_header(robot, seq, 0);
-    pack_vision(f, px, py, pth, 160);
-    return f;
-}
-
-std::string frame_no_vision_pos(int robot, uint16_t seq, double tx, double ty, double tth) {
-    std::string f = pack_header(robot, seq, 4);
-    pack_no_vision(f);
-    put16(f, 16, static_cast<int16_t>(std::lround(tx * 1000)));
-    put16(f, 18, static_cast<int16_t>(std::lround(ty * 1000)));
-    put16(f, 20, static_cast<int16_t>(std::lround(tth * 1000)));
-    f[22] = static_cast<char>(102);
-    f[23] = static_cast<char>(68);
-    f[24] = static_cast<char>(64);
-    f[25] = static_cast<char>(102);
-    f[29] = static_cast<char>(0x80);
-    return f;
-}
 
 struct Lcg {
     uint32_t s = 0xABCDEF01u;
@@ -132,17 +56,17 @@ PHX_TEST(bridge_rejects_garbage_wrong_id_and_stale_seq) {
     Kinematics kin;
     MatchBridge b{MatchBridgeConfig{.expected_robot_id = 3}, kin};
     CHECK(b.accept("garbage in", 0.0) == MatchAccept::Malformed);
-    CHECK(b.accept(frame_global_pos(4, 1, 0, 0, 0, 1, 0, 0), 0.0) == MatchAccept::WrongId);
-    CHECK(b.accept(frame_global_pos(3, 10, 0, 0, 0, 1, 0, 0), 0.0) == MatchAccept::Accepted);
-    CHECK(b.accept(frame_global_pos(3, 10, 0, 0, 0, 1, 0, 0), 0.004) == MatchAccept::StaleSeq);
-    CHECK(b.accept(frame_global_pos(3, 9, 0, 0, 0, 1, 0, 0), 0.008) == MatchAccept::StaleSeq);
-    CHECK(b.accept(frame_global_pos(3, 11, 0, 0, 0, 1, 0, 0), 0.012) == MatchAccept::Accepted);
+    CHECK(b.accept(global_pos(4, 1, 0, 0, 0, 1, 0, 0), 0.0) == MatchAccept::WrongId);
+    CHECK(b.accept(global_pos(3, 10, 0, 0, 0, 1, 0, 0), 0.0) == MatchAccept::Accepted);
+    CHECK(b.accept(global_pos(3, 10, 0, 0, 0, 1, 0, 0), 0.004) == MatchAccept::StaleSeq);
+    CHECK(b.accept(global_pos(3, 9, 0, 0, 0, 1, 0, 0), 0.008) == MatchAccept::StaleSeq);
+    CHECK(b.accept(global_pos(3, 11, 0, 0, 0, 1, 0, 0), 0.012) == MatchAccept::Accepted);
     // Seq wrap: crossing 65535 -> 0 is AHEAD, not stale.
     MatchBridge w{MatchBridgeConfig{.expected_robot_id = 3}, kin};
-    CHECK(w.accept(frame_global_pos(3, 65534, 0, 0, 0, 1, 0, 0), 0.0) == MatchAccept::Accepted);
-    CHECK(w.accept(frame_global_pos(3, 65535, 0, 0, 0, 1, 0, 0), 0.004) == MatchAccept::Accepted);
-    CHECK(w.accept(frame_global_pos(3, 0, 0, 0, 0, 1, 0, 0), 0.008) == MatchAccept::Accepted);
-    CHECK(w.accept(frame_global_pos(3, 1, 0, 0, 0, 1, 0, 0), 0.012) == MatchAccept::Accepted);
+    CHECK(w.accept(global_pos(3, 65534, 0, 0, 0, 1, 0, 0), 0.0) == MatchAccept::Accepted);
+    CHECK(w.accept(global_pos(3, 65535, 0, 0, 0, 1, 0, 0), 0.004) == MatchAccept::Accepted);
+    CHECK(w.accept(global_pos(3, 0, 0, 0, 0, 1, 0, 0), 0.008) == MatchAccept::Accepted);
+    CHECK(w.accept(global_pos(3, 1, 0, 0, 0, 1, 0, 0), 0.012) == MatchAccept::Accepted);
 }
 
 PHX_TEST(bridge_first_vision_gate_blocks_motion_until_fix) {
@@ -151,7 +75,7 @@ PHX_TEST(bridge_first_vision_gate_blocks_motion_until_fix) {
     Plant p;
     // Frames arrive WITHOUT vision (sentinels): valid commands, no fix.
     for (int i = 0; i < 100; ++i) {
-        b.accept(frame_no_vision_pos(3, static_cast<uint16_t>(i + 1), 1.0, 0.0, 0.0),
+        b.accept(global_pos_no_vision(3, static_cast<uint16_t>(i + 1), 1.0, 0.0, 0.0),
                  i * kDt);
         const BridgeTick t = b.tick(i * kDt, kDt, p.odo(), 0.0, BallContactObs{});
         CHECK(!t.motion_enabled);
@@ -159,7 +83,7 @@ PHX_TEST(bridge_first_vision_gate_blocks_motion_until_fix) {
         for (double v : t.ctrl.wheel_rev_s) CHECK(v == 0.0);
     }
     // The first frame WITH vision: fix snaps, motion enables.
-    b.accept(frame_global_pos(3, 500, p.x, p.y, p.th, 1.0, 0.0, 0.0), 100 * kDt);
+    b.accept(global_pos(3, 500, p.x, p.y, p.th, 1.0, 0.0, 0.0), 100 * kDt);
     const BridgeTick t = b.tick(101 * kDt, kDt, p.odo(), 0.0, BallContactObs{});
     CHECK(t.motion_enabled);
     CHECK(t.ctrl.energize);
@@ -176,7 +100,7 @@ PHX_TEST(bridge_command_timeout_ramps_down_then_coasts) {
     // Drive forward at 0.5 m/s for a second.
     for (int i = 0; i < 250; ++i) {
         if (i % 4 == 0) {
-            b.accept(frame_local_vel(3, seq++, 0.5, 0.0, 0.0, p.x, p.y, p.th), now);
+            b.accept(local_vel(3, seq++, 0.5, 0.0, 0.0, p.x, p.y, p.th), now);
         }
         const BridgeTick t = b.tick(now, kDt, p.odo(), p.odo().ang, BallContactObs{});
         p.wheels = t.ctrl.wheel_rev_s;
@@ -208,7 +132,7 @@ PHX_TEST(bridge_server_emergency_skill_stops_the_robot) {
     double now = 0.0;
     uint16_t seq = 0;
     for (int i = 0; i < 250; ++i) {
-        if (i % 4 == 0) b.accept(frame_local_vel(3, seq++, 0.6, 0.0, 0.0, p.x, p.y, p.th), now);
+        if (i % 4 == 0) b.accept(local_vel(3, seq++, 0.6, 0.0, 0.0, p.x, p.y, p.th), now);
         const BridgeTick t = b.tick(now, kDt, p.odo(), p.odo().ang, BallContactObs{});
         p.wheels = t.ctrl.wheel_rev_s;
         p.step(kDt);
@@ -217,7 +141,7 @@ PHX_TEST(bridge_server_emergency_skill_stops_the_robot) {
     CHECK(p.odo().lin.x > 0.3);
     // Server sends EMERGENCY: controlled stop while frames keep coming.
     for (int i = 0; i < 250; ++i) {
-        if (i % 4 == 0) b.accept(frame_emergency(3, seq++, p.x, p.y, p.th), now);
+        if (i % 4 == 0) b.accept(emergency(3, seq++, p.x, p.y, p.th), now);
         const BridgeTick t = b.tick(now, kDt, p.odo(), p.odo().ang, BallContactObs{});
         p.wheels = t.ctrl.wheel_rev_s;
         p.step(kDt);
@@ -254,7 +178,7 @@ PHX_TEST(bridge_drives_to_target_through_full_cascade) {
             const double c = std::cos(p.th), s = std::sin(p.th);
             const double gvx = o.vx * c - o.vy * s;
             const double gvy = o.vx * s + o.vy * c;
-            b.accept(frame_global_pos(3, seq++, p.x - gvx * 0.040 + noise_x,
+            b.accept(global_pos(3, seq++, p.x - gvx * 0.040 + noise_x,
                                       p.y - gvy * 0.040 + noise_y,
                                       phx::wrap_angle(p.th - o.w * 0.040 + noise_th),
                                       1.2, 0.6, 0.8),
@@ -275,12 +199,12 @@ PHX_TEST(bridge_wheel_vel_maps_to_the_right_motors) {
     MatchBridge b{MatchBridgeConfig{.expected_robot_id = 3}, kin};
     Plant p;
     // Spin motor id 1 (FR) only: raw 2000 = 10 rad/s on wire wheel FR.
-    std::string f = pack_header(3, 1, 1);
-    pack_vision(f, 0, 0, 0, 160);
-    put16(f, 16, 2000);
-    put16(f, 18, 0);
-    put16(f, 20, 0);
-    put16(f, 22, 0);
+    std::string f = header(3, 1, 1);
+    vision(f, 0, 0, 0, 160);
+    pack::put16(f, 16, 2000);
+    pack::put16(f, 18, 0);
+    pack::put16(f, 20, 0);
+    pack::put16(f, 22, 0);
     b.accept(f, 0.0);
     b.tick(0.0, kDt, phx::Twist{}, 0.0, BallContactObs{});
     BridgeTick t;
