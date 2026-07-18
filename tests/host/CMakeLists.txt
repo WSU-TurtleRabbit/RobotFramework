@@ -19,6 +19,7 @@ set(RF_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 
 add_executable(host_tests
     main.cpp
+    test_actuators.cpp
     test_decode.cpp
     test_controller.cpp
     test_estimator.cpp
@@ -35,6 +36,7 @@ add_executable(host_tests
     ${RF_ROOT}/Networks/decode.cpp
     ${RF_ROOT}/Networks/matchctrl.cpp
     ${RF_ROOT}/Math/kinematics.cpp
+    ${RF_ROOT}/Motion/actuators.cpp
     ${RF_ROOT}/Motion/controller.cpp
     ${RF_ROOT}/Motion/estimator.cpp
     ${RF_ROOT}/Motion/skills.cpp
