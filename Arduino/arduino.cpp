@@ -134,6 +134,24 @@ bool Arduino::sendCommand(char command) {
   }
 }
 
+bool Arduino::sendBytes(const char* data, size_t len) {
+  if (!is_connected || !serial_port.IsOpen()) {
+    std::cerr << "Cannot send bytes: Arduino not connected" << std::endl;
+    return false;
+  }
+
+  try {
+    serial_port.Write(std::string(data, len));
+    serial_port.DrainWriteBuffer();
+    return true;
+
+  }
+  catch (const std::exception& e) {
+    std::cerr << "Failed to send bytes: " << e.what() << std::endl;
+    return false;
+  }
+}
+
 bool Arduino::isConnected() const {
   return is_connected;
 }

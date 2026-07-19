@@ -1,4 +1,4 @@
-add_library(Telemetry Telemetry.cpp)
+add_library(Telemetry Telemetry.cpp match_feedback.cpp)
 
 target_include_directories(Telemetry
     INTERFACE 
@@ -6,6 +6,7 @@ target_include_directories(Telemetry
 )
 
 target_link_libraries(Telemetry PUBLIC
-    moteus 
+    moteus
     pi3hat
+    Motion
 )

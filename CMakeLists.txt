@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.25)
 
 project(RobotFramework)
 
+# The pure logic modules (Math/kinematics, Motion/, ...) are shared with the
+# host test suite (tests/host) and use C++20 (<numbers>, std::optional, ...).
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 find_package(OpenCV REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
@@ -16,14 +21,16 @@ target_link_libraries(COMMON_LIBS INTERFACE
     ${OpenCV_LIBS}
     BallDetection
     Arduino
-    Networks 
+    Networks
     wheel_math
-    moteus 
-    pi3hat 
+    Motion
+    Safety
+    moteus
+    pi3hat
     bcm_host
     Telemetry
     Logger
-    atomic 
+    atomic
     yaml-cpp
 )
 
@@ -40,6 +47,8 @@ add_subdirectory(BallDetection)
 add_subdirectory(Arduino)
 add_subdirectory(Networks)
 add_subdirectory(Math)
+add_subdirectory(Motion)
+add_subdirectory(Safety)
 add_subdirectory(Telemetry)
 add_subdirectory(Logger)
 

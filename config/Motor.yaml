@@ -3,3 +3,16 @@ motorMap:
   2: 2 # MOTOR ID 2 Mapped to BUS 2
   3: 3 # MOTOR ID 3 Mapped to BUS 3
   4: 4 # MOTOR ID 4 Mapped to BUS 4
+
+# Meters of body travel per motor output revolution — the ONE drive-scale
+# calibration constant (moteus velocity commands are in output rev/s).
+# Default = 2*pi*R for the direct-drive 33.5mm omni wheel. CALIBRATE on
+# hardware: command a known motor rev count, measure the distance travelled.
+metersPerMotorRev: 0.21048670778
+
+# moteus-level per-command shaping (values proven on the Rust robot):
+# the controller bounds each velocity setpoint and its ramp itself, which
+# smooths steps between our 100 Hz updates and backstops a runaway command.
+# Comment out to use the controller's own defaults.
+velocityLimit: 45 # output rev/s
+accelLimit: 120 # output rev/s^2

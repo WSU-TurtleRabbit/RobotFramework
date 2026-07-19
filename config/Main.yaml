@@ -1,7 +1,17 @@
 intervals:
-  Motor_interval: 20
+  # Motor/control tick (ms) — the MatchCtrl cascade rate. 4 ms (250 Hz) is
+  # the target, proven on this hardware by phoenix-rf (250 Hz loop, ~0.7 ms
+  # CAN cycle, ~0.014 ms jitter). 10 ms (100 Hz) works but wastes the
+  # estimator/trajectory/control fidelity.
+  Motor_interval: 4
   Arduino_interval: 100
-  Reciver_interval: 20
-  Sender_interval: 1000
   Camera_interval: 200
-  Idle_interval: 3000
+
+# This robot's id on the command channel. Commands addressed to another id
+# are ignored (the robot must not drive on a teammate's command).
+# -1 = accept any id (historical behavior, useful on the bench).
+Robot_id: -1
+
+# Physical robot identity letter reported as rid= in telemetry (asset tag,
+# not the command id — swapping electronics between shells keeps this).
+Robot_rid: "?"

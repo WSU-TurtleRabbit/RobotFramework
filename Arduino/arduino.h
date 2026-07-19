@@ -32,6 +32,9 @@ public:
     // Send a single character command
     bool sendCommand(char command);
     
+    // Send a multi-byte command (parameterized kick/dribble: 'k'+ms, 'd'+us)
+    bool sendBytes(const char* data, size_t len);
+    
     // Check if connected
     bool isConnected() const;
     

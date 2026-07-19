@@ -24,22 +24,30 @@ UDP::UDP() {
 
     buffer.resize(buffer_size);
 
-    
+
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    // The address structs start zeroed: client_addr/target_addr hold garbage
+    // otherwise, and telemetry sent before the first command would go to a
+    // garbage destination.
+    std::memset(&server_addr, 0, sizeof(server_addr));
+    std::memset(&client_addr, 0, sizeof(client_addr));
+    std::memset(&target_addr, 0, sizeof(target_addr));
 
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(receiver_port);
 
-    tv.tv_usec = 50000; //30ms fro timeout 
+    tv.tv_usec = 50000; // 50 ms receive timeout
     tv.tv_sec = 0;
 
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)); 
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
     bind(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr));
 
-    
-    Msg_found;
+    Msg_found = false;
+    has_peer = false;
+    tx_err_count = 0;
     len = sizeof(client_addr);
 };
 
@@ -63,6 +71,7 @@ std::string UDP::receive() {
 
     buffer[last_bytes] = '\0';
     Msg_found = true;
+    has_peer = true; // client_addr now holds a real sender to reply to
     return std::string(buffer.data(), last_bytes);
 
 };
@@ -77,14 +86,53 @@ void UDP::clear_buffer() {
 
 
 void UDP::send(const std::string& message) {
-    sendto(sockfd, message.c_str(), message.size(), 0,
-           (struct sockaddr*)&target_addr, sizeof(target_addr));
+    // No command received yet: we do not know who to talk to. The old code
+    // called sendto() BEFORE filling target_addr, so the first telemetry
+    // packet (and every packet until a command arrived) went to a garbage
+    // address.
+    if (!has_peer) {
+        return;
+    }
 
+    // Reply to the last commander's IP on the telemetry port, THEN send.
     target_addr.sin_family = AF_INET;
-    target_addr.sin_port = htons(sender_port);  
+    target_addr.sin_port = htons(sender_port);
+    target_addr.sin_addr = client_addr.sin_addr; // copy the IP from the sender
 
-    // Copy the IP from the sender
-    target_addr.sin_addr = client_addr.sin_addr;
+    const ssize_t sent = sendto(sockfd, message.c_str(), message.size(), 0,
+                                (struct sockaddr*)&target_addr, sizeof(target_addr));
+    if (sent < 0) {
+        tx_err_count++;
+    }
+}
+
+std::string UDP::local_ip() {
+    if (!has_peer) {
+        return "0.0.0.0";
+    }
+    // Connect a scratch datagram socket toward the peer: the kernel picks
+    // the outbound interface, and getsockname reveals its address. Nothing
+    // is transmitted.
+    int probe = socket(AF_INET, SOCK_DGRAM, 0);
+    if (probe < 0) {
+        return "0.0.0.0";
+    }
+    struct sockaddr_in peer = client_addr;
+    peer.sin_family = AF_INET;
+    peer.sin_port = htons(sender_port);
+    std::string result = "0.0.0.0";
+    if (connect(probe, (struct sockaddr*)&peer, sizeof(peer)) == 0) {
+        struct sockaddr_in self;
+        socklen_t self_len = sizeof(self);
+        if (getsockname(probe, (struct sockaddr*)&self, &self_len) == 0) {
+            char buf[INET_ADDRSTRLEN] = {0};
+            if (inet_ntop(AF_INET, &self.sin_addr, buf, sizeof(buf)) != nullptr) {
+                result = buf;
+            }
+        }
+    }
+    close(probe);
+    return result;
 }
 
 int UDP::getBufferSize() {
