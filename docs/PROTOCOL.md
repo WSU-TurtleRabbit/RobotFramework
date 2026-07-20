@@ -37,6 +37,8 @@ Body (`<3hBBBB` + 16 B skill data):
 The robot inserts the vision pose into its estimator's past by `posDelay`
 (plus a configured capture delay), so **no clock sync is needed**.
 
+![MatchCtrl frame layout](images/matchctrl-frame.svg)
+
 ### Skill ids (TIGERs `skills.c`, verbatim)
 
 `EMERGENCY 0` · `WHEEL_VEL 1` · `LOCAL_VEL 2` · `GLOBAL_VEL 3` ·
@@ -105,6 +107,8 @@ Body (`<3h3hBBBBBBHBB2hBBB`):
 The server's ball-contact ladder prefers the barrier bit, then LIGHT/STRONG
 traction, then vision geometry — so the camera contact signal and the
 traction estimate are what make go-to-ball reliable.
+
+![MatchFeedback frame layout](images/matchfeedback-frame.svg)
 
 ## Legacy text channel (bench fallback)
 

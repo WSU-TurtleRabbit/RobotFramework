@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 500" font-family="-apple-system, 'Segoe UI', Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1a7f37"/>
+    </marker>
+    <marker id="arrowOrange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#bc4c00"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="980" height="500" rx="10" fill="#f6f8fa" stroke="#d0d7de"/>
+
+  <text x="24" y="34" font-size="18" font-weight="700" fill="#1f2328">The delayed-vision trick — Motion/estimator</text>
+  <text x="24" y="56" font-size="12" fill="#57606a">Vision arrives ~40 ms late. The robot keeps a ring of 128 slots (one per 4 ms tick), fixes the past, and replays to the present.</text>
+
+  <!-- late camera pose -->
+  <rect x="60" y="90" width="230" height="54" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="75" y="112" font-size="12" font-weight="700" fill="#1f2328">a camera pose arrives late</text>
+  <text x="75" y="130" font-size="10" fill="#57606a">measured age = posDelay (Q6.2 ms)</text>
+  <path d="M175,144 C220,160 250,172 282,194" fill="none" stroke="#bc4c00" stroke-width="1.5" marker-end="url(#arrowOrange)"/>
+
+  <!-- timeline cells: 24 slots, x = 60 + i*30 -->
+  <!-- corrected past: slots 0..6 -->
+  <g fill="#ddf4ff" stroke="#d0d7de">
+    <rect x="60" y="200" width="30" height="36"/>
+    <rect x="90" y="200" width="30" height="36"/>
+    <rect x="120" y="200" width="30" height="36"/>
+    <rect x="150" y="200" width="30" height="36"/>
+    <rect x="180" y="200" width="30" height="36"/>
+    <rect x="210" y="200" width="30" height="36"/>
+    <rect x="240" y="200" width="30" height="36"/>
+  </g>
+  <!-- insertion slot 7 -->
+  <rect x="270" y="200" width="30" height="36" fill="#fff1e5" stroke="#bc4c00" stroke-width="2"/>
+  <!-- replayed slots 8..22 -->
+  <g fill="#dafbe1" stroke="#d0d7de">
+    <rect x="300" y="200" width="30" height="36"/>
+    <rect x="330" y="200" width="30" height="36"/>
+    <rect x="360" y="200" width="30" height="36"/>
+    <rect x="390" y="200" width="30" height="36"/>
+    <rect x="420" y="200" width="30" height="36"/>
+    <rect x="450" y="200" width="30" height="36"/>
+    <rect x="480" y="200" width="30" height="36"/>
+    <rect x="510" y="200" width="30" height="36"/>
+    <rect x="540" y="200" width="30" height="36"/>
+    <rect x="570" y="200" width="30" height="36"/>
+    <rect x="600" y="200" width="30" height="36"/>
+    <rect x="630" y="200" width="30" height="36"/>
+    <rect x="660" y="200" width="30" height="36"/>
+    <rect x="690" y="200" width="30" height="36"/>
+    <rect x="720" y="200" width="30" height="36"/>
+  </g>
+  <!-- now slot 23 -->
+  <rect x="750" y="200" width="30" height="36" fill="#ffffff" stroke="#1a7f37" stroke-width="2.5"/>
+  <text x="765" y="223" font-size="11" font-weight="700" fill="#1a7f37" text-anchor="middle">now</text>
+
+  <!-- replay arrow -->
+  <path d="M300,196 C400,150 640,150 748,192" fill="none" stroke="#1a7f37" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+  <text x="530" y="158" font-size="11" font-weight="700" fill="#1a7f37" text-anchor="middle">replay the stored gyro + odometry inputs to the present</text>
+
+  <!-- insertion labels -->
+  <line x1="285" y1="236" x2="285" y2="258" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="285" y="276" font-size="11" font-weight="700" fill="#bc4c00" text-anchor="middle">insert the pose posDelay + 20 ms in the past</text>
+  <text x="285" y="294" font-size="10" fill="#57606a" text-anchor="middle">steady-state Kalman fix — the position correction also fixes velocity</text>
+
+  <text x="60" y="254" font-size="10" fill="#57606a">older · one slot = one 4 ms tick</text>
+
+  <!-- output -->
+  <line x1="765" y1="236" x2="765" y2="298" stroke="#1a7f37" stroke-width="1.5" marker-end="url(#arrowGreen)"/>
+  <rect x="635" y="300" width="260" height="44" rx="6" fill="#dafbe1" stroke="#1a7f37"/>
+  <text x="765" y="318" font-size="11" font-weight="700" fill="#1a7f37" text-anchor="middle">smooth present state [x, y, θ, vx, vy]</text>
+  <text x="765" y="334" font-size="10" fill="#1a7f37" text-anchor="middle">→ trajectory reference + controller</text>
+
+  <!-- honesty notes -->
+  <rect x="60" y="372" width="830" height="100" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="75" y="396" font-size="11" font-weight="700" fill="#1f2328">keeping it honest</text>
+  <text x="75" y="414" font-size="10" fill="#57606a">every slot stores gyro rate · wheel odometry · INS state [x, y, θ, vx, vy] — 128 slots = 512 ms of history (24 drawn)</text>
+  <text x="75" y="432" font-size="10" fill="#57606a">outlier gate: a jump needing &gt; 3 m/s of correction speed is rejected — a run of rejects means we were lost → snap</text>
+  <text x="75" y="450" font-size="10" fill="#57606a">1 s without vision → dead reckoning on encoders + gyro; the first fix back snaps. NaN gyro → odometry yaw.</text>
+</svg>

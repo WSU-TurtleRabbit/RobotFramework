@@ -1,6 +1,15 @@
 # RobotFramework
 Robot Client in C++
 
+## Start here — the visual tour
+
+New to the repo? **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains the
+whole system in seven diagrams**: the big picture, the code map, the 250 Hz
+tick, the delayed-vision trick, the control cascade, the wire format, and the
+safety net.
+
+![System overview](docs/images/system-overview.svg)
+
 ## Onboard motion, protocol, and safety
 
 The robot runs the **TIGERs Mannheim MatchCtrl architecture**: the server
@@ -15,6 +24,7 @@ kicker charge model, battery, and health. Safety tiers: 1 s command loss →
 onboard EMERGENCY ramp, vision timeout → dead reckoning, motion gated until
 the first vision fix, plus the recoverable per-motor supervisor.
 
+* [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — the visual tour (start here)
 * [docs/MOTION.md](docs/MOTION.md) — the cascade, config knobs, commissioning
 * [docs/PROTOCOL.md](docs/PROTOCOL.md) — MatchCtrl/MatchFeedback wire formats
 * `tests/host/` — Pi-free unit tests for all pure logic (wire, skills,

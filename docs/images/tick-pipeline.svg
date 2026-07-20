@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 790" font-family="-apple-system, 'Segoe UI', Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="720" height="790" rx="10" fill="#f6f8fa" stroke="#d0d7de"/>
+
+  <text x="24" y="36" font-size="18" font-weight="700" fill="#1f2328">One control tick — 250 Hz, every 4 ms</text>
+  <text x="24" y="58" font-size="12" fill="#57606a">TIGERs robot.c order: sense → fuse → plan → control → act. match_bridge orchestrates the tick.</text>
+
+  <!-- side input: sensors -->
+  <rect x="16" y="96" width="92" height="40" rx="6" fill="#dafbe1" stroke="#1a7f37"/>
+  <text x="62" y="112" font-size="10" font-weight="700" fill="#1a7f37" text-anchor="middle">encoders</text>
+  <text x="62" y="126" font-size="10" fill="#1a7f37" text-anchor="middle">+ gyro</text>
+  <line x1="108" y1="116" x2="148" y2="116" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- side input: MatchCtrl -->
+  <rect x="16" y="184" width="92" height="40" rx="6" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="62" y="200" font-size="10" font-weight="700" fill="#0969da" text-anchor="middle">MatchCtrl</text>
+  <text x="62" y="214" font-size="10" fill="#0969da" text-anchor="middle">UDP 50514</text>
+  <line x1="108" y1="204" x2="148" y2="204" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- stage 1 -->
+  <circle cx="118" cy="116" r="14" fill="#0969da"/>
+  <text x="118" y="121" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+  <rect x="150" y="84" width="380" height="64" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="164" y="108" font-size="13" font-weight="700" fill="#1f2328">Read sensors</text>
+  <text x="164" y="128" font-size="11" fill="#57606a">moteus encoders → FK odometry · pi3hat gyro yaw rate</text>
+  <line x1="340" y1="148" x2="340" y2="170" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- stage 2 -->
+  <circle cx="118" cy="204" r="14" fill="#0969da"/>
+  <text x="118" y="209" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+  <rect x="150" y="172" width="380" height="64" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="164" y="196" font-size="13" font-weight="700" fill="#1f2328">Parse the latest MatchCtrl</text>
+  <text x="164" y="216" font-size="11" fill="#57606a">Networks/matchctrl · seq dedup, robot id, watchdog, skill switch</text>
+  <line x1="340" y1="236" x2="340" y2="258" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- stage 3 -->
+  <circle cx="118" cy="292" r="14" fill="#0969da"/>
+  <text x="118" y="297" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+  <rect x="150" y="260" width="380" height="64" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="164" y="284" font-size="13" font-weight="700" fill="#1f2328">State estimation</text>
+  <text x="164" y="304" font-size="11" fill="#57606a">Motion/estimator · insert delayed vision in the past, replay</text>
+  <line x1="340" y1="324" x2="340" y2="346" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- stage 4 -->
+  <circle cx="118" cy="380" r="14" fill="#0969da"/>
+  <text x="118" y="385" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
+  <rect x="150" y="348" width="380" height="64" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="164" y="372" font-size="13" font-weight="700" fill="#1f2328">Trajectory regeneration</text>
+  <text x="164" y="392" font-size="11" fill="#57606a">Motion/trajectory · fresh bang-bang from the reference state</text>
+  <line x1="340" y1="412" x2="340" y2="434" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- stage 5 -->
+  <circle cx="118" cy="468" r="14" fill="#0969da"/>
+  <text x="118" y="473" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">5</text>
+  <rect x="150" y="436" width="380" height="64" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="164" y="460" font-size="13" font-weight="700" fill="#1f2328">Control law — Panthera cascade</text>
+  <text x="164" y="480" font-size="11" fill="#57606a">Motion/controller · FF + P → world → body → wheel rev/s</text>
+  <line x1="340" y1="500" x2="340" y2="522" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- stage 6 -->
+  <circle cx="118" cy="556" r="14" fill="#0969da"/>
+  <text x="118" y="561" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">6</text>
+  <rect x="150" y="524" width="380" height="64" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="164" y="548" font-size="13" font-weight="700" fill="#1f2328">Actuators</text>
+  <text x="164" y="568" font-size="11" fill="#57606a">Motion/actuators · kicker ARM/FORCE on contact · dribbler ESC</text>
+  <line x1="340" y1="588" x2="340" y2="610" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- side output: serial -->
+  <rect x="572" y="536" width="132" height="40" rx="6" fill="#fff1e5" stroke="#bc4c00"/>
+  <text x="638" y="552" font-size="10" font-weight="700" fill="#bc4c00" text-anchor="middle">serial out</text>
+  <text x="638" y="566" font-size="10" fill="#bc4c00" text-anchor="middle">kick / dribble</text>
+  <line x1="530" y1="556" x2="570" y2="556" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- stage 7 -->
+  <circle cx="118" cy="644" r="14" fill="#0969da"/>
+  <text x="118" y="649" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">7</text>
+  <rect x="150" y="612" width="380" height="64" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="164" y="636" font-size="13" font-weight="700" fill="#1f2328">Telemetry cycle</text>
+  <text x="164" y="656" font-size="11" fill="#57606a">moteus CAN velocity mode + limits + watchdog · IMU sample</text>
+  <line x1="340" y1="676" x2="340" y2="698" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- side output: CAN -->
+  <rect x="572" y="624" width="132" height="40" rx="6" fill="#fbefff" stroke="#8250df"/>
+  <text x="638" y="640" font-size="10" font-weight="700" fill="#8250df" text-anchor="middle">CAN out</text>
+  <text x="638" y="654" font-size="10" fill="#8250df" text-anchor="middle">wheel rev/s</text>
+  <line x1="530" y1="644" x2="570" y2="644" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- stage 8 -->
+  <circle cx="118" cy="732" r="14" fill="#0969da"/>
+  <text x="118" y="737" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">8</text>
+  <rect x="150" y="700" width="380" height="64" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="164" y="724" font-size="13" font-weight="700" fill="#1f2328">MatchFeedback + watchdogs</text>
+  <text x="164" y="744" font-size="11" fill="#57606a">Telemetry/match_feedback · 50 Hz · 1 s loss → EMERGENCY</text>
+
+  <!-- side output: feedback -->
+  <rect x="572" y="712" width="132" height="40" rx="6" fill="#dafbe1" stroke="#1a7f37"/>
+  <text x="638" y="728" font-size="10" font-weight="700" fill="#1a7f37" text-anchor="middle">MatchFeedback</text>
+  <text x="638" y="742" font-size="10" fill="#1a7f37" text-anchor="middle">UDP 50513 · 50 Hz</text>
+  <line x1="530" y1="732" x2="570" y2="732" stroke="#57606a" stroke-width="1.5" marker-end="url(#arrow)"/>
+</svg>

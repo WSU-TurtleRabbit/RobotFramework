@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 510" font-family="-apple-system, 'Segoe UI', Arial, sans-serif">
+  <rect x="0" y="0" width="1000" height="510" rx="10" fill="#f6f8fa" stroke="#d0d7de"/>
+
+  <text x="24" y="34" font-size="18" font-weight="700" fill="#1f2328">MatchFeedback — 35 bytes on the wire (robot → server, UDP 50513)</text>
+  <text x="24" y="56" font-size="12" fill="#57606a">Sent at 50 Hz to the last commander's IP. The pose is the measurement-matched slot — the state at the vision timepoint.</text>
+
+  <!-- offset numbers -->
+  <g font-size="9" fill="#57606a" font-family="ui-monospace, Consolas, monospace">
+    <text x="48" y="92">0</text>
+    <text x="100" y="92">2</text>
+    <text x="126" y="92">3</text>
+    <text x="152" y="92">4</text>
+    <text x="204" y="92">6</text>
+    <text x="360" y="92">12</text>
+    <text x="516" y="92">18</text>
+    <text x="542" y="92">19</text>
+    <text x="568" y="92">20</text>
+    <text x="594" y="92">21</text>
+    <text x="620" y="92">22</text>
+    <text x="646" y="92">23</text>
+    <text x="672" y="92">24</text>
+    <text x="724" y="92">26</text>
+    <text x="750" y="92">27</text>
+    <text x="776" y="92">28</text>
+    <text x="880" y="92">32</text>
+    <text x="932" y="92">34</text>
+  </g>
+
+  <!-- byte cells -->
+  <g stroke="#d0d7de">
+    <rect x="45" y="100" width="52" height="34" fill="#eaeef2"/>
+    <rect x="97" y="100" width="26" height="34" fill="#eaeef2"/>
+    <rect x="123" y="100" width="26" height="34" fill="#eaeef2"/>
+    <rect x="149" y="100" width="52" height="34" fill="#eaeef2"/>
+    <rect x="201" y="100" width="156" height="34" fill="#ddf4ff"/>
+    <rect x="357" y="100" width="156" height="34" fill="#ddf4ff"/>
+    <rect x="513" y="100" width="26" height="34" fill="#fff1e5"/>
+    <rect x="539" y="100" width="26" height="34" fill="#fff1e5"/>
+    <rect x="565" y="100" width="26" height="34" fill="#dafbe1"/>
+    <rect x="591" y="100" width="26" height="34" fill="#fff8c5"/>
+    <rect x="617" y="100" width="26" height="34" fill="#fff8c5"/>
+    <rect x="643" y="100" width="26" height="34" fill="#fbefff"/>
+    <rect x="669" y="100" width="52" height="34" fill="#fbefff"/>
+    <rect x="721" y="100" width="26" height="34" fill="#eaeef2"/>
+    <rect x="747" y="100" width="26" height="34" fill="#dafbe1"/>
+    <rect x="773" y="100" width="104" height="34" fill="#dafbe1"/>
+    <rect x="877" y="100" width="78" height="34" fill="#eaeef2"/>
+  </g>
+  <g font-size="10" fill="#1f2328" text-anchor="middle">
+    <text x="71" y="121">PX</text>
+    <text x="110" y="121">06</text>
+    <text x="136" y="121">id</text>
+    <text x="175" y="121">seq</text>
+    <text x="279" y="121">pos ×3</text>
+    <text x="435" y="121">vel ×3</text>
+    <text x="526" y="121" font-size="9">kL</text>
+    <text x="552" y="121" font-size="9">kM</text>
+    <text x="578" y="121" font-size="9">drb</text>
+    <text x="604" y="121" font-size="9">bV</text>
+    <text x="630" y="121" font-size="9">b%</text>
+    <text x="656" y="121" font-size="9">flg</text>
+    <text x="695" y="121" font-size="9">feat</text>
+    <text x="734" y="121" font-size="9">hw</text>
+    <text x="760" y="121" font-size="9">age</text>
+    <text x="825" y="121">ballPos ×2</text>
+    <text x="916" y="121" font-size="9">lastKick ×3</text>
+  </g>
+
+  <!-- brackets row A -->
+  <g stroke="#57606a" fill="none">
+    <path d="M45,146 L45,152 L201,152 L201,146"/>
+    <path d="M201,146 L201,152 L357,152 L357,146"/>
+    <path d="M513,146 L513,152 L565,152 L565,146"/>
+    <path d="M591,146 L591,152 L643,152 L643,146"/>
+    <path d="M747,146 L747,152 L877,152 L877,146"/>
+  </g>
+  <text x="123" y="168" font-size="10" fill="#57606a" text-anchor="middle">header</text>
+  <text x="279" y="168" font-size="10" font-weight="700" fill="#0969da" text-anchor="middle">pos ×3 — mm, mm, mrad</text>
+  <text x="539" y="168" font-size="10" font-weight="700" fill="#bc4c00" text-anchor="middle">kicker</text>
+  <text x="617" y="168" font-size="10" font-weight="700" fill="#9a6700" text-anchor="middle">battery</text>
+  <text x="812" y="168" font-size="10" font-weight="700" fill="#1a7f37" text-anchor="middle">ballPosAge · ballPos</text>
+
+  <!-- brackets row B -->
+  <g stroke="#57606a" fill="none">
+    <path d="M357,180 L357,186 L513,186 L513,180"/>
+    <path d="M565,180 L565,186 L591,186 L591,180"/>
+    <path d="M643,180 L643,186 L721,186 L721,180"/>
+    <path d="M877,180 L877,186 L955,186 L955,180"/>
+  </g>
+  <text x="435" y="202" font-size="10" fill="#0969da" text-anchor="middle">vel ×3 — mm/s · mm/s · mrad/s</text>
+  <text x="578" y="202" font-size="10" fill="#1a7f37" text-anchor="middle">dribbler</text>
+  <text x="682" y="202" font-size="10" fill="#8250df" text-anchor="middle">flags · features</text>
+  <text x="916" y="202" font-size="10" fill="#57606a" text-anchor="middle">lastKick ×3</text>
+
+  <!-- legend cards -->
+  <rect x="45" y="230" width="440" height="118" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <rect x="59" y="246" width="14" height="14" fill="#ddf4ff" stroke="#0969da"/>
+  <text x="81" y="258" font-size="12" font-weight="700" fill="#1f2328">pos + vel (12 bytes)</text>
+  <text x="61" y="278" font-size="10" fill="#57606a">pos = the estimator's measurement-matched slot — the</text>
+  <text x="61" y="296" font-size="10" fill="#57606a">state at the vision timepoint (TIGERs semantics)</text>
+  <text x="61" y="314" font-size="10" fill="#57606a">vel ω is the live gyro rate</text>
+  <text x="61" y="332" font-size="10" fill="#57606a">units: mm · mm · mrad and mm/s · mm/s · mrad/s</text>
+
+  <rect x="515" y="230" width="440" height="118" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <rect x="529" y="246" width="14" height="14" fill="#fff1e5" stroke="#bc4c00"/>
+  <text x="551" y="258" font-size="12" font-weight="700" fill="#1f2328">kicker · battery · lastKick (7 bytes)</text>
+  <text x="531" y="278" font-size="10" fill="#57606a">kickerLevel: recharge-model volts (no ADC) · kickerMax 200</text>
+  <text x="531" y="296" font-size="10" fill="#57606a">battery: dV (×0.1 V) + %/255 over the 4S 10.0–16.8 V window</text>
+  <text x="531" y="314" font-size="10" fill="#57606a">lastKick: duration / dribbleVelDev / dribbleForce</text>
+  <text x="531" y="332" font-size="10" fill="#57606a">0 = not measured</text>
+
+  <rect x="45" y="360" width="440" height="118" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <rect x="59" y="376" width="14" height="14" fill="#dafbe1" stroke="#1a7f37"/>
+  <text x="81" y="388" font-size="12" font-weight="700" fill="#1f2328">dribbler · ball (6 bytes)</text>
+  <text x="61" y="408" font-size="10" fill="#57606a">dribblerState: upper 6 bits speed ×0.25 m/s</text>
+  <text x="61" y="426" font-size="10" fill="#57606a">lower 2 bits traction: 0 off · 1 idle · 2 light · 3 strong</text>
+  <text x="61" y="444" font-size="10" fill="#57606a">ballPosAge: 255 = no onboard ball estimate</text>
+  <text x="61" y="462" font-size="10" fill="#57606a">ballPos zeroed while age = 255 (pre-calibration)</text>
+
+  <rect x="515" y="360" width="440" height="118" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+  <rect x="529" y="376" width="14" height="14" fill="#fbefff" stroke="#8250df"/>
+  <text x="551" y="388" font-size="12" font-weight="700" fill="#1f2328">flags · features · ids (4 bytes)</text>
+  <text x="531" y="408" font-size="10" fill="#57606a">flags 0x80 barrier interrupted (camera ball-contact)</text>
+  <text x="531" y="426" font-size="10" fill="#57606a">0x60 dribbler temp · 0x10 kick toggle · 0x07 ball obs.</text>
+  <text x="531" y="444" font-size="10" fill="#57606a">features: 0x01 MOVE · 0x02 DRIBBLER · 0x04 BARRIER</text>
+  <text x="531" y="462" font-size="10" fill="#57606a">0x08 KICK_STRAIGHT · hardwareId: asset id (config)</text>
+</svg>

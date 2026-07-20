@@ -37,6 +37,10 @@ UDP 50514          Networks/matchctrl          Motion/match_bridge
                      barrier, features — 50 Hz to the server (UDP 50513)
 ```
 
+The same flow as a picture:
+
+![The 250 Hz per-tick pipeline](images/tick-pipeline.svg)
+
 ## The per-tick sequence (TIGERs `robot.c` order)
 
 1. **Read sensors** — moteus encoder velocities (previous CAN cycle) → body
@@ -88,6 +92,14 @@ UDP 50514          Networks/matchctrl          Motion/match_bridge
    per-command watchdog (0.1 s) and the recoverable supervisor trips
    (over-current, over-temp, under-voltage, fault) stay armed below
    everything.
+
+### The estimator, the cascade, and the safety net — visually
+
+![Delayed-vision fusion: fix the past, replay to the present](images/estimator-fusion.svg)
+
+![The Panthera control cascade](images/controller-cascade.svg)
+
+![The six safety tiers](images/safety-tiers.svg)
 
 ## Control rate
 
