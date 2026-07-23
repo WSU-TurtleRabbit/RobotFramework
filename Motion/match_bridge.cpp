@@ -21,6 +21,14 @@ MatchAccept MatchBridge::accept(const std::string& datagram, double now_s) {
     if (cfg_.expected_robot_id >= 0 && mc->robot_id != cfg_.expected_robot_id) {
         return MatchAccept::WrongId;
     }
+    // A restarted base station begins a fresh sequence at zero.  Preserve
+    // duplicate/reorder protection while commands are flowing, but reopen
+    // synchronization after the command watchdog has already declared the
+    // old session dead.  Otherwise a server restart can leave every new
+    // frame rejected until the robot daemon is also restarted.
+    if (have_seq_ && active_ && now_s - last_accept_s_ > cfg_.command_timeout_s) {
+        have_seq_ = false;
+    }
     // Wrapping seq compare: 0 = duplicate, >= 0x8000 = older (reordered).
     if (have_seq_) {
         const uint16_t ahead = static_cast<uint16_t>(mc->seq - last_seq_);
@@ -108,6 +116,7 @@ BridgeTick MatchBridge::tick(double now_s, double dt, const phx::Twist& odo_body
     if (sp.kind == MotionSetpoint::Kind::Pose) {
         ref = follower_.tick(dt, sp);
     }
+    out.ref = ref;
     out.ctrl = controller_.tick(dt, sp, est, ref, gyro_yaw_radps);
 
     // 6. Actuators (KD rides every motion skill; EMERGENCY/timeout disarms).

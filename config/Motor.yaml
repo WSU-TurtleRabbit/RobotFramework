@@ -8,7 +8,29 @@ motorMap:
 # calibration constant (moteus velocity commands are in output rev/s).
 # Default = 2*pi*R for the direct-drive 33.5mm omni wheel. CALIBRATE on
 # hardware: command a known motor rev count, measure the distance travelled.
-metersPerMotorRev: 0.21048670778
+# Field-calibrated 2026-07-23 from 21 complete fresh-battery motions by
+# integrating the four measured encoder velocities and fitting them to the
+# vision displacement. Robust fit 0.21708 m/rev; 90% move-bootstrap interval
+# 0.21315..0.22163. This also agrees with the 0.21049 m/rev physical wheel
+# circumference once carpet/roller effects are included.
+metersPerMotorRev: 0.2171
+
+# The same two-coefficient encoder/vision fit identified the effective
+# lateral coefficient as 0.24465 m per raw kinematic revolution. Therefore
+# mpr/lateralScale = 0.24465 -> lateralScale = 0.8873. This replaces the
+# earlier command/velocity-only estimate, whose sign was reversed by closed
+# loop trajectory lag. IK applies this factor and FK its exact reciprocal.
+bodyLateralScale: 0.887
+
+# Per-wheel normalization refined from the corrected-IMU, high-load 50 Hz
+# commanded-vs-measured fit. The resulting nominal-to-measured wheel products
+# are equalized to about 1.008. CAN order is [FR, RR, RL, FL].
+motorCommandScale: [1.006, 1.008, 1.004, 1.004]
+
+# Residual sign-specific equalization from the final corrected-IMU 2 m/s
+# forward/reverse pair. These multiply the base factors above.
+motorCommandScalePositive: [1.001, 0.996, 1.000, 1.002]
+motorCommandScaleNegative: [1.001, 0.989, 1.001, 0.999]
 
 # moteus-level per-command shaping (values proven on the Rust robot):
 # the controller bounds each velocity setpoint and its ramp itself, which

@@ -31,10 +31,12 @@ public:
     // Plan from state (x0, v0) to state (x1, v1) under |v| <= vmax, |a| <= amax.
     // v1 is clamped into [-vmax, vmax]. Handles |v0| > vmax by braking first.
     static BangBang1D plan(double x0, double v0, double x1, double v1, double vmax,
-                           double amax) {
+                           double amax, double brake_max = -1.0) {
         BangBang1D tr;
         vmax = std::max(vmax, kMinLimit);
         amax = std::max(amax, kMinLimit);
+        brake_max = brake_max > 0.0 ? brake_max : amax;
+        brake_max = std::max(brake_max, kMinLimit);
         v1 = std::clamp(v1, -vmax, vmax);
 
         double x = x0, v = v0;
@@ -42,24 +44,25 @@ public:
         // brake to the limit first, then plan the remainder.
         if (std::abs(v) > vmax) {
             const double dir = v > 0 ? 1.0 : -1.0;
-            const double dt = (std::abs(v) - vmax) / amax;
-            tr.push(dt, x, v, -dir * amax);
-            x += v * dt - 0.5 * dir * amax * dt * dt;
+            const double dt = (std::abs(v) - vmax) / brake_max;
+            tr.push(dt, x, v, -dir * brake_max);
+            x += v * dt - 0.5 * dir * brake_max * dt * dt;
             v = dir * vmax;
         }
 
-        Candidate best = choose_profile(x, v, x1, v1, vmax, amax);
+        Candidate best =
+            choose_profile(x, v, x1, v1, vmax, amax, brake_max);
         if (!best.valid) {
             // Defensive numeric corner (unreachable in exact arithmetic: one
             // family always covers the displacement). Brake to rest, then plan
             // from standstill, where both root constraints are provably
             // satisfiable for every displacement.
             const double dir = v >= 0 ? 1.0 : -1.0;
-            const double t_stop = std::abs(v) / amax;
-            tr.push(t_stop, x, v, -dir * amax);
-            x += v * t_stop - 0.5 * dir * amax * t_stop * t_stop;
+            const double t_stop = std::abs(v) / brake_max;
+            tr.push(t_stop, x, v, -dir * brake_max);
+            x += v * t_stop - 0.5 * dir * brake_max * t_stop * t_stop;
             v = 0.0;
-            best = choose_profile(x, v, x1, v1, vmax, amax);
+            best = choose_profile(x, v, x1, v1, vmax, amax, brake_max);
         }
         for (int i = 0; i < 3; ++i) {
             if (best.t[i] <= 0.0) continue;
@@ -131,12 +134,16 @@ private:
     // Build the ramp-(cruise)-ramp profile whose first acceleration has sign
     // `dir`. dir=+1: accelerate to a peak, then decelerate ("up-down").
     // dir=-1: decelerate to a valley, then accelerate ("down-up").
-    static Candidate make_profile(double dir, double x0, double v0, double x1, double v1,
-                                  double vmax, double amax) {
+    static Candidate make_profile(double dir, double x0, double v0, double x1,
+                                  double v1, double vmax, double accel_max,
+                                  double brake_max) {
         Candidate c;
-        const double a = dir * amax;
+        const double accel = dir * accel_max;
+        const double brake = -dir * brake_max;
         const double s = x1 - x0;
-        double arg = 0.5 * (v0 * v0 + v1 * v1) + a * s;
+        double arg =
+            (2.0 * dir * s + v0 * v0 / accel_max + v1 * v1 / brake_max) /
+            (1.0 / accel_max + 1.0 / brake_max);
         if (arg < -kEps) return c;  // this family cannot cover s
         arg = std::max(arg, 0.0);
         const double root = std::sqrt(arg);
@@ -165,26 +172,26 @@ private:
         if (!found) return c;
 
         if (std::abs(vext) <= vmax) {
-            c.t[0] = std::abs(vext - v0) / amax;
-            c.a[0] = a;
+            c.t[0] = std::abs(vext - v0) / accel_max;
+            c.a[0] = accel;
             c.t[1] = 0;
-            c.t[2] = std::abs(v1 - vext) / amax;
-            c.a[2] = -a;
+            c.t[2] = std::abs(v1 - vext) / brake_max;
+            c.a[2] = brake;
         } else {
             // Clamp at the velocity limit and insert a cruise segment.
             const double vc = dir * vmax;
-            const double d1 = (vc * vc - v0 * v0) / (2.0 * a);
-            const double d3 = (v1 * v1 - vc * vc) / (-2.0 * a);
+            const double d1 = (vc * vc - v0 * v0) / (2.0 * accel);
+            const double d3 = (v1 * v1 - vc * vc) / (2.0 * brake);
             double d2 = s - d1 - d3;
             double t2 = d2 / vc;
             if (t2 < -kTolFor(vmax)) return c;  // numeric corner: not this family
             t2 = std::max(t2, 0.0);
-            c.t[0] = std::abs(vc - v0) / amax;
-            c.a[0] = a;
+            c.t[0] = std::abs(vc - v0) / accel_max;
+            c.a[0] = accel;
             c.t[1] = t2;
             c.a[1] = 0;
-            c.t[2] = std::abs(v1 - vc) / amax;
-            c.a[2] = -a;
+            c.t[2] = std::abs(v1 - vc) / brake_max;
+            c.a[2] = brake;
         }
         c.total = c.t[0] + c.t[1] + c.t[2];
         c.valid = true;
@@ -192,9 +199,12 @@ private:
     }
 
     static Candidate choose_profile(double x0, double v0, double x1, double v1,
-                                    double vmax, double amax) {
-        const Candidate up = make_profile(+1.0, x0, v0, x1, v1, vmax, amax);
-        const Candidate down = make_profile(-1.0, x0, v0, x1, v1, vmax, amax);
+                                    double vmax, double accel_max,
+                                    double brake_max) {
+        const Candidate up =
+            make_profile(+1.0, x0, v0, x1, v1, vmax, accel_max, brake_max);
+        const Candidate down =
+            make_profile(-1.0, x0, v0, x1, v1, vmax, accel_max, brake_max);
         if (up.valid && down.valid) return up.total <= down.total ? up : down;
         return up.valid ? up : down;
     }

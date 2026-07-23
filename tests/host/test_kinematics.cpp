@@ -100,6 +100,69 @@ PHX_TEST(kin_inverse_forward_roundtrip_twist_grid) {
     }
 }
 
+PHX_TEST(kin_lateral_effectiveness_scale_is_symmetric_with_odometry) {
+    Kinematics nominal;
+    Kinematics calibrated;
+    calibrated.body_lateral_scale = 1.084;
+    const BodyTwist lateral{0.0, 1.0, 0.0};
+    const auto nominal_wheels = nominal.inverse(lateral);
+    const auto calibrated_wheels = calibrated.inverse(lateral);
+    for (int i = 0; i < 4; ++i) {
+        CHECK_NEAR(
+            std::abs(calibrated_wheels[i] / nominal_wheels[i]),
+            1.084,
+            1e-9
+        );
+    }
+    const BodyTwist recovered = calibrated.forward(calibrated_wheels);
+    CHECK_NEAR(recovered.vx, lateral.vx, 1e-9);
+    CHECK_NEAR(recovered.vy, lateral.vy, 1e-9);
+    CHECK_NEAR(recovered.w, lateral.w, 1e-9);
+}
+
+PHX_TEST(kin_wheel_command_scale_does_not_fabricate_forward_odometry) {
+    Kinematics k;
+    const BodyTwist t{0.4, -0.2, 0.3};
+    const auto nominal = k.inverse(t);
+    k.wheel_command_scale = {{1.01, 1.02, 0.99, 1.03}};
+    const auto corrected = k.inverse(t);
+    for (int i = 0; i < 4; ++i) {
+        CHECK_NEAR(
+            corrected[i],
+            nominal[i] * k.wheel_command_scale[i],
+            1e-9
+        );
+    }
+    // FK reads physical encoder speeds directly and must not divide by a
+    // command-side normalization factor.
+    const BodyTwist measured = k.forward(nominal);
+    CHECK_NEAR(measured.vx, t.vx, 1e-9);
+    CHECK_NEAR(measured.vy, t.vy, 1e-9);
+    CHECK_NEAR(measured.w, t.w, 1e-9);
+}
+
+PHX_TEST(kin_wheel_command_scale_can_equalize_positive_and_negative_directions) {
+    Kinematics k;
+    k.wheel_command_scale_positive = {{1.01, 1.02, 1.03, 1.04}};
+    k.wheel_command_scale_negative = {{0.99, 0.98, 0.97, 0.96}};
+    const auto nominal_positive = Kinematics{}.inverse({0.6, 0.0, 0.0});
+    const auto corrected_positive = k.inverse({0.6, 0.0, 0.0});
+    const auto nominal_negative = Kinematics{}.inverse({-0.6, 0.0, 0.0});
+    const auto corrected_negative = k.inverse({-0.6, 0.0, 0.0});
+    for (int i = 0; i < 4; ++i) {
+        const double expected_positive = nominal_positive[i] >= 0.0
+            ? k.wheel_command_scale_positive[i]
+            : k.wheel_command_scale_negative[i];
+        const double expected_negative = nominal_negative[i] >= 0.0
+            ? k.wheel_command_scale_positive[i]
+            : k.wheel_command_scale_negative[i];
+        CHECK_NEAR(
+            corrected_positive[i], nominal_positive[i] * expected_positive, 1e-9);
+        CHECK_NEAR(
+            corrected_negative[i], nominal_negative[i] * expected_negative, 1e-9);
+    }
+}
+
 PHX_TEST(kin_forward_zero_wheels_is_zero_twist) {
     const Kinematics k;
     const BodyTwist est = k.forward({0.0, 0.0, 0.0, 0.0});

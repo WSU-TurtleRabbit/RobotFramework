@@ -89,6 +89,24 @@ struct Kinematics {
     // on hardware: command a known motor rev count and measure travel.
     // Config override: Motor.yaml `metersPerMotorRev`.
     double meters_per_motor_rev = 2.0 * std::numbers::pi * kDefaultWheelRadiusM;
+    // Identified chassis lateral effectiveness correction. Omni rollers and
+    // load geometry can make strafe travel weaker than forward travel even
+    // when every motor tracks its velocity setpoint. IK applies this gain to
+    // the body-y demand; FK divides it back out so odometry stays in physical
+    // m/s. Config override: Motor.yaml `bodyLateralScale`.
+    double body_lateral_scale = 1.0;
+    // Per-controller velocity tracking normalization, CAN order 1..4.
+    // These scale only IK commands; FK always consumes the real measured
+    // motor speeds, so odometry is never fabricated.
+    std::array<double, 4> wheel_command_scale = {{1.0, 1.0, 1.0, 1.0}};
+    // Small direction-specific residual multipliers. Moteus/friction
+    // response is not perfectly symmetric through zero; keeping this
+    // separate from the base factor permits sign calibration without
+    // changing encoder odometry.
+    std::array<double, 4> wheel_command_scale_positive =
+        {{1.0, 1.0, 1.0, 1.0}};
+    std::array<double, 4> wheel_command_scale_negative =
+        {{1.0, 1.0, 1.0, 1.0}};
 
     // Inverse kinematics: body twist -> the four motor velocity setpoints
     // (output rev/s), ready for moteus PositionMode::Command::velocity.

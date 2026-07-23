@@ -5,11 +5,12 @@
 # TIGERs-derived defaults for the new cascade.
 
 imu:
-  # Gyro polarity: +1 when the pi3hat gyro reads POSITIVE for a CCW (+w) body
-  # rotation — the condition for heading dead-reckoning to cancel drift.
-  # VERIFIED +1 on Robot B (its pi3hat is mounted ~180 deg flipped). Re-verify
-  # per robot: drive `+w` and check the reported gyro sign matches.
-  yaw_rate_sign: 1.0
+  # Robot A hardware identification 2026-07-23: a controlled +w rotation
+  # showed that the Pi3Hat Y rate is physical yaw, with inverted polarity.
+  # Axis: 0=rate_dps.x, 1=rate_dps.y, 2=rate_dps.z.
+  yaw_rate_axis: 1
+  # Sign maps the selected board axis to chassis CCW-positive yaw.
+  yaw_rate_sign: -1.0
 
 match:
   enabled: true
@@ -25,20 +26,44 @@ match:
 # Delayed-vision fusion (TIGERs fusion_ekf architecture).
 estimator:
   slots: 128                # time-slot ring (one slot per control tick)
-  capture_delay_s: 0.020    # fixed camera/pipeline delay on top of posDelay
+  # Residual capture/exposure delay not represented by SSL's frame timestamps.
+  capture_delay_s: 0.020
   vision_timeout_s: 1.0     # beyond -> dead-reckon on encoders + gyro
-  gate_speed_mps: 3.0       # outlier gate: vision jump implying > this
-  gate_min_dist_m: 0.15     # ...never gating below this distance
+  # At 2 m/s, wheel slip during launch can put the INS >15 cm from the
+  # camera-matched state. The old gate then rejected every good correction
+  # until a five-frame snap, producing a large lateral arc. This wider gate
+  # still rejects impossible marker jumps but continuously fuses real motion.
+  gate_speed_mps: 8.0
+  gate_min_dist_m: 0.30
   gate_snap_after: 5        # consecutive rejections -> we were lost: snap
-  tracking_gain: 0.5        # drag of INS slots toward the corrected history
+  tracking_gain: 0.80       # prompt replay correction without camera chasing
   odo_vel_gain: 0.5         # body-velocity pull toward wheel odometry
-  theta_gain: 0.4           # vision heading correction per fix
+  # Field sweep: 0.35 gave the most repeatable hard-reversal path. The gate
+  # below rejects large marker flips before this correction is applied.
+  theta_gain: 0.35
+  # Field verifier measured valid reverse-leg disagreement reaching 0.30 rad.
+  # A 0.25 gate then latched out every correction and rotated global motion
+  # into a lateral arc. Accept physical yaw drift up to 0.45 rad while still
+  # rejecting the camera's observed ~1.2 rad marker flips.
+  theta_gate_rad: 0.45
   meas_std_m: 0.005         # vision position noise (Kalman gain model)
   process_accel_std: 2.0    # motion process noise (Kalman gain model)
+  # Field sweep (4/20/43 ms): this single camera's moving-marker noise needs
+  # conservative correction; wheel odometry carries the high-rate dynamics.
+  measurement_dt_s: 0.004
+  # Decoupled after field sweep: position needs prompt camera correction near
+  # the target, while camera-derived velocity must remain conservative.
+  vision_pos_gain: 0.90
+  vision_vel_gain: 1.50
 
 # Per-tick trajectory regeneration (pose skills).
 trajectory:
   cent_acc_max: 2.5         # centrifugal omega cap: |w| <= this / |v_xy|
+  # 2026-07-23 symmetric A/B passes: 0.40 was needlessly slow; 0.80 without
+  # actual-state latency compensation produced 60-86 mm overshoot. With the
+  # measured 200 ms target guard below, 0.50 produced the best verified
+  # result: 14-25 mm overshoot and millimetre final endpoints.
+  brake_scale: 0.50
   orient_lag_tau_s: 0.05    # low-pass on the orientation target
   fast_pos_align_rad: 0.25  # FAST_POS: aligned enough for the raised accel
   final_orient_dist_m: 0.35 # inside this, the final orientation applies
@@ -46,13 +71,25 @@ trajectory:
 
 # The Panthera-style control cascade.
 controller:
-  kp_pos: 2.5               # 1/s: P on reference-vs-estimate position error
+  # Field tuning at the 2.0 m/s competition ceiling. Position feedback repairs
+  # residual drift; velocity feedback damps braking lag before it becomes
+  # endpoint overshoot. The final command remains clamped to the skill limit.
+  kp_pos: 5.0               # stable field-proven position recovery
+  kp_vel: 0.70              # stronger measured-velocity damping for fast arrival
   pos_err_clamp_m: 0.4      # clamp on the position error vector
-  vel_corr_max_mps: 1.0     # clamp on the added correction velocity
-  kp_heading: 6.0           # rad/s per rad (Robot B proven)
-  kp_yaw_rate: 0.3          # yaw-rate damping vs gyro (Robot B proven)
-  omega_corr_max: 3.0       # clamp on the total omega correction
-  acc_ff_lead_s: 0.04       # trajectory accel FF as a velocity lead
+  vel_corr_max_mps: 0.9     # stable bounded correction inside skill limit
+  # High-speed field verification showed ±0.4 rad traction-induced yaw with
+  # the staged kp=4 / 2 rad/s cap. Restore the Panthera/Robot-B proven
+  # authority and gyro damping so translation does not become a lateral arc.
+  kp_heading: 6.0
+  kp_yaw_rate: 0.30
+  omega_corr_max: 3.0
+  acc_ff_lead_s: 0.14       # compensate measured command/traction braking lag
+  # Final approach is capped from the fused physical pose with the same
+  # braking model as the trajectory. Symmetric reversal A/B passes measured
+  # about 200 ms of worst-direction estimator/traction settling latency.
+  target_brake_scale: 0.50
+  target_brake_reaction_s: 0.20
   emergency_decel_mps2: 8.0 # TIGERs onboard EMERGENCY ramp rate
   emergency_w_decel_radps2: 30.0
   out_slew_rev_s2: 120.0    # wheel setpoint slew (matches moteus accel limit)
@@ -82,8 +119,8 @@ actuators:
 # MatchFeedback reporting.
 feedback:
   hardware_id: 0            # physical asset id (set per robot!)
-  battery_empty_v: 10.0     # 4S LiPo window for the percent report
-  battery_full_v: 16.8
+  battery_empty_v: 19.8     # 6S LiPo window for the percent report
+  battery_full_v: 25.2
   kicker_max_v: 200.0       # nominal scaling constant for the server
   kicker_recharge_s: 5.0
   interval_ms: 20           # 50 Hz

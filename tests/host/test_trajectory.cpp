@@ -64,6 +64,21 @@ PHX_TEST(bangbang1d_matches_server_trajectory_py) {
     CHECK_NEAR(c.acc(0.30), -20.0, 1e-9);
 }
 
+PHX_TEST(bangbang1d_asymmetric_braking_starts_earlier_and_lands_exactly) {
+    const phx::BangBang1D symmetric =
+        phx::BangBang1D::plan(0.0, 0.0, 1.3, 0.0, 1.0, 1.0);
+    const phx::BangBang1D early_brake =
+        phx::BangBang1D::plan(0.0, 0.0, 1.3, 0.0, 1.0, 1.0, 0.6);
+    REQUIRE(early_brake.segment_count() >= 2);
+    CHECK_NEAR(early_brake.segment(0).a, 1.0, 1e-12);
+    CHECK_NEAR(
+        early_brake.segment(early_brake.segment_count() - 1).a, -0.6, 1e-12);
+    CHECK(early_brake.segment(0).dt < symmetric.segment(0).dt);
+    CHECK_NEAR(early_brake.end_pos(), 1.3, 1e-9);
+    CHECK_NEAR(early_brake.end_vel(), 0.0, 1e-9);
+    CHECK(early_brake.vel(early_brake.segment(0).dt) <= 1.0 + 1e-9);
+}
+
 // --- per-tick regeneration behavior ---
 
 PHX_TEST(trajectory_reaches_target_and_stops) {

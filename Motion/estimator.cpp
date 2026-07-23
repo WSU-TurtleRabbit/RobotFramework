@@ -31,7 +31,7 @@ void FusionEstimator::reset() {
 // The result is the classic alpha-beta filter, but with gains derived from
 // an explicit noise model instead of hand-picked.
 void FusionEstimator::compute_gains() {
-    const double dt = cfg_.nominal_dt_s;
+    const double dt = std::clamp(cfg_.measurement_dt_s, 0.005, 0.2);
     const double q = cfg_.process_accel_std * cfg_.process_accel_std;
     const double r = cfg_.meas_std_m * cfg_.meas_std_m;
     // Continuous white-noise acceleration model discretized:
@@ -53,6 +53,12 @@ void FusionEstimator::compute_gains() {
         p11 = n11 - k1 * n01;
         k_pos_ = k0;
         k_vel_ = k1;
+    }
+    if (cfg_.vision_pos_gain >= 0.0) {
+        k_pos_ = std::clamp(cfg_.vision_pos_gain, 0.0, 1.0);
+    }
+    if (cfg_.vision_vel_gain >= 0.0) {
+        k_vel_ = std::max(0.0, cfg_.vision_vel_gain);
     }
 }
 
@@ -167,7 +173,9 @@ void FusionEstimator::on_vision(const VisionPose& pose, double pos_delay_s) {
         s.y += k_pos_ * ry;
         s.vgx += k_vel_ * rx;
         s.vgy += k_vel_ * ry;
-        s.theta = phx::wrap_angle(s.theta + cfg_.theta_gain * rtheta);
+        if (std::fabs(rtheta) <= std::max(0.0, cfg_.theta_gate_rad)) {
+            s.theta = phx::wrap_angle(s.theta + cfg_.theta_gain * rtheta);
+        }
     }
 
     last_meas_ = TimedState{phx::Pose{phx::Vec2{s.x, s.y}, s.theta},

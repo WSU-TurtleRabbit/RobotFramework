@@ -13,22 +13,16 @@ MatchFeedback MatchFeedbackBuilder::build(const MatchBridge& bridge,
     fb.robot_id = health.robot_id;
     fb.seq = seq_++;
 
-    // Pose/vel: the estimator's measurement-matched slot (TIGERs report the
-    // state at the vision timepoint), present-time output as fallback.
-    const auto meas = bridge.estimator().last_meas_state();
-    if (meas.has_value()) {
-        fb.pos_x = meas->pose.pos.x;
-        fb.pos_y = meas->pose.pos.y;
-        fb.heading = meas->pose.heading;
-        fb.vel_x = meas->vel_global.x;
-        fb.vel_y = meas->vel_global.y;
-    } else {
-        fb.pos_x = bt.est.pose.pos.x;
-        fb.pos_y = bt.est.pose.pos.y;
-        fb.heading = bt.est.pose.heading;
-        fb.vel_x = bt.est.vel_global.x;
-        fb.vel_y = bt.est.vel_global.y;
-    }
+    // Report the PRESENT estimator state used by the controller. The old
+    // matched-slot telemetry was delayed by the camera pipeline, so comparing
+    // it with the server's present world pose invented 10-25 cm "estimator
+    // errors" at competition speed. Live calibration needs the exact state
+    // the control cascade is navigating from.
+    fb.pos_x = bt.est.pose.pos.x;
+    fb.pos_y = bt.est.pose.pos.y;
+    fb.heading = bt.est.pose.heading;
+    fb.vel_x = bt.est.vel_global.x;
+    fb.vel_y = bt.est.vel_global.y;
     fb.ang_vel = bt.est.omega;
 
     // Kicker: recharge model (no charge ADC on this hardware).

@@ -36,6 +36,9 @@ struct TrajectoryConfig {
     // Lateral accel budget for the centrifugal omega cap, m/s^2: yaw rate is
     // limited to cent_acc_max / |v_xy| (divisor floored at 0.3 m/s).
     double cent_acc_max = 2.5;
+    // Braking acceleration as a fraction of the skill's acceleration limit.
+    // Below one starts braking earlier without weakening launch.
+    double brake_scale = 1.0;
     // First-order low-pass on the orientation target, seconds (0 = off).
     double orient_lag_tau_s = 0.05;
     // FAST_POS: heading counts as aligned with the drive direction within

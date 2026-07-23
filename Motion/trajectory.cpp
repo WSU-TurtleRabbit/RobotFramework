@@ -68,7 +68,8 @@ TrajSample TrajectoryFollower::tick(double dt_in, const MotionSetpoint& sp) {
     // --- regenerate the translation profile from the reference state ---
     const phx::BangBang2D tr =
         phx::BangBang2D::plan(cur_.pose.pos, cur_.vel, sp.target.pos,
-                              sp.vel_max_xy, acc_max_xy);
+                              sp.vel_max_xy, acc_max_xy,
+                              acc_max_xy * std::clamp(cfg_.brake_scale, 0.1, 1.0));
     // --- regenerate the orientation profile (wrapped short way) ---
     const double heading_target =
         cur_.pose.heading + phx::angle_diff(orient_target_filt_, cur_.pose.heading);

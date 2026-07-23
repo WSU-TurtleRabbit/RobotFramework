@@ -69,6 +69,18 @@ PHX_TEST(bridge_rejects_garbage_wrong_id_and_stale_seq) {
     CHECK(w.accept(global_pos(3, 1, 0, 0, 0, 1, 0, 0), 0.012) == MatchAccept::Accepted);
 }
 
+PHX_TEST(bridge_resynchronizes_sequence_after_command_timeout) {
+    Kinematics kin;
+    MatchBridgeConfig cfg;
+    cfg.expected_robot_id = 3;
+    cfg.command_timeout_s = 1.0;
+    MatchBridge b{cfg, kin};
+    CHECK(b.accept(global_pos(3, 2000, 0, 0, 0, 1, 0, 0), 0.0) == MatchAccept::Accepted);
+    CHECK(b.accept(global_pos(3, 0, 0, 0, 0, 1, 0, 0), 0.5) == MatchAccept::StaleSeq);
+    CHECK(b.accept(global_pos(3, 0, 0, 0, 0, 1, 0, 0), 1.01) == MatchAccept::Accepted);
+    CHECK(b.accept(global_pos(3, 0, 0, 0, 0, 1, 0, 0), 1.02) == MatchAccept::StaleSeq);
+}
+
 PHX_TEST(bridge_first_vision_gate_blocks_motion_until_fix) {
     Kinematics kin;
     MatchBridge b{MatchBridgeConfig{.expected_robot_id = 3}, kin};

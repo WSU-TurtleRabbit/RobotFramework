@@ -225,6 +225,35 @@ PHX_TEST(estimator_heading_fuses_gyro_and_vision) {
     CHECK_NEAR(w.est.output().omega, 1.0, 1e-9);
 }
 
+PHX_TEST(estimator_heading_gate_rejects_marker_flip_but_keeps_position) {
+    EstimatorConfig cfg;
+    cfg.capture_delay_s = 0.0;
+    cfg.theta_gain = 0.5;
+    cfg.theta_gate_rad = 0.45;
+    FusionEstimator est{cfg};
+    est.tick(0.0, kDt, phx::Twist{}, 0.0);
+    est.on_vision(VisionPose{0.0, 0.0, 0.0}, 0.0);
+    est.tick(kDt, kDt, phx::Twist{}, 0.0);
+
+    // A blurred marker may keep a valid centre while its decoded orientation
+    // flips. Position still fuses; heading must stay on the gyro estimate.
+    est.on_vision(VisionPose{0.05, 0.0, 1.2}, 0.0);
+    CHECK(est.output().pose.pos.x > 0.0);
+    CHECK(std::fabs(est.output().pose.heading) < 1e-9);
+
+    // A small, physically plausible yaw innovation still corrects drift.
+    est.on_vision(VisionPose{0.05, 0.0, 0.10}, 0.0);
+    CHECK(est.output().pose.heading > 0.0);
+    CHECK(est.output().pose.heading < 0.10);
+
+    // The field verifier observed legitimate reverse-leg disagreement at
+    // 0.30 rad. It must remain correctable rather than latching the estimator
+    // into a rotated frame.
+    const double before = est.output().pose.heading;
+    est.on_vision(VisionPose{0.05, 0.0, 0.35}, 0.0);
+    CHECK(est.output().pose.heading > before);
+}
+
 PHX_TEST(estimator_gyro_loss_falls_back_to_odometry_yaw) {
     FusionEstimator est;
     est.tick(0.0, kDt, phx::Twist{}, 0.0);
@@ -242,4 +271,24 @@ PHX_TEST(estimator_kalman_gains_are_sane) {
     FusionEstimator est;
     CHECK(est.k_pos() > 0.05 && est.k_pos() < 0.95);
     CHECK(est.k_vel() > 0.01 && est.k_vel() < 50.0);
+}
+
+PHX_TEST(estimator_gain_uses_vision_period_not_control_tick) {
+    EstimatorConfig slow_camera;
+    slow_camera.measurement_dt_s = 0.043;
+    EstimatorConfig wrong_control_period;
+    wrong_control_period.measurement_dt_s = kDt;
+    FusionEstimator field_est{slow_camera};
+    FusionEstimator underweighted{wrong_control_period};
+    CHECK(field_est.k_pos() > 0.60);
+    CHECK(field_est.k_pos() > 4.0 * underweighted.k_pos());
+}
+
+PHX_TEST(estimator_field_gain_overrides_are_independent) {
+    EstimatorConfig cfg;
+    cfg.vision_pos_gain = 0.65;
+    cfg.vision_vel_gain = 1.50;
+    FusionEstimator est{cfg};
+    CHECK_NEAR(est.k_pos(), 0.65, 1e-12);
+    CHECK_NEAR(est.k_vel(), 1.50, 1e-12);
 }

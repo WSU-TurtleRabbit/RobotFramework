@@ -80,12 +80,38 @@ ControlOutput Controller::pose_tick(double dt, const MotionSetpoint& sp,
     // Position error of the REFERENCE vs the estimate, global frame. The P
     // term corrects tracking error only — the trajectory supplies the
     // motion; clamped so a big disturbance can't command a lurch.
-    phx::Vec2 pos_err = (ref.pose.pos - est.pose.pos).clamped(cfg_.pos_err_clamp_m);
-    phx::Vec2 vel_corr = (pos_err * cfg_.kp_pos).clamped(cfg_.vel_corr_max_mps);
+    const phx::Vec2 pos_err =
+        (ref.pose.pos - est.pose.pos).clamped(cfg_.pos_err_clamp_m);
+    const phx::Vec2 vel_err = ref.vel - est.vel_global;
+    const phx::Vec2 vel_corr =
+        (pos_err * cfg_.kp_pos + vel_err * cfg_.kp_vel)
+            .clamped(cfg_.vel_corr_max_mps);
 
     // Velocity setpoint: trajectory FF (+ accel lead) + P, global frame.
-    const phx::Vec2 vel_cmd_global =
-        ref.vel + ref.acc * cfg_.acc_ff_lead_s + vel_corr;
+    // The trajectory limit is a HARD motion envelope, not merely a planner
+    // hint.  Feedforward lead and tracking correction may sharpen response,
+    // but their sum must never exceed the skill's granted velocity ceiling.
+    phx::Vec2 vel_cmd_global =
+        (ref.vel + ref.acc * cfg_.acc_ff_lead_s + vel_corr)
+            .clamped(std::max(0.0, sp.vel_max_xy));
+
+    // The regenerated reference is intentionally smooth, so during a hard
+    // launch it can run several centimetres ahead of the physical chassis.
+    // Braking solely from that reference then starts late. Bound the final
+    // approach speed with the fused robot-to-target distance and an
+    // identified reaction allowance. The wheel-output slew remains the last
+    // actuator-rate limiter.
+    const double target_dist = (sp.target.pos - est.pose.pos).norm();
+    const double brake_acc =
+        std::max(0.0, sp.acc_max_xy * cfg_.target_brake_scale);
+    if (brake_acc > 1e-6 && std::isfinite(target_dist)) {
+        const double reaction = std::max(0.0, cfg_.target_brake_reaction_s);
+        const double ar = brake_acc * reaction;
+        const double approach_max =
+            std::max(0.0, std::sqrt(ar * ar + 2.0 * brake_acc * target_dist) - ar);
+        vel_cmd_global = vel_cmd_global.clamped(
+            std::min(std::max(0.0, sp.vel_max_xy), approach_max));
+    }
 
     // Yaw: FF profile rate + P heading + P yaw-rate vs the measured gyro.
     const double herr = phx::angle_diff(ref.pose.heading, est.pose.heading);
@@ -94,7 +120,9 @@ ControlOutput Controller::pose_tick(double dt, const MotionSetpoint& sp,
     const double omega_corr = std::clamp(cfg_.kp_heading * herr +
                                              cfg_.kp_yaw_rate * rate_err,
                                          -cfg_.omega_corr_max, cfg_.omega_corr_max);
-    const double omega_cmd = ref.omega + omega_corr;
+    const double omega_cmd = std::clamp(
+        ref.omega + omega_corr, -std::max(0.0, sp.vel_max_w),
+        std::max(0.0, sp.vel_max_w));
 
     // Global -> body by the robot's own heading estimate, then to wheels.
     const phx::Vec2 vel_body = vel_cmd_global.rotated(-est.pose.heading);

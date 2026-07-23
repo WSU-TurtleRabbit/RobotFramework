@@ -1,5 +1,5 @@
 // MatchFeedback assembly tests: what the robot reports back to the server —
-// matched-slot pose (TIGERs semantics), kicker charge model, traction
+// present controller-estimator pose, kicker charge model, traction
 // ladder, battery curve, feature bits, seq, and the kick-counter toggle.
 #include <cmath>
 
@@ -37,20 +37,24 @@ BallContactObs ball_at_mouth() {
 }
 }  // namespace
 
-PHX_TEST(feedback_uses_matched_slot_pose_when_present) {
+PHX_TEST(feedback_uses_present_controller_estimate) {
     Kinematics kin;
     MatchBridge b{MatchBridgeConfig{.expected_robot_id = 3}, kin};
     // Give the estimator a vision fix at (0.4, -0.2, 0.5).
     b.accept(global_pos(3, 1, 0.4, -0.2, 0.5, 1.0, 0.0, 0.0), 0.0);
-    const BridgeTick t = b.tick(0.0, kDt, phx::Twist{}, 0.0, no_ball());
+    b.tick(0.0, kDt, phx::Twist{}, 0.0, no_ball());
+    const BridgeTick t = b.tick(
+        kDt, kDt, phx::Twist{1.0, 0.0, 0.0}, 0.0, no_ball()
+    );
     MatchFeedbackBuilder fb;
     const MatchFeedback out = fb.build(b, t, health(), no_ball(), 0.0);
     CHECK(out.robot_id == 3);
     CHECK(out.seq == 0);
-    // The matched slot (the measurement timepoint), not the present output.
-    CHECK_NEAR(out.pos_x, 0.4, 1e-9);
-    CHECK_NEAR(out.pos_y, -0.2, 1e-9);
-    CHECK_NEAR(out.heading, 0.5, 1e-9);
+    // Feedback must equal the state the controller consumed this tick.
+    CHECK_NEAR(out.pos_x, t.est.pose.pos.x, 1e-12);
+    CHECK_NEAR(out.pos_y, t.est.pose.pos.y, 1e-12);
+    CHECK_NEAR(out.heading, t.est.pose.heading, 1e-12);
+    CHECK_NEAR(out.vel_x, t.est.vel_global.x, 1e-12);
     CHECK(out.hardware_id == 11);
     CHECK(out.ball_pos_age_ms == 255);
 }

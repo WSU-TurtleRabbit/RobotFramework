@@ -62,13 +62,25 @@ struct EstimatorConfig {
     double odo_vel_gain = 0.5;
     // Vision heading correction gain per fix (0..1].
     double theta_gain = 0.4;
+    // Reject visual heading innovations larger than this while continuing
+    // to fuse position. Fast marker blur can flip orientation without
+    // invalidating the robot centre detection.
+    double theta_gate_rad = 0.45;
     // Noise model for the steady-state Kalman gains: vision position
     // std-dev (m) and motion process accel std-dev (m/s^2).
     double meas_std_m = 0.005;
     double process_accel_std = 2.0;
-    // Nominal tick used for the gain computation (the gains are constant;
-    // runtime dt may jitter around this).
-    double nominal_dt_s = 0.004;
+    // Nominal interval between VISION measurements used for the steady-state
+    // gain computation. This is not the 250 Hz propagation tick: using the
+    // control interval here underweights a 20-60 Hz camera by an order of
+    // magnitude and lets the estimate lag badly during braking.
+    double measurement_dt_s = 1.0 / 60.0;
+    // Optional field overrides for the steady-state alpha/beta gains.
+    // Negative keeps the Riccati-derived value. Independent overrides are
+    // useful when moving-marker position is trustworthy but its derivative
+    // is too noisy to raise the position and velocity gains together.
+    double vision_pos_gain = -1.0;
+    double vision_vel_gain = -1.0;
 };
 
 // Present-time best estimate (the newest slot, smoothly consistent with the
@@ -109,8 +121,9 @@ public:
     // Full reset (NaN recovery / operator): back to the no-fix zero state.
     void reset();
 
-    // Corrected state at the LAST vision measurement's own timepoint — what
-    // TIGERs report in MatchFeedback (pos + vel of the matched time slot).
+    // Corrected state at the LAST vision measurement's own timepoint. Kept
+    // for delayed-fusion diagnostics; MatchFeedback reports output() because
+    // field calibration needs the present state used by the controller.
     struct TimedState {
         phx::Pose pose{};
         phx::Vec2 vel_global{};

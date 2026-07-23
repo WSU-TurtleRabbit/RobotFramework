@@ -56,6 +56,8 @@ public:
     // config imu.yaw_rate_sign). Heading is the attitude quaternion's yaw
     // Euler angle in degrees.
     bool attitude_present = false;
+    double imu_roll_dps = std::numeric_limits<double>::quiet_NaN();
+    double imu_pitch_dps = std::numeric_limits<double>::quiet_NaN();
     double imu_yaw_dps = std::numeric_limits<double>::quiet_NaN();
     double imu_heading_deg = std::numeric_limits<double>::quiet_NaN();
 

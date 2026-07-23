@@ -51,6 +51,7 @@ enum class MatchAccept {
 // Everything the superloop (and MatchFeedback assembly) needs out of a tick.
 struct BridgeTick {
     ControlOutput ctrl;       // wheel setpoints + energize
+    TrajSample ref;           // current onboard trajectory reference
     ActuatorOutput act;       // kicker/dribbler decision
     EstimatorOutput est;      // estimator passthrough (feedback pose source)
     bool emergency = false;   // running the onboard EMERGENCY (timeout/skill)

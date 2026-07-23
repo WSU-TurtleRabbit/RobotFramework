@@ -37,10 +37,18 @@ std::optional<std::array<double, 3>> solve3(const double a[3][3], const double b
 
 std::array<double, 4> Kinematics::inverse(const BodyTwist& t) const {
     std::array<double, 4> out{};
+    const double lateral_scale = std::max(0.1, body_lateral_scale);
     for (int i = 0; i < 4; ++i) {
         const auto a = wheels[i].row();
-        const double surface_mps = a[0] * t.vx + a[1] * t.vy + a[2] * t.w;
-        out[i] = surface_mps / meters_per_motor_rev;
+        const double surface_mps =
+            a[0] * t.vx + a[1] * (t.vy * lateral_scale) + a[2] * t.w;
+        const double direction_scale =
+            surface_mps >= 0.0 ? wheel_command_scale_positive[i]
+                               : wheel_command_scale_negative[i];
+        out[i] =
+            surface_mps / meters_per_motor_rev
+            * std::clamp(wheel_command_scale[i], 0.5, 1.5)
+            * std::clamp(direction_scale, 0.8, 1.2);
     }
     return out;
 }
@@ -66,7 +74,11 @@ BodyTwist Kinematics::forward(const std::array<double, 4>& motor_rev_s) const {
     }
     const auto x = solve3(ata, atb);
     if (!x) return BodyTwist{};
-    return BodyTwist{(*x)[0], (*x)[1], (*x)[2]};
+    return BodyTwist{
+        (*x)[0],
+        (*x)[1] / std::max(0.1, body_lateral_scale),
+        (*x)[2],
+    };
 }
 
 double Kinematics::peak_motor_rev_s(const BodyTwist& t) const {

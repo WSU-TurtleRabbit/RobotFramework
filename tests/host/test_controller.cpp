@@ -80,6 +80,54 @@ PHX_TEST(controller_pose_ff_velocity_flows_through) {
     CHECK_NEAR(out.cmd_body.lin.y, -0.2, 1e-9);
 }
 
+PHX_TEST(controller_pose_velocity_feedback_damps_tracking_overshoot) {
+    ControllerConfig cfg;
+    cfg.kp_pos = 0.0;
+    cfg.kp_vel = 0.45;
+    cfg.vel_corr_max_mps = 0.6;
+    Controller c{cfg, Kinematics{}};
+    TrajSample r = ref_at(0, 0, 0);
+    r.vel = {0.2, 0.0};
+    // Still travelling at 0.8 m/s while the braking profile asks for 0.2:
+    // velocity feedback must command below the trajectory reference.
+    const ControlOutput out =
+        c.tick(kDt, pose_sp(1, 0, 0, 1.0, 1.0),
+               est_at(0, 0, 0, 0.8, 0.0), r, 0.0);
+    CHECK_NEAR(out.cmd_body.lin.x, 0.2 + 0.45 * (0.2 - 0.8), 1e-9);
+}
+
+PHX_TEST(controller_pose_combined_correction_respects_skill_velocity_caps) {
+    Controller c{ControllerConfig{}, Kinematics{}};
+    TrajSample r = ref_at(0.5, 0.0, 1.0);
+    r.vel = {0.25, 0.0};
+    r.acc = {2.5, 0.0};
+    r.omega = 2.0;
+    const ControlOutput out = c.tick(
+        kDt, pose_sp(1.0, 0.0, 1.0, 0.25, 2.5, 0.5),
+        est_at(0.0, 0.0, 0.0), r, 0.0);
+    CHECK(out.cmd_body.lin.norm() <= 0.25 + 1e-9);
+    CHECK(std::fabs(out.cmd_body.ang) <= 0.5 + 1e-9);
+}
+
+PHX_TEST(controller_pose_actual_distance_caps_delayed_final_approach) {
+    ControllerConfig cfg;
+    cfg.kp_pos = 0.0;
+    cfg.kp_vel = 0.0;
+    cfg.acc_ff_lead_s = 0.0;
+    cfg.target_brake_scale = 0.5;
+    cfg.target_brake_reaction_s = 0.06;
+    Controller c{cfg, Kinematics{}};
+    TrajSample r = ref_at(0.9, 0.0, 0.0);
+    r.vel = {1.0, 0.0};
+    const MotionSetpoint sp = pose_sp(1.0, 0.0, 0.0, 1.5, 2.0);
+    const ControlOutput out =
+        c.tick(kDt, sp, est_at(0.9, 0.0, 0.0), r, 0.0);
+    // a_brake=1, d=0.1, reaction=0.06:
+    // v <= sqrt((a*t)^2 + 2*a*d) - a*t = 0.3912 m/s.
+    CHECK(out.cmd_body.lin.norm() < 0.392);
+    CHECK(out.cmd_body.lin.norm() > 0.390);
+}
+
 PHX_TEST(controller_omega_damps_gyro_overshoot) {
     Controller c{ControllerConfig{}, Kinematics{}};
     TrajSample r = ref_at(0, 0, 0);

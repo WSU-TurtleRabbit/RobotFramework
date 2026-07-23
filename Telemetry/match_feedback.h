@@ -2,7 +2,7 @@
 // robot health, TIGERs' SystemMatchFeedback semantics adapted to what OUR
 // hardware can actually measure:
 //
-//   * pose/velocity come from the estimator's measurement-matched slot
+//   * pose/velocity are the present estimator state used by the controller
 //     (TIGERs report the delayed slot matched to the vision timepoint) with
 //     the present-time output as fallback;
 //   * the kicker level is a recharge MODEL (elapsed since the last fire

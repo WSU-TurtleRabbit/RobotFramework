@@ -29,16 +29,20 @@ namespace phx {
 class BangBang2D {
 public:
     // Plan from (p0, v0) to rest at p1 under planar |v| <= vmax, |a| <= amax.
-    static BangBang2D plan(Vec2 p0, Vec2 v0, Vec2 p1, double vmax, double amax) {
+    static BangBang2D plan(Vec2 p0, Vec2 v0, Vec2 p1, double vmax, double amax,
+                           double brake_max = -1.0) {
         BangBang2D tr;
         vmax = std::max(vmax, 1e-6);
         amax = std::max(amax, 1e-6);
+        brake_max = brake_max > 0.0 ? brake_max : amax;
 
         const double lo = 1e-3, hi = kPiHalf - 1e-3;
         const auto plan_at = [&](double alpha, BangBang1D& x, BangBang1D& y) {
             const double c = std::cos(alpha), s = std::sin(alpha);
-            x = BangBang1D::plan(p0.x, v0.x, p1.x, 0.0, vmax * c, amax * c);
-            y = BangBang1D::plan(p0.y, v0.y, p1.y, 0.0, vmax * s, amax * s);
+            x = BangBang1D::plan(
+                p0.x, v0.x, p1.x, 0.0, vmax * c, amax * c, brake_max * c);
+            y = BangBang1D::plan(
+                p0.y, v0.y, p1.y, 0.0, vmax * s, amax * s, brake_max * s);
         };
 
         // f(alpha) = Tx - Ty is monotonically increasing: growing alpha takes

@@ -17,6 +17,7 @@ namespace rf {
 // Everything config/Motion.yaml controls for the MatchCtrl cascade.
 struct MatchSettings {
     bool enabled = true;            // false = ignore MatchCtrl frames
+    int imu_yaw_rate_axis = 2;      // 0=x/roll, 1=y/pitch, 2=z/yaw
     double imu_yaw_rate_sign = 1.0; // gyro polarity: +1 when the pi3hat gyro
                                     // reads positive for a CCW (+w) rotation
                                     // (VERIFIED +1 on Robot B — re-verify per robot)

@@ -18,6 +18,7 @@ MatchSettings loadMatchSettings(const std::string& path) {
         const YAML::Node root = YAML::LoadFile(path);
 
         if (root["imu"]) {
+            opt(root["imu"], "yaw_rate_axis", s.imu_yaw_rate_axis);
             opt(root["imu"], "yaw_rate_sign", s.imu_yaw_rate_sign);
         }
         if (root["match"]) {
@@ -38,12 +39,17 @@ MatchSettings loadMatchSettings(const std::string& path) {
             opt(e, "tracking_gain", s.estimator.tracking_gain);
             opt(e, "odo_vel_gain", s.estimator.odo_vel_gain);
             opt(e, "theta_gain", s.estimator.theta_gain);
+            opt(e, "theta_gate_rad", s.estimator.theta_gate_rad);
             opt(e, "meas_std_m", s.estimator.meas_std_m);
             opt(e, "process_accel_std", s.estimator.process_accel_std);
+            opt(e, "measurement_dt_s", s.estimator.measurement_dt_s);
+            opt(e, "vision_pos_gain", s.estimator.vision_pos_gain);
+            opt(e, "vision_vel_gain", s.estimator.vision_vel_gain);
         }
         if (root["trajectory"]) {
             const YAML::Node t = root["trajectory"];
             opt(t, "cent_acc_max", s.trajectory.cent_acc_max);
+            opt(t, "brake_scale", s.trajectory.brake_scale);
             opt(t, "orient_lag_tau_s", s.trajectory.orient_lag_tau_s);
             opt(t, "fast_pos_align_rad", s.trajectory.fast_pos_align_rad);
             opt(t, "final_orient_dist_m", s.trajectory.final_orient_dist_m);
@@ -52,12 +58,16 @@ MatchSettings loadMatchSettings(const std::string& path) {
         if (root["controller"]) {
             const YAML::Node c = root["controller"];
             opt(c, "kp_pos", s.controller.kp_pos);
+            opt(c, "kp_vel", s.controller.kp_vel);
             opt(c, "pos_err_clamp_m", s.controller.pos_err_clamp_m);
             opt(c, "vel_corr_max_mps", s.controller.vel_corr_max_mps);
             opt(c, "kp_heading", s.controller.kp_heading);
             opt(c, "kp_yaw_rate", s.controller.kp_yaw_rate);
             opt(c, "omega_corr_max", s.controller.omega_corr_max);
             opt(c, "acc_ff_lead_s", s.controller.acc_ff_lead_s);
+            opt(c, "target_brake_scale", s.controller.target_brake_scale);
+            opt(c, "target_brake_reaction_s",
+                s.controller.target_brake_reaction_s);
             opt(c, "emergency_decel_mps2", s.controller.emergency_decel_mps2);
             opt(c, "emergency_w_decel_radps2", s.controller.emergency_w_decel_radps2);
             opt(c, "out_slew_rev_s2", s.controller.out_slew_rev_s2);

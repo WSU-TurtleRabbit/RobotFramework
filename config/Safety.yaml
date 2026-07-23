@@ -17,7 +17,10 @@ envelope:
 commandTimeoutMs: 250 # milliseconds
 
 # --- Per-motor protective trips (latched; recoverable) ---
-currentLimit: 5.0 # Amps — sustained per-motor overcurrent
+# Field-verified against moteus: controller max_current_A=15 A, while normal
+# 1 m/s holonomic acceleration reaches ~8 A on wheel 1. Keep a 33% hardware
+# margin and the 300 ms sustained-current qualification below.
+currentLimit: 10.0 # Amps — sustained per-motor overcurrent
 
 # Sustained over-current window: q-current legitimately spikes past the trip
 # level for tens of milliseconds during hard acceleration, so the trip only
@@ -30,7 +33,7 @@ currentGraceMs: 300 # milliseconds
 faultGraceMs: 50 # milliseconds
 
 tripTempC: 70.0 # C — protective stop below the moteus 75 C hard fault
-minBusVoltage: 10.0 # V — under-voltage cutoff (sagging battery)
+minBusVoltage: 19.0 # V — 6S LiPo under-voltage cutoff (3.17 V/cell)
 
 # Auto-recovery hold-off: a latched trip clears itself after everything has
 # been healthy (with hysteresis) for this long while the operator commands

@@ -251,6 +251,9 @@ int main(int argc, char **argv)
 
     // The freshest bridge tick result (feedback + actuators consume it).
     rf::BridgeTick bt;
+    // Latest measured motor velocities, shared by the odometry path and the
+    // lower-rate motion-identification record.
+    std::array<double, 4> measured_rev_s = {0.0, 0.0, 0.0, 0.0};
     // Legacy v1 bookkeeping.
     BodyTwist last_cmd_twist;
     // Monotonic ms of the last valid drive command (MatchCtrl or v1) for
@@ -308,6 +311,7 @@ int main(int argc, char **argv)
         static auto last_motor_time = current_time;
         static auto last_camera_time = current_time;
         static auto last_feedback_time = current_time;
+        static auto last_motor_log_time = current_time;
         static auto last_arduino_time = current_time;
 
         // --- UDP receive (every superloop iteration): MatchCtrl binary
@@ -406,7 +410,6 @@ int main(int argc, char **argv)
         {
             // Measured wheel velocities (rev/s, motor id i -> index i-1) from
             // the PREVIOUS cycle's replies — the estimator's odometry input.
-            static std::array<double, 4> measured_rev_s = {0.0, 0.0, 0.0, 0.0};
             static auto last_motor_tick_wall = current_time;
             const double motor_dt =
                 std::chrono::duration<double>(current_time - last_motor_tick_wall).count();
@@ -427,8 +430,15 @@ int main(int argc, char **argv)
             {
                 // The MatchCtrl cascade: delayed fusion + trajectory +
                 // control + actuator policy, one call per tick.
+                const std::array<double, 3> imu_rate_dps = {
+                    telemetry.imu_roll_dps,
+                    telemetry.imu_pitch_dps,
+                    telemetry.imu_yaw_dps,
+                };
+                const int yaw_axis = std::clamp(motion.imu_yaw_rate_axis, 0, 2);
                 const double gyro_radps = telemetry.attitude_present
-                    ? telemetry.imu_yaw_dps * (M_PI / 180.0) * motion.imu_yaw_rate_sign
+                    ? imu_rate_dps[yaw_axis] * (M_PI / 180.0)
+                          * motion.imu_yaw_rate_sign
                     : std::nan("");
                 const uint64_t obs_ms = ball_obs_time_ms.load(std::memory_order_relaxed);
                 const BallObservation obs = ball_observation.load(std::memory_order_relaxed);
@@ -504,9 +514,14 @@ int main(int argc, char **argv)
                     measured_rev_s[id - 1] = pair.second.velocity;
             }
 
-            // Bus voltage (average of replying motors) + per-motor logging.
+            // Bus voltage (average of replying motors) + sampled motor
+            // logging. Formatting four map records at the 250 Hz control
+            // rate created avoidable disk/CPU jitter; 20 Hz retains health
+            // diagnostics while the control and safety reads remain 250 Hz.
             float voltage_sum = 0.0f;
             int voltage_n = 0;
+            const bool log_motor_sample =
+                current_time - last_motor_log_time >= std::chrono::milliseconds(50);
             for (const auto &pair : servo_status)
             {
                 const auto &r = pair.second;
@@ -515,16 +530,22 @@ int main(int argc, char **argv)
                     voltage_sum += r.voltage;
                     voltage_n++;
                 }
-                std::string sub = std::string("motor-") + std::to_string(pair.first);
-                std::map<std::string, double> data = {
-                    {"temperature", r.temperature},
-                    {"voltage", r.voltage},
-                    {"velocity", r.velocity},
-                    {"current", r.current},
-                    {"mode", static_cast<double>(r.mode)},
-                    {"fault", static_cast<double>(r.fault)}};
-                logger.log("rframework", sub, data, "", LogLevel::INFO);
+                if (log_motor_sample)
+                {
+                    std::string sub =
+                        std::string("motor-") + std::to_string(pair.first);
+                    std::map<std::string, double> data = {
+                        {"temperature", r.temperature},
+                        {"voltage", r.voltage},
+                        {"velocity", r.velocity},
+                        {"current", r.current},
+                        {"mode", static_cast<double>(r.mode)},
+                        {"fault", static_cast<double>(r.fault)}};
+                    logger.log("rframework", sub, data, "", LogLevel::INFO);
+                }
             }
+            if (log_motor_sample)
+                last_motor_log_time = current_time;
             const double avg_voltage =
                 voltage_n > 0 ? static_cast<double>(voltage_sum) / voltage_n : 0.0;
 
@@ -601,6 +622,36 @@ int main(int argc, char **argv)
             const rf::MatchFeedback fb = feedback.build(bridge, bt, health, ball, now_s);
             const auto bytes = rf::encode_match_feedback(fb);
             UDP.send(std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size()));
+            // Compact 50 Hz motion-identification record: commanded and
+            // measured wheels plus the estimator/reference states. This is
+            // sufficient to identify wheel imbalance without console output
+            // or control-rate logging.
+            logger.log("motion", std::map<std::string, double>{
+                {"cmd_body_vx", bt.ctrl.cmd_body.lin.x},
+                {"cmd_body_vy", bt.ctrl.cmd_body.lin.y},
+                {"cmd_body_w", bt.ctrl.cmd_body.ang},
+                {"cmd_w1", bt.ctrl.wheel_rev_s[0]},
+                {"cmd_w2", bt.ctrl.wheel_rev_s[1]},
+                {"cmd_w3", bt.ctrl.wheel_rev_s[2]},
+                {"cmd_w4", bt.ctrl.wheel_rev_s[3]},
+                {"meas_w1", measured_rev_s[0]},
+                {"meas_w2", measured_rev_s[1]},
+                {"meas_w3", measured_rev_s[2]},
+                {"meas_w4", measured_rev_s[3]},
+                {"est_x", bt.est.pose.pos.x},
+                {"est_y", bt.est.pose.pos.y},
+                {"est_theta", bt.est.pose.heading},
+                {"est_vx", bt.est.vel_global.x},
+                {"est_vy", bt.est.vel_global.y},
+                {"imu_heading_deg", telemetry.imu_heading_deg},
+                {"imu_pitch_dps", telemetry.imu_pitch_dps},
+                {"imu_roll_dps", telemetry.imu_roll_dps},
+                {"imu_yaw_dps", telemetry.imu_yaw_dps},
+                {"ref_x", bt.ref.pose.pos.x},
+                {"ref_y", bt.ref.pose.pos.y},
+                {"ref_vx", bt.ref.vel.x},
+                {"ref_vy", bt.ref.vel.y},
+            });
             last_feedback_time = current_time;
         }
 

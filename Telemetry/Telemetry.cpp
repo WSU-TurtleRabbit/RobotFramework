@@ -113,6 +113,8 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
         attitude_present = pi3hat_output.attitude_present;
         if (attitude_present)
         {
+            imu_roll_dps = attitude.rate_dps.x;
+            imu_pitch_dps = attitude.rate_dps.y;
             imu_yaw_dps = attitude.rate_dps.z;
             // Yaw Euler angle from the attitude quaternion, degrees.
             const auto &q = attitude.attitude;
@@ -122,6 +124,8 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
         }
         else
         {
+            imu_roll_dps = std::numeric_limits<double>::quiet_NaN();
+            imu_pitch_dps = std::numeric_limits<double>::quiet_NaN();
             imu_yaw_dps = std::numeric_limits<double>::quiet_NaN();
             imu_heading_deg = std::numeric_limits<double>::quiet_NaN();
         }

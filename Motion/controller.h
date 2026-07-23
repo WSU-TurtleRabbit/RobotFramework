@@ -4,7 +4,8 @@
 // VELOCITY on moteus controllers (they are our FOC layer — the inner loop is
 // theirs). Everything above that difference is their structure:
 //
-//   pose skills:   velocity FF (trajectory) + P position (global, clamped)
+//   pose skills:   velocity FF (trajectory) + P position + P velocity
+//                  tracking (global, jointly clamped)
 //                  + P heading + P yaw-rate vs the gyro
 //   vel skills:    accel/jerk S-curve shaping toward the velocity setpoint
 //                  (the vendored phx::TwistShaper — the S-curve shaper
@@ -37,8 +38,9 @@ namespace rf {
 struct ControllerConfig {
     // --- Pose cascade gains ---
     double kp_pos = 2.5;            // 1/s: velocity correction per m of error
+    double kp_vel = 0.0;            // velocity-error damping (0 = disabled)
     double pos_err_clamp_m = 0.4;   // clamp on the position error vector
-    double vel_corr_max_mps = 1.0;  // clamp on the added correction velocity
+    double vel_corr_max_mps = 1.0;  // clamp on combined tracking correction
     // Heading: P on heading error + P on yaw-rate error vs the gyro. Gains
     // proven on Robot B (phoenix-rf HeadingController: kp 6, kd 0.3, clamp 3).
     double kp_heading = 6.0;
@@ -47,6 +49,12 @@ struct ControllerConfig {
     // Trajectory acceleration feedforward as a velocity lead, seconds (the
     // moteus velocity loop's lag compensation; SINE commissioning tunes it).
     double acc_ff_lead_s = 0.04;
+    // Final-approach guard based on the ACTUAL fused pose rather than the
+    // ahead-of-plant trajectory reference. The allowed translational speed
+    // solves d = v*t_reaction + v^2/(2*a_brake), where
+    // a_brake = skill_accel * target_brake_scale.
+    double target_brake_scale = 0.5;
+    double target_brake_reaction_s = 0.0;
 
     // --- EMERGENCY ramp (TIGERs onboard rate) ---
     double emergency_decel_mps2 = 8.0;

@@ -10,8 +10,8 @@ intervals:
 # This robot's id on the command channel. Commands addressed to another id
 # are ignored (the robot must not drive on a teammate's command).
 # -1 = accept any id (historical behavior, useful on the bench).
-Robot_id: -1
+Robot_id: 4
 
 # Physical robot identity letter reported as rid= in telemetry (asset tag,
 # not the command id — swapping electronics between shells keeps this).
-Robot_rid: "?"
+Robot_rid: "A"
