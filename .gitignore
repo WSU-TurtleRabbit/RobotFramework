@@ -32,10 +32,13 @@
 *.app
 
 *.json
+!config/motion_calibrations.json
+config/Motion.yaml.before-calibration
 
 # Virtual Environments
 *venv
 .rframework-venv
+__pycache__/
 
 # Log files
 *.log

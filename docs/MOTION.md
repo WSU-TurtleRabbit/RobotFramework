@@ -130,6 +130,36 @@ envelope, trips, moteus watchdog. `config/Motor.yaml` — motor map,
 `metersPerMotorRev` (the ONE drive-scale calibration), moteus vel/accel
 limits.
 
+### Active Robot A calibration
+
+`config/Motion.yaml` currently carries the **RLearn seed-20260805 champion**
+for guarded physical validation. The candidate changes only trajectory and
+controller values; estimator, geometry, wheel limits, watchdogs, and emergency
+behavior remain at the field-proven settings.
+
+The complete machine-readable record is
+`config/motion_calibrations.json`. It includes:
+
+- the active RLearn values and the field-proven 2026-07-23 rollback values;
+- hashes of the champion, dataset manifest, held-out model report, and seed
+  report;
+- robust simulated limits and held-out wheel-model error;
+- the required `0.5 → 1.0 → 1.5 → 2.0 → 2.5 m/s` field-test stages.
+
+Verify or switch the repository configuration without hand-editing YAML:
+
+```bash
+python tools/select_motion_calibration.py rlearn-champion-20260805 --check
+python tools/select_motion_calibration.py field-proven-20260723
+python tools/select_motion_calibration.py rlearn-champion-20260805
+```
+
+Applying a profile writes `config/Motion.yaml.before-calibration` before a
+change. That local snapshot is an extra convenience; the authoritative
+rollback remains the field-proven profile in the registry. The learned result
+is not considered field-proven until every guarded stage passes with the
+E-stop available.
+
 ## Commissioning (on hardware, in order)
 
 1. `estop.py` within reach. `monitor.py` to watch MatchFeedback.

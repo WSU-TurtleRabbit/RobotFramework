@@ -35,6 +35,17 @@ Legacy 7-field velocity commands and `STOP`/`PING` still work as bench
 fallbacks; a v1 command takes the robot back to direct control until the
 next MatchCtrl frame.
 
+### Robot A RLearn calibration
+
+Robot A currently uses the RLearn seed-20260805 motion candidate in
+`config/Motion.yaml` for guarded physical testing. Its complete provenance,
+simulation and held-out metrics, staged validation limits, and the
+field-proven rollback profile are stored in
+`config/motion_calibrations.json`. Use
+`tools/select_motion_calibration.py` to verify, apply, or roll back the active
+motion values without editing YAML manually. See `docs/MOTION.md` for the
+required staged field procedure.
+
 ## Building on the Pi
 
 To use this repository, you will need several dependencies.  

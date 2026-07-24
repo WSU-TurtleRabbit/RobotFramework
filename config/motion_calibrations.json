@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "active_profile": "rlearn-champion-20260805",
+  "profiles": {
+    "field-proven-20260723": {
+      "name": "Robot A field-proven calibration",
+      "status": "hardware_validated_rollback",
+      "source_robotframework_commit": "905868c5d902d0f133b6fcc363cdbafdf215454d",
+      "parameters": {
+        "trajectory.brake_scale": 0.5,
+        "trajectory.orient_lag_tau_s": 0.05,
+        "controller.kp_pos": 5.0,
+        "controller.kp_vel": 0.7,
+        "controller.kp_heading": 6.0,
+        "controller.kp_yaw_rate": 0.3,
+        "controller.omega_corr_max": 3.0,
+        "controller.acc_ff_lead_s": 0.14,
+        "controller.target_brake_scale": 0.5,
+        "controller.target_brake_reaction_s": 0.2
+      },
+      "field_metrics": {
+        "accepted_legs": 8,
+        "total_legs": 8,
+        "worst_cross_track_m": 0.10411076467542528,
+        "worst_endpoint_error_m": 0.01945406478910938,
+        "peak_estimated_speed_mps": 1.791817513029717
+      }
+    },
+    "rlearn-champion-20260805": {
+      "name": "RLearn real-data champion",
+      "status": "installed_for_guarded_field_validation",
+      "training_seed": 20260805,
+      "parameters": {
+        "trajectory.brake_scale": 0.460247462900441,
+        "trajectory.orient_lag_tau_s": 0.0470833679480691,
+        "controller.kp_pos": 5.796512538720543,
+        "controller.kp_vel": 0.7036927208811388,
+        "controller.kp_heading": 5.990236905427155,
+        "controller.kp_yaw_rate": 0.2659636842542758,
+        "controller.omega_corr_max": 3.01402769272368,
+        "controller.acc_ff_lead_s": 0.15474522251819184,
+        "controller.target_brake_scale": 0.5719281908761186,
+        "controller.target_brake_reaction_s": 0.17593929651219475
+      },
+      "simulation_only_parameter_not_applied_onboard": {
+        "plant_speed_guard": 0.866273516042339
+      },
+      "robust_simulation_metrics": {
+        "objective": 10.204448510454878,
+        "improvement_fraction_vs_baseline": 0.9983978775842745,
+        "completed_searches": 81,
+        "constraint_passing_searches": 81,
+        "champion_promotions": 26,
+        "max_physical_speed_mps": 2.514797,
+        "worst_endpoint_error_m": 0.0126226,
+        "worst_cross_track_m": 0.1075303,
+        "worst_endpoint_heading_error_rad": 0.00792,
+        "field_violations": 0,
+        "speed_violations": 0,
+        "wheel_violations": 0
+      },
+      "real_data_model": {
+        "transition_rows": 61087,
+        "training_rows": 48942,
+        "heldout_rows": 12145,
+        "heldout_active_motion_rows": 1713,
+        "heldout_coupled_translation_yaw_rows": 748,
+        "ensemble_members": 9,
+        "feature_count": 47,
+        "heldout_delta_rmse_rev_s": [
+          0.08121636227604549,
+          0.04738294914083986,
+          0.05463894437855277,
+          0.04413721896221354
+        ],
+        "heldout_active_delta_rmse_rev_s": [
+          0.21519721233468475,
+          0.12455980101342999,
+          0.14341340721008192,
+          0.11525298423269158
+        ],
+        "heldout_coupled_delta_rmse_rev_s": [
+          0.3040862565128086,
+          0.15195245329189624,
+          0.19932311126465002,
+          0.14594437723507786
+        ]
+      },
+      "provenance": {
+        "champion_json_sha256": "898ea10366c07fbb35c12a5450a068652b7293dfe3ab81a93691d4d98ec8da19",
+        "model_validation_json_sha256": "71f453ba93c27de71e1094638cb108b320c15bbf9f7a1f18c0f59e14d42b26b2",
+        "dataset_manifest_json_sha256": "43594b635916e12b76e7dd7f5d6fda47cbad35a4ff86f37b76ff364ff24ae488",
+        "seed_report_json_sha256": "986399a7765d5e1e652710c375978a60879fdc6bfb00e387dee179e534fb4315"
+      },
+      "field_validation": {
+        "required": true,
+        "initial_speed_mps": 0.5,
+        "stages_mps": [
+          0.5,
+          1.0,
+          1.5,
+          2.0,
+          2.5
+        ],
+        "deviation_abort_m": 0.2,
+        "endpoint_pass_m": 0.035,
+        "cross_track_pass_m": 0.12,
+        "rollback_profile": "field-proven-20260723",
+        "note": "Simulation evidence is not physical validation. Keep E-stop available and pass each stage before increasing speed."
+      }
+    }
+  }
+}
