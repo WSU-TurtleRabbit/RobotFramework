@@ -545,7 +545,30 @@ int main(int argc, char **argv)
                 }
             }
             if (log_motor_sample)
+            {
+                if (telemetry.attitude_present)
+                {
+                    const std::array<double, 3> imu_rate_dps = {
+                        telemetry.imu_roll_dps,
+                        telemetry.imu_pitch_dps,
+                        telemetry.imu_yaw_dps,
+                    };
+                    const int yaw_axis =
+                        std::clamp(motion.imu_yaw_rate_axis, 0, 2);
+                    const double selected_radps =
+                        imu_rate_dps[yaw_axis] * (M_PI / 180.0)
+                        * motion.imu_yaw_rate_sign;
+                    logger.log("rframework", "imu",
+                        {
+                            {"pitch_dps", telemetry.imu_pitch_dps},
+                            {"roll_dps", telemetry.imu_roll_dps},
+                            {"selected_radps", selected_radps},
+                            {"yaw_dps", telemetry.imu_yaw_dps},
+                        },
+                        "", LogLevel::INFO);
+                }
                 last_motor_log_time = current_time;
+            }
             const double avg_voltage =
                 voltage_n > 0 ? static_cast<double>(voltage_sum) / voltage_n : 0.0;
 

@@ -69,7 +69,11 @@ The same flow as a picture:
    orientation profile, the **centrifugal ω limit** (`|ω| ≤ centAccMax /
    |v_xy|`), and a light low-pass on the orientation target. FAST_POS slaves
    the heading to the drive direction and raises accel once aligned;
-   `primaryDirection` keeps the robot's preferred axis along travel.
+   `primaryDirection` keeps the robot's preferred axis along travel. At
+   launch the target displacement defines travel before velocity exists, and
+   the pose-alignment gate shares traction with yaw before releasing full
+   translation. This prevents the real chassis's large sideways launch arc
+   without lowering the skill's velocity ceiling.
 5. **Control law** (`Motion/controller`, TIGERs "Panthera") — trajectory
    velocity FF (+ accel lead) **+ P** on the reference-vs-estimate position
    error (global frame, clamped) → world velocity; **P** heading + **P**
@@ -132,10 +136,15 @@ limits.
 
 ### Active Robot A calibration
 
-`config/Motion.yaml` currently carries the **RLearn seed-20260805 champion**
-for guarded physical validation. The candidate changes only trajectory and
-controller values; estimator, geometry, wheel limits, watchdogs, and emergency
-behavior remain at the field-proven settings.
+`config/Motion.yaml` carries the **field-validated RLearn seed-20260805
+champion**. Robot A completed its guarded campaign on 2026-07-30. Longitudinal
+and diagonal motion may use a 2.5 m/s velocity ceiling with at most 2.0 m/s^2
+translation acceleration. Pure lateral motion is limited to 1.5 m/s and
+1.5 m/s^2 because the 2.0 m/s lateral stage exceeded the 0.12 m corridor.
+Arbitrary simultaneous pose moves use at most 1.5 m/s, 1.0 m/s^2 translation
+acceleration, and 3.0 rad/s^2 yaw acceleration; heading changes near or above
+90 degrees use a 1.25 m/s velocity ceiling. Pre-aligned approaches retain the
+2.5 m/s velocity ceiling.
 
 The complete machine-readable record is
 `config/motion_calibrations.json`. It includes:
@@ -156,9 +165,8 @@ python tools/select_motion_calibration.py rlearn-champion-20260805
 
 Applying a profile writes `config/Motion.yaml.before-calibration` before a
 change. That local snapshot is an extra convenience; the authoritative
-rollback remains the field-proven profile in the registry. The learned result
-is not considered field-proven until every guarded stage passes with the
-E-stop available.
+rollback remains the field-proven profile in the registry. The registry
+records the accepted field envelope and retained rollback.
 
 ## Commissioning (on hardware, in order)
 

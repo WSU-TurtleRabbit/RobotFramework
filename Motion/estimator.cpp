@@ -22,6 +22,8 @@ void FusionEstimator::reset() {
     consecutive_rejects_ = 0;
     rejected_total_ = 0;
     last_meas_.reset();
+    last_vision_heading_.reset();
+    last_vision_heading_t_s_ = -1e9;
     // snap_count_ is kept: consumers compare, they don't absolute-count.
 }
 
@@ -168,13 +170,34 @@ void FusionEstimator::on_vision(const VisionPose& pose, double pos_delay_s) {
         s.x = pose.x;
         s.y = pose.y;
         s.theta = phx::wrap_angle(pose.heading);
+        last_vision_heading_ = pose.heading;
+        last_vision_heading_t_s_ = at.t_s;
     } else {
         s.x += k_pos_ * rx;
         s.y += k_pos_ * ry;
         s.vgx += k_vel_ * rx;
         s.vgy += k_vel_ * ry;
-        if (std::fabs(rtheta) <= std::max(0.0, cfg_.theta_gate_rad)) {
+        bool temporal_heading_ok = true;
+        if (last_vision_heading_.has_value()) {
+            const double dt = std::clamp(
+                at.t_s - last_vision_heading_t_s_, 0.0, 0.05);
+            const double temporal_limit =
+                std::max(0.0, cfg_.vision_heading_jump_tolerance_rad) +
+                std::max(0.0, cfg_.vision_heading_rate_max_rad_s) * dt;
+            temporal_heading_ok =
+                std::fabs(phx::angle_diff(pose.heading, *last_vision_heading_)) <=
+                temporal_limit;
+        }
+        const bool agrees_with_gyro =
+            std::fabs(rtheta) <=
+            std::max(0.0, cfg_.vision_heading_estimator_tolerance_rad);
+        const bool heading_ok =
+            std::fabs(rtheta) <= std::max(0.0, cfg_.theta_gate_rad) &&
+            (temporal_heading_ok || agrees_with_gyro);
+        if (heading_ok) {
             s.theta = phx::wrap_angle(s.theta + cfg_.theta_gain * rtheta);
+            last_vision_heading_ = pose.heading;
+            last_vision_heading_t_s_ = at.t_s;
         }
     }
 

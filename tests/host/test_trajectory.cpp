@@ -144,6 +144,34 @@ PHX_TEST(trajectory_centrifugal_omega_cap_applies) {
     CHECK(max_speed > 2.0);  // it really got fast (the cap had to bite)
 }
 
+PHX_TEST(trajectory_orientation_brake_scale_reduces_peak_yaw_rate) {
+    TrajectoryConfig symmetric_cfg;
+    symmetric_cfg.orient_lag_tau_s = 0.0;
+    TrajectoryFollower symmetric(symmetric_cfg);
+    symmetric.reset(phx::Pose{phx::Vec2{0, 0}, 0.0}, phx::Vec2{}, 0.0);
+
+    TrajectoryConfig early_cfg = symmetric_cfg;
+    early_cfg.orient_brake_scale = 0.5;
+    TrajectoryFollower early(early_cfg);
+    early.reset(phx::Pose{phx::Vec2{0, 0}, 0.0}, phx::Vec2{}, 0.0);
+
+    const MotionSetpoint sp =
+        make_pos(0.0, 0.0, phx::kPi / 2.0, 1.0, 1.0, 3.0, 4.0);
+    double symmetric_peak = 0.0;
+    double early_peak = 0.0;
+    TrajSample early_done;
+    for (int i = 0; i < 2000; ++i) {
+        const TrajSample a = symmetric.tick(kDt, sp);
+        early_done = early.tick(kDt, sp);
+        symmetric_peak = std::max(symmetric_peak, std::fabs(a.omega));
+        early_peak = std::max(early_peak, std::fabs(early_done.omega));
+        if (a.done && early_done.done) break;
+    }
+    CHECK(early_peak < symmetric_peak);
+    CHECK(early_done.done);
+    CHECK_NEAR(early_done.pose.heading, phx::kPi / 2.0, 1e-9);
+}
+
 PHX_TEST(trajectory_orientation_lag_smooths_heading_retarget) {
     TrajectoryConfig cfg;
     cfg.orient_lag_tau_s = 0.1;
@@ -155,6 +183,36 @@ PHX_TEST(trajectory_orientation_lag_smooths_heading_retarget) {
     // A light low-pass: the first tick's yaw rate must be well below the
     // instant-replan value (no lag would jump toward 30 rad/s territory).
     CHECK(std::fabs(first.omega) < 5.0);
+}
+
+PHX_TEST(trajectory_pose_alignment_moves_gently_then_releases_full_speed) {
+    TrajectoryConfig gated_cfg;
+    gated_cfg.orient_lag_tau_s = 0.0;
+    TrajectoryFollower gated(gated_cfg);
+    gated.reset(phx::Pose{phx::Vec2{0, 0}, 0.0}, phx::Vec2{}, 0.0);
+
+    TrajectoryConfig open_cfg = gated_cfg;
+    open_cfg.pose_align_min_scale = 1.0;
+    TrajectoryFollower open(open_cfg);
+    open.reset(phx::Pose{phx::Vec2{0, 0}, 0.0}, phx::Vec2{}, 0.0);
+
+    const MotionSetpoint sp =
+        make_pos(2.0, 0.0, phx::kPi / 2.0, 2.0, 2.0, 3.0, 6.0);
+    TrajSample gated_mid;
+    TrajSample open_mid;
+    for (int i = 0; i < 50; ++i) {
+        gated_mid = gated.tick(kDt, sp);
+        open_mid = open.tick(kDt, sp);
+    }
+    CHECK(gated_mid.pose.pos.x > 0.0);  // coupled move, not rotate-only
+    CHECK(gated_mid.pose.heading > 0.0);
+    CHECK(gated_mid.vel.norm() < open_mid.vel.norm());
+
+    TrajSample done = gated_mid;
+    for (int i = 0; i < 3000 && !done.done; ++i) done = gated.tick(kDt, sp);
+    CHECK(done.done);
+    CHECK_NEAR(done.pose.pos.x, 2.0, 1e-9);
+    CHECK_NEAR(done.pose.heading, phx::kPi / 2.0, 1e-9);
 }
 
 PHX_TEST(trajectory_fast_pos_slaves_heading_to_drive_direction) {
@@ -176,6 +234,58 @@ PHX_TEST(trajectory_fast_pos_slaves_heading_to_drive_direction) {
     for (int i = 0; i < 2000 && !s.done; ++i) s = f.tick(kDt, sp);
     CHECK(s.done);
     CHECK_NEAR(s.pose.heading, -2.0, 1e-6);
+}
+
+PHX_TEST(trajectory_fast_pos_aligns_before_full_translation_launch) {
+    TrajectoryConfig cfg;
+    cfg.orient_lag_tau_s = 0.0;
+    cfg.pose_align_min_scale = 0.10;
+    TrajectoryFollower gated(cfg);
+    gated.reset(phx::Pose{phx::Vec2{0, 0}, phx::kPi / 2.0},
+                phx::Vec2{}, 0.0);
+
+    TrajectoryConfig open_cfg = cfg;
+    open_cfg.pose_align_min_scale = 1.0;
+    TrajectoryFollower open(open_cfg);
+    open.reset(phx::Pose{phx::Vec2{0, 0}, phx::kPi / 2.0},
+               phx::Vec2{}, 0.0);
+
+    MotionSetpoint sp = make_pos(2.0, 0.0, 0.0, 2.5, 1.2, 3.0, 3.0);
+    sp.fast_pos = true;
+    sp.acc_max_xy_fast = 1.2;
+
+    const TrajSample first = gated.tick(kDt, sp);
+    const TrajSample open_first = open.tick(kDt, sp);
+    CHECK(first.pose.heading < phx::kPi / 2.0);
+    CHECK(first.vel.norm() < open_first.vel.norm() * 0.2);
+
+    TrajSample aligned = first;
+    for (int i = 0; i < 1000 &&
+                    std::fabs(phx::angle_diff(aligned.pose.heading, 0.0)) >
+                        cfg.pose_align_full_speed_rad;
+         ++i) {
+        aligned = gated.tick(kDt, sp);
+    }
+    CHECK(std::fabs(phx::angle_diff(aligned.pose.heading, 0.0)) <=
+          cfg.pose_align_full_speed_rad);
+    const double before = aligned.vel.norm();
+    for (int i = 0; i < 50; ++i) aligned = gated.tick(kDt, sp);
+    CHECK(aligned.vel.norm() > before);
+}
+
+PHX_TEST(trajectory_primary_direction_uses_target_direction_at_rest) {
+    TrajectoryConfig cfg;
+    cfg.orient_lag_tau_s = 0.0;
+    TrajectoryFollower f(cfg);
+    f.reset(phx::Pose{phx::Vec2{0, 0}, phx::kPi / 2.0},
+            phx::Vec2{}, 0.0);
+    MotionSetpoint sp = make_pos(2.0, 0.0, 1.0, 2.5, 1.2, 3.0, 3.0);
+    sp.primary_direction = 0.0;
+
+    const TrajSample first = f.tick(kDt, sp);
+    CHECK(first.pose.heading < phx::kPi / 2.0);
+    CHECK(first.vel.norm() <=
+          sp.acc_max_xy * cfg.pose_align_min_scale * kDt + 1e-9);
 }
 
 PHX_TEST(trajectory_reset_reanchors_reference) {

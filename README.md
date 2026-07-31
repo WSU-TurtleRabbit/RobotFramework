@@ -37,10 +37,13 @@ next MatchCtrl frame.
 
 ### Robot A RLearn calibration
 
-Robot A currently uses the RLearn seed-20260805 motion candidate in
-`config/Motion.yaml` for guarded physical testing. Its complete provenance,
-simulation and held-out metrics, staged validation limits, and the
-field-proven rollback profile are stored in
+Robot A uses the field-validated RLearn seed-20260805 motion profile in
+`config/Motion.yaml`. The validated fast envelope is a 2.5 m/s velocity
+ceiling with at most 2.0 m/s^2 translation acceleration; pure lateral moves
+remain limited to 1.5 m/s and 1.5 m/s^2. Arbitrary simultaneous pose moves
+use 1.5 m/s, 1.0 m/s^2 translation acceleration, and 3.0 rad/s^2 yaw
+acceleration; use 1.25 m/s for turns near or above 90 degrees. Its complete
+provenance, simulation, held-out and field metrics, and rollback profile are stored in
 `config/motion_calibrations.json`. Use
 `tools/select_motion_calibration.py` to verify, apply, or roll back the active
 motion values without editing YAML manually. See `docs/MOTION.md` for the

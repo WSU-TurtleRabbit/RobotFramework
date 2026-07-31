@@ -40,6 +40,12 @@ MatchSettings loadMatchSettings(const std::string& path) {
             opt(e, "odo_vel_gain", s.estimator.odo_vel_gain);
             opt(e, "theta_gain", s.estimator.theta_gain);
             opt(e, "theta_gate_rad", s.estimator.theta_gate_rad);
+            opt(e, "vision_heading_rate_max_rad_s",
+                s.estimator.vision_heading_rate_max_rad_s);
+            opt(e, "vision_heading_jump_tolerance_rad",
+                s.estimator.vision_heading_jump_tolerance_rad);
+            opt(e, "vision_heading_estimator_tolerance_rad",
+                s.estimator.vision_heading_estimator_tolerance_rad);
             opt(e, "meas_std_m", s.estimator.meas_std_m);
             opt(e, "process_accel_std", s.estimator.process_accel_std);
             opt(e, "measurement_dt_s", s.estimator.measurement_dt_s);
@@ -50,10 +56,15 @@ MatchSettings loadMatchSettings(const std::string& path) {
             const YAML::Node t = root["trajectory"];
             opt(t, "cent_acc_max", s.trajectory.cent_acc_max);
             opt(t, "brake_scale", s.trajectory.brake_scale);
+            opt(t, "orient_brake_scale", s.trajectory.orient_brake_scale);
             opt(t, "orient_lag_tau_s", s.trajectory.orient_lag_tau_s);
             opt(t, "fast_pos_align_rad", s.trajectory.fast_pos_align_rad);
             opt(t, "final_orient_dist_m", s.trajectory.final_orient_dist_m);
             opt(t, "drive_dir_min_speed", s.trajectory.drive_dir_min_speed);
+            opt(t, "pose_align_full_speed_rad",
+                s.trajectory.pose_align_full_speed_rad);
+            opt(t, "pose_align_slow_rad", s.trajectory.pose_align_slow_rad);
+            opt(t, "pose_align_min_scale", s.trajectory.pose_align_min_scale);
         }
         if (root["controller"]) {
             const YAML::Node c = root["controller"];

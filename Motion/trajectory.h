@@ -20,7 +20,9 @@
 // trajectory-shaping, not control): FAST_POS slaves the heading to the
 // drive direction and raises accel once aligned; a primary direction keeps
 // the robot's preferred axis along the travel direction until the final
-// approach.
+// approach. At launch, target displacement supplies the otherwise-undefined
+// drive direction and the same pose-alignment gate shares traction with yaw
+// before full translation is released.
 //
 // Pure and deterministic: no clocks, no sockets.
 #pragma once
@@ -39,6 +41,9 @@ struct TrajectoryConfig {
     // Braking acceleration as a fraction of the skill's acceleration limit.
     // Below one starts braking earlier without weakening launch.
     double brake_scale = 1.0;
+    // Rotational counterpart: lower values begin yaw braking earlier and
+    // reduce heading overshoot while translation shares the traction budget.
+    double orient_brake_scale = 1.0;
     // First-order low-pass on the orientation target, seconds (0 = off).
     double orient_lag_tau_s = 0.05;
     // FAST_POS: heading counts as aligned with the drive direction within
@@ -47,9 +52,17 @@ struct TrajectoryConfig {
     // FAST_POS / primaryDirection: inside this distance to the target the
     // FINAL skill orientation takes over from the drive-direction slave, m.
     double final_orient_dist_m = 0.35;
-    // Below this reference speed the drive direction is undefined — hold the
-    // current heading instead of slaving, m/s.
+    // Above this reference speed use velocity as the smooth drive-direction
+    // signal; below it use the displacement to the target, m/s.
     double drive_dir_min_speed = 0.3;
+    // GLOBAL_POS pose moves share traction between translation and yaw. When
+    // the requested final heading is far away, start translation at this
+    // fraction and release full speed/acceleration as heading converges.
+    // This preserves simultaneous move+turn behavior without launching a
+    // large sideways arc from a 90-degree pose mismatch.
+    double pose_align_full_speed_rad = 0.25;
+    double pose_align_slow_rad = 1.20;
+    double pose_align_min_scale = 0.20;
 };
 
 // One regenerated trajectory sample — the reference the controller tracks.

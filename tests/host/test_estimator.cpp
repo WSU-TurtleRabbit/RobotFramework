@@ -246,12 +246,53 @@ PHX_TEST(estimator_heading_gate_rejects_marker_flip_but_keeps_position) {
     CHECK(est.output().pose.heading > 0.0);
     CHECK(est.output().pose.heading < 0.10);
 
-    // The field verifier observed legitimate reverse-leg disagreement at
-    // 0.30 rad. It must remain correctable rather than latching the estimator
-    // into a rotated frame.
+}
+
+PHX_TEST(estimator_heading_rate_gate_rejects_gradual_marker_flip) {
+    EstimatorConfig cfg;
+    cfg.capture_delay_s = 0.0;
+    cfg.theta_gain = 0.5;
+    cfg.theta_gate_rad = 0.45;
+    cfg.vision_heading_rate_max_rad_s = 12.0;
+    cfg.vision_heading_jump_tolerance_rad = 0.08;
+    cfg.vision_heading_estimator_tolerance_rad = 0.20;
+    FusionEstimator est{cfg};
+    est.tick(0.0, kDt, phx::Twist{}, 0.0);
+    est.on_vision(VisionPose{0.0, 0.0, 0.10}, 0.0);
+
+    // Robot A's blurred marker stepped 0.13 -> 0.52 -> 0.60 -> 0.68 rad
+    // across successive frames. Each step is below the broad residual gate,
+    // but the sequence implies impossible yaw while the gyro is stationary.
+    for (int i = 1; i <= 3; ++i) {
+        est.tick(i * 0.016, 0.016, phx::Twist{}, 0.0);
+        const double before = est.output().pose.heading;
+        est.on_vision(VisionPose{0.01 * i, 0.0, 0.44 + 0.08 * i}, 0.0);
+        CHECK_NEAR(est.output().pose.heading, before, 1e-9);
+        CHECK(est.output().pose.pos.x > 0.0);
+    }
+
+    // The marker decoding returns to the physical orientation immediately.
+    est.tick(0.064, 0.016, phx::Twist{}, 0.0);
     const double before = est.output().pose.heading;
-    est.on_vision(VisionPose{0.05, 0.0, 0.35}, 0.0);
+    est.on_vision(VisionPose{0.03, 0.0, 0.12}, 0.0);
     CHECK(est.output().pose.heading > before);
+}
+
+PHX_TEST(estimator_heading_rate_gate_allows_turn_consistent_with_gyro) {
+    EstimatorConfig cfg;
+    cfg.capture_delay_s = 0.0;
+    cfg.theta_gain = 0.5;
+    FusionEstimator est{cfg};
+    est.tick(0.0, kDt, phx::Twist{}, 0.0);
+    est.on_vision(VisionPose{0.0, 0.0, 0.0}, 0.0);
+
+    // Even after a visual gap, a large genuine turn remains admissible when
+    // it agrees with the independently propagated gyro heading.
+    for (int i = 1; i <= 25; ++i) {
+        est.tick(i * kDt, kDt, phx::Twist{}, 3.0);
+    }
+    est.on_vision(VisionPose{0.0, 0.0, 0.30}, 0.0);
+    CHECK_NEAR(est.output().pose.heading, 0.30, 1e-6);
 }
 
 PHX_TEST(estimator_gyro_loss_falls_back_to_odometry_yaw) {

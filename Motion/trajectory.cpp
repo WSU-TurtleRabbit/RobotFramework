@@ -28,9 +28,16 @@ TrajSample TrajectoryFollower::tick(double dt_in, const MotionSetpoint& sp) {
     const phx::Vec2 to_target = sp.target.pos - cur_.pose.pos;
     const double dist = to_target.norm();
     const double speed = cur_.vel.norm();
-    const double drive_dir = speed > cfg_.drive_dir_min_speed
-                                 ? std::atan2(cur_.vel.y, cur_.vel.x)
-                                 : cur_.pose.heading;
+    // At launch there is no velocity direction yet.  Use the actual
+    // displacement instead of the current chassis heading so FAST_POS and
+    // primaryDirection start aligning before translation builds.  Once
+    // moving, the reference velocity remains the smoother direction signal
+    // across ordinary re-targets.
+    const double drive_dir =
+        speed > cfg_.drive_dir_min_speed
+            ? std::atan2(cur_.vel.y, cur_.vel.x)
+            : (dist > 1e-9 ? std::atan2(to_target.y, to_target.x)
+                           : cur_.pose.heading);
 
     // --- orientation target: final heading, drive-direction slave (FAST_POS),
     // or primary-direction offset ---
@@ -55,10 +62,34 @@ TrajSample TrajectoryFollower::tick(double dt_in, const MotionSetpoint& sp) {
 
     // --- effective limits ---
     double acc_max_xy = sp.acc_max_xy;
+    const double orient_error =
+        std::fabs(phx::angle_diff(orient_target, cur_.pose.heading));
     if (sp.fast_pos && slave_to_drive &&
-        std::fabs(phx::angle_diff(drive_dir, cur_.pose.heading)) <
-            cfg_.fast_pos_align_rad) {
+        orient_error < cfg_.fast_pos_align_rad) {
         acc_max_xy = std::max(acc_max_xy, sp.acc_max_xy_fast);
+    }
+    double vel_max_xy = sp.vel_max_xy;
+    // Share traction between translation and rotation for every pose mode.
+    // Previously FAST_POS/primaryDirection bypassed this gate, so they could
+    // launch at full translation while still facing across the requested
+    // path.  That produced a large sideways arc on real omni wheels.
+    const bool gate_translation =
+        slave_to_drive || (!sp.fast_pos && !sp.primary_direction.has_value());
+    if (gate_translation) {
+        const double heading_error =
+            slave_to_drive
+                ? orient_error
+                : std::fabs(
+                      phx::angle_diff(sp.target.heading, cur_.pose.heading));
+        const double full = std::max(0.0, cfg_.pose_align_full_speed_rad);
+        const double slow = std::max(full + 1e-6, cfg_.pose_align_slow_rad);
+        const double min_scale =
+            std::clamp(cfg_.pose_align_min_scale, 0.0, 1.0);
+        const double blend =
+            std::clamp((heading_error - full) / (slow - full), 0.0, 1.0);
+        const double scale = 1.0 - blend * (1.0 - min_scale);
+        vel_max_xy *= scale;
+        acc_max_xy *= scale;
     }
     // Centrifugal omega cap: |w| <= centAccMax / |v_xy| (divisor floored so
     // the cap is inert near standstill).
@@ -68,14 +99,16 @@ TrajSample TrajectoryFollower::tick(double dt_in, const MotionSetpoint& sp) {
     // --- regenerate the translation profile from the reference state ---
     const phx::BangBang2D tr =
         phx::BangBang2D::plan(cur_.pose.pos, cur_.vel, sp.target.pos,
-                              sp.vel_max_xy, acc_max_xy,
+                              vel_max_xy, acc_max_xy,
                               acc_max_xy * std::clamp(cfg_.brake_scale, 0.1, 1.0));
     // --- regenerate the orientation profile (wrapped short way) ---
     const double heading_target =
         cur_.pose.heading + phx::angle_diff(orient_target_filt_, cur_.pose.heading);
+    const double orient_brake =
+        sp.acc_max_w * std::clamp(cfg_.orient_brake_scale, 0.1, 1.0);
     const phx::BangBang1D rot =
         phx::BangBang1D::plan(cur_.pose.heading, cur_.omega, heading_target, 0.0,
-                              vel_max_w_eff, sp.acc_max_w);
+                              vel_max_w_eff, sp.acc_max_w, orient_brake);
 
     const bool done = tr.total_time() <= dt && rot.total_time() <= dt;
     if (done) {

@@ -162,11 +162,26 @@ ControlOutput Controller::map_wheels(double dt, const phx::Twist& body, bool ene
     const std::array<double, 4> prev = prev_wheel_;
     const std::array<double, 4> want =
         kin_.inverse(BodyTwist{body.lin.x, body.lin.y, body.ang});
+    std::array<double, 4> delta{};
+    double peak_delta = 0.0;
     for (int i = 0; i < 4; ++i) {
         // NaN guard: a non-finite setpoint must never reach the motor.
         const double w = std::isfinite(want[i]) ? want[i] : 0.0;
-        const double dv = std::clamp(w - prev[i], -cfg_.out_slew_rev_s2 * dt,
-                                     cfg_.out_slew_rev_s2 * dt);
+        delta[i] = w - prev[i];
+        peak_delta = std::max(peak_delta, std::abs(delta[i]));
+    }
+    // Scale the complete wheel-delta vector as one unit. Independent wheel
+    // clipping bends a simultaneous translation+yaw request because the
+    // smaller deltas arrive early while the largest wheel lags. A shared
+    // scale preserves the inverse-kinematic ratio and therefore the intended
+    // body direction, with the same per-wheel slew ceiling.
+    const double allowed_delta = std::max(0.0, cfg_.out_slew_rev_s2 * dt);
+    const double delta_scale =
+        peak_delta > allowed_delta && peak_delta > 1e-12
+            ? allowed_delta / peak_delta
+            : 1.0;
+    for (int i = 0; i < 4; ++i) {
+        const double dv = delta[i] * delta_scale;
         out.wheel_rev_s[i] =
             std::clamp(prev[i] + dv, -cfg_.wheel_max_rev_s, cfg_.wheel_max_rev_s);
     }

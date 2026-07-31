@@ -180,6 +180,36 @@ PHX_TEST(controller_wheel_vel_direct_with_slew) {
     CHECK(out.energize);
 }
 
+PHX_TEST(controller_body_output_slew_preserves_wheel_delta_ratio) {
+    Kinematics kin;
+    ControllerConfig cfg;
+    cfg.out_slew_rev_s2 = 1.0;  // force output limiting on the first tick
+    Controller c{cfg, kin};
+    c.reset(phx::Twist{});
+    TrajSample r = ref_at(0, 0, 0);
+    r.vel = {1.0, 0.35};
+    r.omega = 2.0;
+    const ControlOutput out =
+        c.tick(kDt, pose_sp(1, 1, 1, 3.0, 3.0), est_at(0, 0, 0), r, 0.0);
+    const auto desired =
+        kin.inverse(BodyTwist{out.cmd_body.lin.x, out.cmd_body.lin.y, out.cmd_body.ang});
+    double common_scale = 0.0;
+    bool have_scale = false;
+    for (int i = 0; i < 4; ++i) {
+        if (std::fabs(desired[i]) < 1e-9) continue;
+        const double scale = out.wheel_rev_s[i] / desired[i];
+        if (!have_scale) {
+            common_scale = scale;
+            have_scale = true;
+        } else {
+            CHECK_NEAR(scale, common_scale, 1e-9);
+        }
+        CHECK(std::fabs(out.wheel_rev_s[i]) <= cfg.out_slew_rev_s2 * kDt + 1e-12);
+    }
+    CHECK(have_scale);
+    CHECK(common_scale > 0.0 && common_scale < 1.0);
+}
+
 PHX_TEST(controller_emergency_ramps_at_tigers_rate_then_coasts) {
     Controller c{ControllerConfig{}, Kinematics{}};
     c.reset(phx::Twist{});

@@ -66,6 +66,15 @@ struct EstimatorConfig {
     // to fuse position. Fast marker blur can flip orientation without
     // invalidating the robot centre detection.
     double theta_gate_rad = 0.45;
+    // A marker flip can arrive as several individually sub-gate steps. Keep
+    // an independent temporal plausibility gate on accepted visual headings.
+    // A measurement is accepted when its inter-frame rate is plausible OR
+    // it agrees closely with the gyro-propagated state. The latter permits a
+    // real fast turn after a camera gap without letting a blurred marker drag
+    // the gyro estimate through a gradual orientation flip.
+    double vision_heading_rate_max_rad_s = 12.0;
+    double vision_heading_jump_tolerance_rad = 0.08;
+    double vision_heading_estimator_tolerance_rad = 0.20;
     // Noise model for the steady-state Kalman gains: vision position
     // std-dev (m) and motion process accel std-dev (m/s^2).
     double meas_std_m = 0.005;
@@ -165,6 +174,8 @@ private:
     uint32_t snap_count_ = 0;
     double k_pos_ = 0.0, k_vel_ = 0.0;  // steady-state Kalman gains
     std::optional<TimedState> last_meas_;
+    std::optional<double> last_vision_heading_;
+    double last_vision_heading_t_s_ = -1e9;
 };
 
 }  // namespace rf
