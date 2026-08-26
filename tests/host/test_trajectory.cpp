@@ -144,6 +144,50 @@ PHX_TEST(trajectory_centrifugal_omega_cap_applies) {
     CHECK(max_speed > 2.0);  // it really got fast (the cap had to bite)
 }
 
+PHX_TEST(trajectory_uses_onboard_heading_for_anisotropic_chassis_limits) {
+    TrajectoryConfig cfg;
+    cfg.body_longitudinal_vel_max = 3.5;
+    cfg.body_lateral_vel_max = 2.2;
+    cfg.body_longitudinal_acc_max = 4.0;
+    cfg.body_lateral_acc_max = 2.0;
+    cfg.pose_align_min_scale = 1.0;
+
+    TrajectoryFollower forward(cfg);
+    forward.reset(phx::Pose{phx::Vec2{0, 0}, 0.0}, phx::Vec2{}, 0.0);
+    TrajectoryFollower lateral(cfg);
+    lateral.reset(phx::Pose{phx::Vec2{0, 0}, 0.0}, phx::Vec2{}, 0.0);
+    const MotionSetpoint forward_sp = make_pos(20.0, 0.0, 0.0, 5.0, 8.0);
+    const MotionSetpoint lateral_sp = make_pos(0.0, 20.0, 0.0, 5.0, 8.0);
+
+    TrajSample fwd;
+    TrajSample side;
+    for (int i = 0; i < 1000; ++i) {
+        fwd = forward.tick(kDt, forward_sp);
+        side = lateral.tick(kDt, lateral_sp);
+    }
+    CHECK(fwd.vel.norm() <= 3.5 + 1e-9);
+    CHECK(fwd.vel.norm() > 3.4);
+    CHECK(side.vel.norm() <= 2.2 + 1e-9);
+    CHECK(side.vel.norm() > 2.1);
+}
+
+PHX_TEST(trajectory_directional_limit_rotates_with_held_chassis_heading) {
+    TrajectoryConfig cfg;
+    cfg.body_longitudinal_vel_max = 3.5;
+    cfg.body_lateral_vel_max = 2.0;
+    cfg.body_longitudinal_acc_max = 4.0;
+    cfg.body_lateral_acc_max = 2.0;
+    cfg.pose_align_min_scale = 1.0;
+    TrajectoryFollower f(cfg);
+    // Facing +Y makes a global +Y route longitudinal, not lateral.
+    f.reset(phx::Pose{phx::Vec2{0, 0}, phx::kPi / 2.0}, phx::Vec2{}, 0.0);
+    const MotionSetpoint sp = make_pos(0.0, 20.0, phx::kPi / 2.0, 5.0, 8.0);
+    TrajSample sample;
+    for (int i = 0; i < 1000; ++i) sample = f.tick(kDt, sp);
+    CHECK(sample.vel.norm() > 3.4);
+    CHECK(sample.vel.norm() <= 3.5 + 1e-9);
+}
+
 PHX_TEST(trajectory_orientation_brake_scale_reduces_peak_yaw_rate) {
     TrajectoryConfig symmetric_cfg;
     symmetric_cfg.orient_lag_tau_s = 0.0;

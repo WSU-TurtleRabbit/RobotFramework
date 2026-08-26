@@ -1,0 +1,12 @@
+# Review overlay only: evaluate a promoted actor without applying it.
+adaptive:
+  enabled: true
+rl:
+  mode: "shadow"
+# Relative paths resolve from the service working directory, which is
+# RobotFramework/build (STARTUP.sh launches from there) — hence the "../".
+  policy_path: "../config/policies/champion.json"
+  residual_limit_fraction: 0.05
+motion_logging:
+  enabled: true
+  rate_hz: 100.0

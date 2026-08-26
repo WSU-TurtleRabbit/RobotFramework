@@ -35,6 +35,13 @@
 namespace rf {
 
 struct TrajectoryConfig {
+    // Chassis-frame anisotropic limits. Omni traction and wheel loading are
+    // stronger fore/aft than in pure strafe. The onboard fused heading picks
+    // the interpolated limit without rotating the chassis onto the path.
+    double body_longitudinal_vel_max = 5.0;
+    double body_lateral_vel_max = 5.0;
+    double body_longitudinal_acc_max = 10.0;
+    double body_lateral_acc_max = 10.0;
     // Lateral accel budget for the centrifugal omega cap, m/s^2: yaw rate is
     // limited to cent_acc_max / |v_xy| (divisor floored at 0.3 m/s).
     double cent_acc_max = 2.5;

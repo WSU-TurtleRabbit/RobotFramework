@@ -116,6 +116,9 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
             imu_roll_dps = attitude.rate_dps.x;
             imu_pitch_dps = attitude.rate_dps.y;
             imu_yaw_dps = attitude.rate_dps.z;
+            imu_accel_x_mps2 = attitude.accel_mps2.x;
+            imu_accel_y_mps2 = attitude.accel_mps2.y;
+            imu_accel_z_mps2 = attitude.accel_mps2.z;
             // Yaw Euler angle from the attitude quaternion, degrees.
             const auto &q = attitude.attitude;
             imu_heading_deg = std::atan2(2.0 * (q.w * q.z + q.x * q.y),
@@ -128,6 +131,9 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
             imu_pitch_dps = std::numeric_limits<double>::quiet_NaN();
             imu_yaw_dps = std::numeric_limits<double>::quiet_NaN();
             imu_heading_deg = std::numeric_limits<double>::quiet_NaN();
+            imu_accel_x_mps2 = std::numeric_limits<double>::quiet_NaN();
+            imu_accel_y_mps2 = std::numeric_limits<double>::quiet_NaN();
+            imu_accel_z_mps2 = std::numeric_limits<double>::quiet_NaN();
         }
     }
 
@@ -140,6 +146,7 @@ std::map<int, MotorTelemetry> Telemetry::cycle(const std::map<int, double> &velo
         mt.temperature = parsed.temperature;
         mt.voltage = parsed.voltage;
         mt.velocity = parsed.velocity;
+        mt.position = parsed.position;
         mt.current = parsed.q_current; // real amps now that the query requests it
         // mt.position = parsed.position;
         mt.mode = static_cast<int>(parsed.mode);

@@ -1,0 +1,190 @@
+# Onboard MatchCtrl motion stack configuration (TIGERs Mannheim
+# architecture). Every knob has a built-in default in the modules
+# (Motion/*.h) — this file only overrides. The controller/trajectory values
+# marked RLEARN below are the seed-20260805 offline champion selected from
+# 61,087 real motor transitions, then physically validated on 2026-07-30.
+# The exact provenance, validated operating envelopes, Phoenix UI fast-brake
+# refinements, and rollback values live in config/motion_calibrations.json.
+
+imu:
+  # Robot A hardware identification 2026-07-30: a vision-correlated field
+  # turn showed that Pi3Hat Z is physical yaw.  Raw Z and SSL-Vision omega
+  # correlated at r=+0.907; the previously selected Y channel stayed near
+  # zero throughout the turn.
+  # Axis: 0=rate_dps.x, 1=rate_dps.y, 2=rate_dps.z.
+  yaw_rate_axis: 2
+  # Sign maps the selected board axis to chassis CCW-positive yaw.
+  yaw_rate_sign: 1.0
+
+match:
+  enabled: true
+  # No accepted MatchCtrl for this long -> onboard EMERGENCY (controlled
+  # ramp to zero, then motors off). TIGERs run 1 s.
+  command_timeout_s: 1.0
+  # Motion only energizes after the first vision fix (a robot that doesn't
+  # know where it is must not drive).
+  require_vision_fix: true
+  # -1 = take Robot_id from Main.yaml.
+  expected_robot_id: -1
+
+# Delayed-vision fusion (TIGERs fusion_ekf architecture).
+estimator:
+  slots: 128                # time-slot ring (one slot per control tick)
+  # Phoenix already encodes camera t_sent-t_capture plus server queue age in
+  # MatchCtrl posDelay (measured about 30 ms on this field).  Adding the old
+  # 20 ms TIGERs default here double-counted capture latency and replayed
+  # slipping wheel odometry too far into the present.
+  capture_delay_s: 0.0
+  vision_timeout_s: 1.0     # beyond -> dead-reckon on encoders + gyro
+  # At 2 m/s, wheel slip during launch can put the INS >15 cm from the
+  # camera-matched state. The old gate then rejected every good correction
+  # until a five-frame snap, producing a large lateral arc. This wider gate
+  # still rejects impossible marker jumps but continuously fuses real motion.
+  gate_speed_mps: 8.0
+  gate_min_dist_m: 0.30
+  gate_snap_after: 5        # consecutive rejections -> we were lost: snap
+  tracking_gain: 1.0        # full delayed-state replay correction
+  odo_vel_gain: 0.5         # body-velocity pull toward wheel odometry
+  # Coupled-pose A/B with temporal marker-flip rejection: 0.50 reduces the
+  # fused-heading lag observed during simultaneous translation and rotation.
+  theta_gain: 0.50
+  # Field verifier measured valid reverse-leg disagreement reaching 0.30 rad.
+  # A 0.25 gate then latched out every correction and rotated global motion
+  # into a lateral arc. Accept physical yaw drift up to 0.45 rad while still
+  # rejecting the camera's observed ~1.2 rad marker flips.
+  theta_gate_rad: 0.45
+  # Reject multi-frame marker-orientation flips whose apparent rate outruns
+  # the chassis. A close match to gyro propagation remains acceptable after
+  # a camera gap, so real turns are not locked out.
+  vision_heading_rate_max_rad_s: 12.0
+  vision_heading_jump_tolerance_rad: 0.08
+  vision_heading_estimator_tolerance_rad: 0.20
+  meas_std_m: 0.005         # vision position noise (Kalman gain model)
+  process_accel_std: 2.0    # motion process noise (Kalman gain model)
+  # Field sweep (4/20/43 ms): this single camera's moving-marker noise needs
+  # conservative correction; wheel odometry carries the high-rate dynamics.
+  measurement_dt_s: 0.004
+  # Decoupled after field sweep: position needs prompt camera correction near
+  # the target, while camera-derived velocity must remain conservative.
+  vision_pos_gain: 1.0
+  vision_vel_gain: 1.50
+
+# Per-tick trajectory regeneration (pose skills).
+trajectory:
+  cent_acc_max: 2.5         # centrifugal omega cap: |w| <= this / |v_xy|
+  # Phoenix UI fast-brake profile: preserve requested launch acceleration
+  # while allowing the same authority for the planned stop.
+  brake_scale: 1.0
+  # Coupled-pose field tuning: begin yaw braking earlier so angular momentum
+  # does not carry a translating chassis through its final orientation.
+  orient_brake_scale: 0.35
+  # RLEARN seed 20260805. Field-proven rollback: 0.05 s.
+  orient_lag_tau_s: 0.0470833679480691
+  fast_pos_align_rad: 0.25  # FAST_POS: aligned enough for the raised accel
+  final_orient_dist_m: 0.35 # inside this, the final orientation applies
+  drive_dir_min_speed: 0.3  # below, hold heading instead of drive-slaving
+  # GLOBAL_POS still moves while turning, but releases full translation only
+  # after large pose-heading errors converge. A 90-degree mismatch otherwise
+  # produced a >0.20 m sideways arc at only 1 m/s on Robot A.
+  pose_align_full_speed_rad: 0.20
+  # Field A/B: about 37% translation at 90 degrees stays concurrent while
+  # preserving the 120 mm path corridor; reversals retain a 15% floor.
+  # Authority rises continuously to 100% as yaw converges.
+  pose_align_slow_rad: 2.05
+  pose_align_min_scale: 0.15
+
+# The Panthera-style control cascade.
+controller:
+  # RLEARN seed 20260805 controller. It passed the complete robust learned-
+  # plant suite with 0 field/speed/wheel violations and the staged 2026-07-30
+  # hardware validation recorded in config/motion_calibrations.json.
+  kp_pos: 5.796512538720543
+  # Guarded field A/B: reduce reliance on wheel-derived lateral velocity
+  # while the chassis is rotating and let vision position close the path.
+  kp_vel: 0.0
+  pos_err_clamp_m: 0.4      # clamp on the position error vector
+  # Strong enough to reject the measured field-direction drift during
+  # simultaneous diagonal translation+yaw; the final vector is still
+  # clamped to each skill's unchanged velocity ceiling.
+  vel_corr_max_mps: 1.2
+  kp_heading: 5.990236905427155
+  # Coupled pose A/B: added rate damping stops the 0.18-0.37 rad yaw rebound
+  # observed after a 90-degree alignment while translating.
+  kp_yaw_rate: 1.0
+  omega_corr_max: 3.01402769272368
+  acc_ff_lead_s: 0.15474522251819184
+  # Match the symmetric trajectory brake instead of imposing a second,
+  # earlier low-authority approach cap.
+  target_brake_scale: 1.0
+  target_brake_reaction_s: 0.17593929651219475
+  emergency_decel_mps2: 8.0 # TIGERs onboard EMERGENCY ramp rate
+  emergency_w_decel_radps2: 30.0
+  # The old 120 rev/s² allowed a bounded velocity-correction step to pin
+  # motor 1 at the moteus 15 A ceiling for >300 ms on arbitrary directions.
+  # 25 still exceeds the ~6 rev/s² kinematic demand of a 1.2 m/s² body
+  # launch by 4x. A 20 rev/s² field trial was rejected because it prolonged
+  # the stressed reversal and caused a current-qualified MOVE drop.
+  # Motor 1 was recalibrated on 2026-07-30; guarded post-calibration trial.
+  # The independent 10 A/300 ms current supervisor remains unchanged.
+  out_slew_rev_s2: 60.0
+  wheel_max_rev_s: 45.0     # wheel saturation (matches moteus velocity limit)
+  # Model feedforward (per-wheel torque): OFF until identified on hardware
+  # via the SINE skill + phoenix-server phoenix/tools/commission.py.
+  model_ff_enabled: false
+  robot_mass_kg: 2.6
+  friction_coulomb_n: 1.5
+  friction_viscous_ns_m: 0.5
+  drivetrain_efficiency: 0.8
+
+# Kicker + dribbler policy (IDENTIFY on the real robots).
+actuators:
+  kick_ms_per_mps: 1.5      # kick speed (m/s) -> solenoid pulse (ms)
+  kick_ms_bias: 2.0
+  kick_pulse_min_ms: 2.0
+  kick_pulse_max_ms: 25.0
+  kicker_recharge_s: 5.2    # > the Arduino's 5 s capacitor guard
+  dribble_us_per_mps: 20.0  # bar speed (m/s) -> ESC us above the 1500 stop
+  # Ball contact (camera stand-in for the IR break-beam).
+  barrier_radius_px: 55.0
+  barrier_bearing_rad: 0.35
+  barrier_min_confidence: 0.3
+  barrier_max_age_s: 0.3
+
+# MatchFeedback reporting.
+feedback:
+  hardware_id: 0            # physical asset id (set per robot!)
+  battery_empty_v: 19.8     # 6S LiPo window for the percent report
+  battery_full_v: 25.2
+  kicker_max_v: 200.0       # nominal scaling constant for the server
+  kicker_recharge_s: 5.0
+  interval_ms: 20           # 50 Hz
+
+# ---------------------------------------------------------------------------
+# Robot-5 adaptive/collect overlay, appended 2026-08-20 to the exact
+# field-proven Motion.yaml (sha256 78eceb68240630b1c11450257bd0f71a992f92ff
+# c4b9c282345c95c29087fe1c). Everything above this line is byte-identical to
+# the robot's proven config. Deploy ONLY after the plain baseline benchmark
+# has passed repeatedly, and diff against the robot's live file first.
+# Relative paths resolve from the service working directory
+# (RobotFramework/build), hence the "../" prefixes.
+# ---------------------------------------------------------------------------
+
+adaptive:
+  enabled: true
+  surface_id: "practice-field"
+  profile_path: "../config/surface_profiles/robot5-practice-field.json"
+  profile_load: true
+  profile_save: true
+  profile_save_interval_s: 5.0
+
+rl:
+  mode: "collect"
+  residual_limit_fraction: 0.05
+
+motion_logging:
+  enabled: true
+  rate_hz: 100.0
+  # Disk bounds — honored once the rotation-capable binary (2026-08-20+) is
+  # deployed; older binaries simply ignore these keys.
+  max_file_mb: 64.0
+  max_total_mb: 512.0

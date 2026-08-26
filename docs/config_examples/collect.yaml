@@ -1,0 +1,11 @@
+# Review overlay only: deterministic adaptation and collection; no actor.
+adaptive:
+  enabled: true
+rl:
+  mode: "collect"
+  residual_limit_fraction: 0.05
+motion_logging:
+  enabled: true
+  rate_hz: 100.0
+  max_file_mb: 64.0     # rotate the active JSONL at this size (0 disables)
+  max_total_mb: 512.0   # delete oldest motion_v1 logs beyond this (0 disables)

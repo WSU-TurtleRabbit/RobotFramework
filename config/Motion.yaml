@@ -7,14 +7,19 @@
 # refinements, and rollback values live in config/motion_calibrations.json.
 
 imu:
-  # Robot A hardware identification 2026-07-30: a vision-correlated field
-  # turn showed that Pi3Hat Z is physical yaw.  Raw Z and SSL-Vision omega
-  # correlated at r=+0.907; the previously selected Y channel stayed near
-  # zero throughout the turn.
+  # Robot A hardware identification 2026-07-31: live spin-out diagnosis
+  # showed physical yaw on the Pi3Hat Y/pitch rate. During commanded yaw,
+  # rate_dps.y reached ~200-265 deg/s while rate_dps.z stayed near zero.
   # Axis: 0=rate_dps.x, 1=rate_dps.y, 2=rate_dps.z.
-  yaw_rate_axis: 2
+  yaw_rate_axis: 1
   # Sign maps the selected board axis to chassis CCW-positive yaw.
-  yaw_rate_sign: 1.0
+  yaw_rate_sign: -1.0
+  # Raw acceleration is logged, but chassis X/Y mapping is not yet verified
+  # for this mounting. -1 keeps it unavailable to adaptation.
+  accel_forward_axis: -1
+  accel_lateral_axis: -1
+  accel_forward_sign: 1.0
+  accel_lateral_sign: 1.0
 
 match:
   enabled: true
@@ -40,14 +45,17 @@ estimator:
   # camera-matched state. The old gate then rejected every good correction
   # until a five-frame snap, producing a large lateral arc. This wider gate
   # still rejects impossible marker jumps but continuously fuses real motion.
-  gate_speed_mps: 8.0
-  gate_min_dist_m: 0.30
-  gate_snap_after: 5        # consecutive rejections -> we were lost: snap
-  tracking_gain: 1.0        # full delayed-state replay correction
-  odo_vel_gain: 0.5         # body-velocity pull toward wheel odometry
+  gate_speed_mps: 3.0
+  gate_min_dist_m: 0.12
+  gate_snap_after: 30       # do not snap to brief single-camera marker jumps
+  tracking_gain: 0.35       # blend delayed corrections instead of teleporting
+  odo_vel_gain: 0.7         # body-velocity pull toward wheel odometry
+  # Match the controller's yaw-rate damping bandwidth. This removes brief
+  # mounted-axis shocks from integrated heading without delaying vision.
+  gyro_rate_filter_tau_s: 0.05
   # Coupled-pose A/B with temporal marker-flip rejection: 0.50 reduces the
   # fused-heading lag observed during simultaneous translation and rotation.
-  theta_gain: 0.50
+  theta_gain: 0.15
   # Field verifier measured valid reverse-leg disagreement reaching 0.30 rad.
   # A 0.25 gate then latched out every correction and rotated global motion
   # into a lateral arc. Accept physical yaw drift up to 0.45 rad while still
@@ -56,9 +64,14 @@ estimator:
   # Reject multi-frame marker-orientation flips whose apparent rate outruns
   # the chassis. A close match to gyro propagation remains acceptable after
   # a camera gap, so real turns are not locked out.
-  vision_heading_rate_max_rad_s: 12.0
-  vision_heading_jump_tolerance_rad: 0.08
-  vision_heading_estimator_tolerance_rad: 0.20
+  vision_heading_rate_max_rad_s: 2.0
+  vision_heading_jump_tolerance_rad: 0.04
+  vision_heading_estimator_tolerance_rad: 0.12
+  # If an abrupt real heading step fails both gates, two nearly identical
+  # raw camera headings may re-lock the estimator. Keep this far below the
+  # observed ~1.2 rad marker flips and require a stable second frame.
+  vision_heading_relock_tolerance_rad: 0.35
+  vision_heading_relock_stability_rad: 0.03
   meas_std_m: 0.005         # vision position noise (Kalman gain model)
   process_accel_std: 2.0    # motion process noise (Kalman gain model)
   # Field sweep (4/20/43 ms): this single camera's moving-marker noise needs
@@ -66,15 +79,23 @@ estimator:
   measurement_dt_s: 0.004
   # Decoupled after field sweep: position needs prompt camera correction near
   # the target, while camera-derived velocity must remain conservative.
-  vision_pos_gain: 1.0
-  vision_vel_gain: 1.50
+  vision_pos_gain: 0.35
+  vision_vel_gain: 0.50
 
 # Per-tick trajectory regeneration (pose skills).
 trajectory:
+  # Onboard fused-heading directional envelope. Longitudinal motion gets high
+  # authority; pure strafe stays inside its wheel/load envelope and diagonals
+  # interpolate smoothly every 4 ms without rotating the chassis to the path.
+  body_longitudinal_vel_max: 4.0
+  body_lateral_vel_max: 2.2
+  body_longitudinal_acc_max: 4.0
+  body_lateral_acc_max: 2.0
   cent_acc_max: 2.5         # centrifugal omega cap: |w| <= this / |v_xy|
   # Phoenix UI fast-brake profile: preserve requested launch acceleration
   # while allowing the same authority for the planned stop.
-  brake_scale: 1.0
+  # Full braking authority is required to stop 3+ m/s finite-field runs.
+  brake_scale: 1.375
   # Coupled-pose field tuning: begin yaw braking earlier so angular momentum
   # does not carry a translating chassis through its final orientation.
   orient_brake_scale: 0.35
@@ -86,11 +107,12 @@ trajectory:
   # GLOBAL_POS still moves while turning, but releases full translation only
   # after large pose-heading errors converge. A 90-degree mismatch otherwise
   # produced a >0.20 m sideways arc at only 1 m/s on Robot A.
-  pose_align_full_speed_rad: 0.20
-  # Field A/B: about 37% translation at 90 degrees stays concurrent while
-  # preserving the 120 mm path corridor; reversals retain a 15% floor.
-  # Authority rises continuously to 100% as yaw converges.
-  pose_align_slow_rad: 2.05
+  # Fixed-heading high-speed A/B on 2026-08-12 showed that the previous
+  # 0.20/2.05 rad blend retained 94% translation at 0.32 rad of NW yaw error,
+  # leaving no wheel/traction authority to recover. Reserve authority early;
+  # translation returns continuously to 100% once heading is within 0.08 rad.
+  pose_align_full_speed_rad: 0.08
+  pose_align_slow_rad: 0.45
   pose_align_min_scale: 0.15
 
 # The Panthera-style control cascade.
@@ -101,32 +123,86 @@ controller:
   kp_pos: 5.796512538720543
   # Guarded field A/B: reduce reliance on wheel-derived lateral velocity
   # while the chassis is rotating and let vision position close the path.
-  kp_vel: 0.0
+  # Real-data champion velocity damping. Safe here because calibration holds
+  # chassis heading rather than combining translation with a large yaw move.
+  kp_vel: 0.7036927208811388
   pos_err_clamp_m: 0.4      # clamp on the position error vector
-  # Strong enough to reject the measured field-direction drift during
-  # simultaneous diagonal translation+yaw; the final vector is still
-  # clamped to each skill's unchanged velocity ceiling.
+  # Keep translation correction strong, but de-rate yaw correction for the
+  # single-camera lab field. A stale/bad heading target must not be able to
+  # turn a long move into a high-rate spin.
   vel_corr_max_mps: 1.2
   kp_heading: 5.990236905427155
-  # Coupled pose A/B: added rate damping stops the 0.18-0.37 rad yaw rebound
-  # observed after a 90-degree alignment while translating.
-  kp_yaw_rate: 1.0
+  # Speed scheduling remains available onboard, but the 0.65/1.45 field
+  # candidate was rejected after repeated west instability. Unity preserves
+  # the last promoted heading controller at every translation speed.
+  high_speed_yaw_start_mps: 1.0
+  high_speed_yaw_full_mps: 2.0
+  high_speed_heading_gain_scale: 1.0
+  high_speed_rate_gain_scale: 1.0
+  # The learned profile uses 0.5. A later 1.0 coupled-pose experiment reduced
+  # rebound after large commanded turns, but fixed-heading omni traces on
+  # 2026-08-12 showed it amplifying launch slip into alternating +/-1--3 rad/s
+  # corrections (226.8 deg/s measured yaw and a 14.5 A motor-1 spike).
+  # With the 50 ms gyro filter in place, guarded diagonal A/B testing found
+  # that 0.5 allowed a sustained NW load disturbance to build ~0.16 rad of
+  # heading error before recovery. 0.7 passed the formerly failing 2.2 m/s
+  # diagonal, but the 2.5 m/s / 2.0 m/s^2 stress case still accumulated
+  # 0.245 rad before its path guard. 0.9 adds damping to that real yaw motion
+  # while the filter still rejects the 20--40 ms sign-changing spikes.
+  kp_yaw_rate: 0.9
+  # Filter the derivative-like gyro feedback, not fused heading. The raw
+  # 250 Hz rate showed alternating 20--40 ms sign changes that the old loop
+  # converted into opposing wheel-load steps during fast omni translation.
+  yaw_rate_filter_tau_s: 0.05
+  # Unexpected-yaw traction sharing. Fast diagonal field traces showed that
+  # encoder velocity can remain accurate while roller/carpet force produces
+  # a sudden chassis yaw. React to filtered gyro-rate error before heading or
+  # path error grows, then restore translation continuously after recovery.
+  yaw_traction_full_radps: 0.35
+  yaw_traction_slow_radps: 1.50
+  yaw_traction_min_scale: 0.20
   omega_corr_max: 3.01402769272368
   acc_ff_lead_s: 0.15474522251819184
   # Match the symmetric trajectory brake instead of imposing a second,
   # earlier low-authority approach cap.
-  target_brake_scale: 1.0
-  target_brake_reaction_s: 0.17593929651219475
+  target_brake_scale: 1.375
+  # Begin the measured-distance approach cap earlier at high speed while
+  # retaining the full physical deceleration request.
+  target_brake_reaction_s: 0.75
+  # Jerk-limited S-curve on the final pose velocity command. At the 4.0 m/s^2
+  # campaign ceiling, 6 m/s^3 reaches full acceleration in 0.67 s: visibly
+  # smooth without turning the launch into a slow crawl. The same bound ramps
+  # braking in continuously; the measured-distance guard above starts early
+  # enough to preserve endpoint capture.
+  pose_jerk_max_xy: 6.0
+  # Chassis-frame jerk ellipse. Longitudinal keeps the fastest controlled
+  # ramp; lateral/mixed wheel loading builds more gradually. This decision is
+  # made onboard every 4 ms from the actual commanded body direction.
+  pose_longitudinal_jerk_max_xy: 6.0
+  pose_lateral_jerk_max_xy: 4.0
+  # Braking is a separate smooth phase: stronger than launch so a 4 m/s
+  # request can still land on a finite field, but jerk-limited rather than a
+  # wheel-command cliff. Values match Phoenix's independent 5.5 m/s^2 model.
+  pose_brake_acc_max_xy: 5.5
+  pose_brake_longitudinal_jerk_max_xy: 40.0
+  pose_brake_lateral_jerk_max_xy: 25.0
+  pose_jerk_max_w: 120.0
   emergency_decel_mps2: 8.0 # TIGERs onboard EMERGENCY ramp rate
   emergency_w_decel_radps2: 30.0
-  # The old 120 rev/s² allowed a bounded velocity-correction step to pin
-  # motor 1 at the moteus 15 A ceiling for >300 ms on arbitrary directions.
-  # 25 still exceeds the ~6 rev/s² kinematic demand of a 1.2 m/s² body
-  # launch by 4x. A 20 rev/s² field trial was rejected because it prolonged
-  # the stressed reversal and caused a current-qualified MOVE drop.
-  # Motor 1 was recalibrated on 2026-07-30; guarded post-calibration trial.
+  # Do not coast merely because the command ramp reached zero. Hold active
+  # zero-velocity braking until measured chassis motion lands; a hardware
+  # safety trip still cuts energization independently. Timeout prevents a
+  # noisy sensor from holding indefinitely.
+  emergency_settle_speed_mps: 0.05
+  emergency_settle_yaw_radps: 0.15
+  emergency_active_brake_timeout_s: 1.50
+  # Higher slew reopened brief motor-1 saturation: repeated identical omni
+  # runs on 2026-08-12 alternated between clean motion and 15 A / 0.36 rad
+  # yaw events. 25 is the field-tested ceiling that still exceeds ordinary
+  # kinematic wheel demand while preventing a near-step yaw correction.
+  # A 20 rev/s² field trial was previously too restrictive.
   # The independent 10 A/300 ms current supervisor remains unchanged.
-  out_slew_rev_s2: 60.0
+  out_slew_rev_s2: 25.0
   wheel_max_rev_s: 45.0     # wheel saturation (matches moteus velocity limit)
   # Model feedforward (per-wheel torque): OFF until identified on hardware
   # via the SINE skill + phoenix-server phoenix/tools/commission.py.
@@ -135,6 +211,73 @@ controller:
   friction_coulomb_n: 1.5
   friction_viscous_ns_m: 0.5
   drivetrain_efficiency: 0.8
+
+# Fast surface/drivetrain identification. Disabled by default so installing
+# this build preserves the field-proven controller exactly. `collect` mode
+# below can be enabled first to validate estimates without applying an RL
+# action; deterministic adaptation is independently gated here.
+adaptive:
+  enabled: false
+  forgetting_factor: 0.998
+  huber_sigma: 3.0
+  min_velocity_error_mps: 0.05
+  max_linear_accel_mps2: 15.0
+  max_angular_accel_radps2: 80.0
+  max_learning_current_a: 9.5
+  max_learning_temperature_c: 65.0
+  max_vision_age_s: 0.15
+  disturbance_accel_mps2: 18.0
+  confidence_threshold: 0.55
+  confidence_decay_s: 4.0
+  parameter_decay_s: 20.0
+  nominal_voltage_v: 23.0
+  default_response_per_s: [8.0, 6.0, 8.0]
+  default_drag_per_s: 0.15
+  max_drag_per_s: 6.0
+  correction_limit_fraction: 0.08
+  correction_slew_linear_mps2: 0.8
+  correction_slew_angular_radps2: 2.0
+  slip_compensation_gain: 0.20
+  max_delay_samples: 15
+  surface_id: "practice-field"
+  profile_path: "../config/surface_profiles/robot5-practice-field.json"
+  profile_load: true
+  profile_save: true
+  profile_save_interval_s: 5.0
+
+# Residual policy lifecycle: off | collect | shadow | bounded. Bounded mode
+# still requires a compatible actor, estimator confidence, healthy telemetry,
+# fresh vision, an on-time loop, residual slew/bounds, and the final wheel
+# constraint layer. No random action generation exists in RobotFramework.
+rl:
+  mode: "off"
+  policy_path: "../config/policies/champion.json"
+  residual_limit_fraction: 0.05
+  residual_slew_linear_mps2: 0.5
+  residual_slew_angular_radps2: 1.5
+  confidence_threshold: 0.65
+  max_consecutive_interventions: 5
+  max_loop_elapsed_s: 0.006
+
+augmentation_safety:
+  velocity_max_mps: 4.0
+  angular_velocity_max_radps: 6.0
+  wheel_max_rev_s: 45.0
+  correction_limit_fraction: 0.15
+  correction_jerk_linear_mps3: 10.0
+  correction_jerk_angular_radps3: 30.0
+  min_bus_voltage_v: 19.0
+  max_temperature_c: 70.0
+  max_current_a: 10.0
+
+# Versioned JSONL is written by a bounded background queue. The legacy text
+# logs remain available during migration.
+motion_logging:
+  enabled: true
+  directory: "logs/motion_v1"
+  rate_hz: 100.0
+  max_file_mb: 64.0     # rotate the active JSONL at this size (0 disables)
+  max_total_mb: 512.0   # delete oldest motion_v1 logs beyond this (0 disables)
 
 # Kicker + dribbler policy (IDENTIFY on the real robots).
 actuators:
@@ -152,7 +295,7 @@ actuators:
 
 # MatchFeedback reporting.
 feedback:
-  hardware_id: 0            # physical asset id (set per robot!)
+  hardware_id: 0            # Robot 5 physical chassis identity reported to Phoenix
   battery_empty_v: 19.8     # 6S LiPo window for the percent report
   battery_full_v: 25.2
   kicker_max_v: 200.0       # nominal scaling constant for the server

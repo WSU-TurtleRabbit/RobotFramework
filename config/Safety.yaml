@@ -7,9 +7,9 @@
 # are never bent toward an axis). SAFE mode shapes instead of hard-stopping;
 # UNSAFE disables the envelope (fault trips and watchdogs still apply).
 envelope:
-  safeLinear: 2.0 # m/s   (historical xLimit/yLimit)
+  safeLinear: 3.5 # m/s   onboard trajectory applies angle-aware limits
   safeAngular: 3.15 # rad/s (historical wLimit)
-  cappedLinear: 2.5 # m/s
+  cappedLinear: 3.5 # m/s
   cappedAngular: 6.0 # rad/s
 
 # A valid drive command older than this stops the robot (legacy v1 path; the

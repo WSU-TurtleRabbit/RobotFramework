@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\tests\host\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\tests\host\test_actuators.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\tests\host\test_controller.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\tests\host\test_decode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\tests\host\test_estimator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\tests\host\test_kinematics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\tests\host\test_match_bridge.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\tests\host\test_match_feedback.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\tests\host\test_matchctrl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\tests\host\test_motor_formats.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\tests\host\test_safety.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\tests\host\test_skills.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\tests\host\test_trajectory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\Networks\decode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\Networks\matchctrl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\Math\kinematics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\Motion\actuators.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\Motion\controller.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\Motion\estimator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\Motion\match_bridge.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\Motion\skills.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\Motion\trajectory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\Safety\supervisor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\Telemetry\match_feedback.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\rishi\Desktop\RoboCup\RobotFramework\tests\host\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{83C6E7D0-6CA4-38D1-87FB-3DCE426FE366}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

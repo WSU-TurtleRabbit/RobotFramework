@@ -47,6 +47,32 @@ void Wheel_math::initalize_math() {
                     kin.wheel_command_scale_negative[i] = v;
             }
         }
+        if (motor["bodyYawCouplingCompensation"]
+            && motor["bodyYawCouplingCompensation"].IsSequence()
+            && motor["bodyYawCouplingCompensation"].size() == 2) {
+            kin.yaw_ff_from_vx =
+                motor["bodyYawCouplingCompensation"][0].as<double>();
+            kin.yaw_ff_from_vy =
+                motor["bodyYawCouplingCompensation"][1].as<double>();
+        }
+        if (motor["motorCommandScaleWest"]
+            && motor["motorCommandScaleWest"].IsSequence()
+            && motor["motorCommandScaleWest"].size() == 4) {
+            for (std::size_t i = 0; i < 4; ++i) {
+                const double v = motor["motorCommandScaleWest"][i].as<double>();
+                if (v >= 0.8 && v <= 1.2)
+                    kin.wheel_command_scale_west[i] = v;
+            }
+        }
+        if (motor["motorCommandScaleEast"]
+            && motor["motorCommandScaleEast"].IsSequence()
+            && motor["motorCommandScaleEast"].size() == 4) {
+            for (std::size_t i = 0; i < 4; ++i) {
+                const double v = motor["motorCommandScaleEast"][i].as<double>();
+                if (v >= 0.8 && v <= 1.2)
+                    kin.wheel_command_scale_east[i] = v;
+            }
+        }
     } catch (const std::exception& e) {
         std::cerr << "Error loading Motor config for kinematics: " << e.what() << std::endl;
         // Keep the physical default from Kinematics.

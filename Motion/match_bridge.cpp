@@ -8,12 +8,14 @@ MatchBridge::MatchBridge(const MatchBridgeConfig& cfg, const Kinematics& kin,
                          const EstimatorConfig& est_cfg,
                          const TrajectoryConfig& traj_cfg,
                          const ControllerConfig& ctrl_cfg,
-                         const ActuatorConfig& act_cfg)
+                         const ActuatorConfig& act_cfg,
+                         const AugmentationConfig& augmentation_cfg)
     : cfg_(cfg),
       estimator_(est_cfg),
       follower_(traj_cfg),
       controller_(ctrl_cfg, kin),
-      actuators_(act_cfg) {}
+      actuators_(act_cfg),
+      augmentor_(augmentation_cfg, kin) {}
 
 MatchAccept MatchBridge::accept(const std::string& datagram, double now_s) {
     const std::optional<MatchCtrl> mc = decode_match_ctrl(datagram);
@@ -56,7 +58,8 @@ MatchAccept MatchBridge::accept(const std::string& datagram, double now_s) {
 }
 
 BridgeTick MatchBridge::tick(double now_s, double dt, const phx::Twist& odo_body,
-                             double gyro_yaw_radps, const BallContactObs& ball) {
+                             double gyro_yaw_radps, const BallContactObs& ball,
+                             const RuntimeFeedback& feedback) {
     last_now_s_ = now_s;
     BridgeTick out;
 
@@ -85,6 +88,7 @@ BridgeTick MatchBridge::tick(double now_s, double dt, const phx::Twist& odo_body
         seen_snaps_ = estimator_.snap_count();
         follower_.reset(est.pose, est.vel_global, est.omega);
         controller_.reset(est.vel_body);
+        augmentor_.reset(est.vel_body);
     }
 
     // 3. Watchdog tier: no accepted frame for command_timeout -> EMERGENCY.
@@ -117,7 +121,15 @@ BridgeTick MatchBridge::tick(double now_s, double dt, const phx::Twist& odo_body
         ref = follower_.tick(dt, sp);
     }
     out.ref = ref;
-    out.ctrl = controller_.tick(dt, sp, est, ref, gyro_yaw_radps);
+    const StableControl stable =
+        controller_.compute(dt, sp, est, ref, gyro_yaw_radps);
+    out.augmentation =
+        augmentor_.step(now_s, dt, sp, ref, est, stable, feedback);
+    out.ctrl = controller_.finalize(dt, stable, out.augmentation.body);
+    out.ctrl.adaptive_delta = out.augmentation.adaptive_delta;
+    out.ctrl.rl_proposed = out.augmentation.rl_proposed;
+    out.ctrl.rl_applied = out.augmentation.rl_applied;
+    out.ctrl.safety_interventions = out.augmentation.interventions;
 
     // 6. Actuators (KD rides every motion skill; EMERGENCY/timeout disarms).
     out.act = actuators_.tick(now_s, sp.kd, ball);
@@ -137,6 +149,7 @@ void MatchBridge::switch_kind(MotionSetpoint::Kind next, const EstimatorOutput& 
         follower_.reset(est.pose, est.vel_global, est.omega);
     }
     controller_.reset(est.vel_body);
+    augmentor_.reset(est.vel_body);
 }
 
 }  // namespace rf

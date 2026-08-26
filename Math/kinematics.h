@@ -107,6 +107,18 @@ struct Kinematics {
         {{1.0, 1.0, 1.0, 1.0}};
     std::array<double, 4> wheel_command_scale_negative =
         {{1.0, 1.0, 1.0, 1.0}};
+    // Identified translation-to-yaw coupling compensation. The physical
+    // chassis can yaw under pure translation even when every wheel tracks
+    // its ideal setpoint. IK adds this yaw feedforward; FK removes the same
+    // coupling so estimator odometry remains in physical body coordinates.
+    double yaw_ff_from_vx = 0.0;  // rad/s per m/s forward
+    double yaw_ff_from_vy = 0.0;  // rad/s per m/s left
+    // Direction-sector command correction. Multiplied only as motion blends
+    // from a 45-degree diagonal toward pure body -x; diagonals/east are 1.0.
+    std::array<double, 4> wheel_command_scale_west = {{1.0, 1.0, 1.0, 1.0}};
+    // Matching correction for pure body +x. It fades out at either 45-degree
+    // diagonal and never changes the independently calibrated west sector.
+    std::array<double, 4> wheel_command_scale_east = {{1.0, 1.0, 1.0, 1.0}};
 
     // Inverse kinematics: body twist -> the four motor velocity setpoints
     // (output rev/s), ready for moteus PositionMode::Command::velocity.

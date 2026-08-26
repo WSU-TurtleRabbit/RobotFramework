@@ -24,7 +24,17 @@ void FusionEstimator::reset() {
     last_meas_.reset();
     last_vision_heading_.reset();
     last_vision_heading_t_s_ = -1e9;
+    last_raw_vision_heading_.reset();
+    last_raw_vision_heading_t_s_ = -1e9;
+    gyro_filter_initialized_ = false;
+    filtered_gyro_w_ = 0.0;
+    last_vision_delay_s_ = 0.0;
+    last_vision_innovation_m_ = 0.0;
+    last_vision_heading_innovation_rad_ = 0.0;
     // snap_count_ is kept: consumers compare, they don't absolute-count.
+    // gyro_bias_radps_ is kept too: it is a learned sensor property, not pose
+    // state. Dropping it on a recovery reset would reintroduce heading drift
+    // for the ~15 s it takes to relearn.
 }
 
 // Steady-state Kalman gains for the constant-velocity model
@@ -95,7 +105,47 @@ void FusionEstimator::tick(double now_s, double dt_in, const phx::Twist& odo_bod
     }
     // Gyro fallback: pi3hat down -> wheel-odometry yaw (noisier, but moving
     // beats blind). Non-finite odometry keeps the last velocity estimate.
-    const double gyro_w = std::isfinite(gyro_yaw_radps) ? gyro_yaw_radps : odo_body.ang;
+    const bool gyro_ok = std::isfinite(gyro_yaw_radps);
+    const double gyro_meas = gyro_ok ? gyro_yaw_radps : odo_body.ang;
+
+    // Online yaw-bias estimation: only while stationary and only on the real
+    // gyro (the odometry fallback carries no gyro bias). Slow low-pass so
+    // sensor noise averages out; hard clamp bounds any damage.
+    if (cfg_.gyro_bias_learn && gyro_ok) {
+        const double lin_sp = std::hypot(odo_body.lin.x, odo_body.lin.y);
+        const bool stationary =
+            std::isfinite(lin_sp) &&
+            lin_sp < cfg_.gyro_bias_stationary_speed_mps &&
+            std::isfinite(odo_body.ang) &&
+            std::fabs(odo_body.ang) < cfg_.gyro_bias_stationary_rate_radps &&
+            std::fabs(gyro_meas) < cfg_.gyro_bias_stationary_rate_radps;
+        if (stationary) {
+            const double a =
+                1.0 - std::exp(-dt / std::max(1e-3, cfg_.gyro_bias_learn_tau_s));
+            gyro_bias_radps_ += a * (gyro_meas - gyro_bias_radps_);
+            gyro_bias_radps_ = std::clamp(gyro_bias_radps_,
+                                          -cfg_.gyro_bias_max_radps,
+                                          cfg_.gyro_bias_max_radps);
+        }
+    }
+
+    // Debias only the real gyro; the odometry-yaw fallback is used as-is.
+    const double gyro_raw = gyro_ok ? (gyro_meas - gyro_bias_radps_) : gyro_meas;
+    double gyro_w = gyro_raw;
+    const double gyro_tau = std::max(0.0, cfg_.gyro_rate_filter_tau_s);
+    if (std::isfinite(gyro_raw) && gyro_tau > 0.0) {
+        if (!gyro_filter_initialized_) {
+            filtered_gyro_w_ = gyro_raw;
+            gyro_filter_initialized_ = true;
+        } else {
+            const double alpha = 1.0 - std::exp(-dt / gyro_tau);
+            filtered_gyro_w_ += alpha * (gyro_raw - filtered_gyro_w_);
+        }
+        gyro_w = filtered_gyro_w_;
+    } else {
+        filtered_gyro_w_ = std::isfinite(gyro_raw) ? gyro_raw : 0.0;
+        gyro_filter_initialized_ = std::isfinite(gyro_raw);
+    }
     const double odo_vx = std::isfinite(odo_body.lin.x) ? odo_body.lin.x : 0.0;
     const double odo_vy = std::isfinite(odo_body.lin.y) ? odo_body.lin.y : 0.0;
 
@@ -143,6 +193,9 @@ void FusionEstimator::on_vision(const VisionPose& pose, double pos_delay_s) {
     const double rx = pose.x - at.x;
     const double ry = pose.y - at.y;
     const double rtheta = phx::angle_diff(pose.heading, at.theta);
+    last_vision_delay_s_ = age_s;
+    last_vision_innovation_m_ = std::hypot(rx, ry);
+    last_vision_heading_innovation_rad_ = rtheta;
 
     // Snap conditions: no fix yet, vision timed out (we dead-reckoned), or a
     // run of rejections (we were lost, not the camera).
@@ -166,6 +219,16 @@ void FusionEstimator::on_vision(const VisionPose& pose, double pos_delay_s) {
     // (through the cross-gain) velocity — this is what pays back wheel slip
     // between fixes.
     State s{at.x, at.y, at.theta, at.vgx, at.vgy};
+    bool stable_raw_heading = false;
+    if (last_raw_vision_heading_.has_value()) {
+        const double raw_dt = at.t_s - last_raw_vision_heading_t_s_;
+        stable_raw_heading = raw_dt >= 0.0 && raw_dt <= 0.05 &&
+            std::fabs(phx::angle_diff(
+                pose.heading, *last_raw_vision_heading_)) <=
+                std::max(0.0, cfg_.vision_heading_relock_stability_rad);
+    }
+    last_raw_vision_heading_ = pose.heading;
+    last_raw_vision_heading_t_s_ = at.t_s;
     if (snap) {
         s.x = pose.x;
         s.y = pose.y;
@@ -191,9 +254,13 @@ void FusionEstimator::on_vision(const VisionPose& pose, double pos_delay_s) {
         const bool agrees_with_gyro =
             std::fabs(rtheta) <=
             std::max(0.0, cfg_.vision_heading_estimator_tolerance_rad);
+        const bool stable_relock =
+            stable_raw_heading &&
+            std::fabs(rtheta) <=
+                std::max(0.0, cfg_.vision_heading_relock_tolerance_rad);
         const bool heading_ok =
             std::fabs(rtheta) <= std::max(0.0, cfg_.theta_gate_rad) &&
-            (temporal_heading_ok || agrees_with_gyro);
+            (temporal_heading_ok || agrees_with_gyro || stable_relock);
         if (heading_ok) {
             s.theta = phx::wrap_angle(s.theta + cfg_.theta_gain * rtheta);
             last_vision_heading_ = pose.heading;
@@ -243,6 +310,10 @@ EstimatorOutput FusionEstimator::output() const {
     o.vision_alive =
         has_fix_ && (s.t_s - last_vision_t_s) <= cfg_.vision_timeout_s;
     o.rejected = rejected_total_;
+    o.vision_age_s = has_fix_ ? std::max(0.0, s.t_s - last_vision_t_s) : 1e9;
+    o.vision_delay_s = last_vision_delay_s_;
+    o.vision_innovation_m = last_vision_innovation_m_;
+    o.vision_heading_innovation_rad = last_vision_heading_innovation_rad_;
     return o;
 }
 

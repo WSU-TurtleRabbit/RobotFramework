@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <ProjectOutputs>
+    <ProjectOutput>
+      <FullPath>C:\Users\jcoeuvhnieuovbueio2v\Documents\GitHub\RoboCup-Research\RobotFramework\tests\host\build-codex\x64\Release\ZERO_CHECK</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\jcoeuvhnieuovbueio2v\Documents\GitHub\RoboCup-Research\RobotFramework\tests\host\build-codex\Release\host_tests.exe</FullPath>
+    </ProjectOutput>
+  </ProjectOutputs>
+  <ContentFiles />
+  <SatelliteDlls />
+  <NonRecipeFileRefs />
+</Project>

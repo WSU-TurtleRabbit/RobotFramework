@@ -3,6 +3,7 @@ add_library(Motion
     estimator.cpp
     trajectory.cpp
     controller.cpp
+    adaptive.cpp
     actuators.cpp
     match_bridge.cpp
     match_config_yaml.cpp

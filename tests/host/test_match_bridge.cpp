@@ -121,13 +121,18 @@ PHX_TEST(bridge_command_timeout_ramps_down_then_coasts) {
     }
     const double x_before_silence = p.x;
     CHECK(x_before_silence > 0.1);  // it really moved
-    // Silence. The robot must ramp down (not cliff) and then coast.
+    // Silence. The robot must ramp down (not cliff), actively brake until
+    // measured motion lands, and then coast.
     bool saw_energized_after_timeout = false;
     double ramp_measured = -1.0;
     for (int i = 0; i < 500 && ramp_measured < 0; ++i) {  // up to 2 s
         const BridgeTick t = b.tick(now, kDt, p.odo(), p.odo().ang, BallContactObs{});
         if (t.emergency && t.ctrl.energize) saw_energized_after_timeout = true;
         if (!t.ctrl.energize && t.emergency) ramp_measured = now - (1.0 + 1.0);
+        // Energized zero velocity is active braking by the moteus inner
+        // loops. Once de-energized, retain the plant velocity to represent
+        // coasting (this simple plant has no passive drag model).
+        if (t.ctrl.energize) p.wheels = t.ctrl.wheel_rev_s;
         p.step(kDt);
         now += kDt;
     }

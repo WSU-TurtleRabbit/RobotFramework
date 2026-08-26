@@ -1,0 +1,1096 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineSystem.cmake:212 (message)"
+      - "CMakeLists.txt:13 (project)"
+    message: |
+      The system is: Windows - 10.0.26200 - ARM64
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:462 (find_file)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:500 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:13 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCXXCompilerId.cpp.in"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/"
+    found: "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeCXXCompilerId.cpp.in"
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\rishi\\.codex\\tmp\\arg0\\codex-arg04kq5tc"
+        - "C:\\Users\\rishi\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\node_modules\\@openai\\codex-win32-arm64\\vendor\\aarch64-pc-windows-msvc\\codex-path"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\1E.Performance.Assist\\Extensibility\\NomadBranch"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\Git\\clangarm64\\bin"
+        - "C:\\Program Files\\Git\\usr\\bin"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Users\\rishi\\.kimi-code\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Python\\Python312\\Scripts\\"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Python\\Python312\\"
+        - "C:\\Users\\rishi\\.local\\bin\\"
+        - "C:\\Users\\rishi\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Fiddler"
+        - "C:\\Users\\rishi\\.dotnet\\tools"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\rishi\\AppData\\Roaming\\npm"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.1-full_build\\bin"
+        - "c:\\users\\rishi\\appdata\\roaming\\python\\python312\\scripts"
+        - "C:\\Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c"
+        - "C:\\Program Files\\PsychoPy\\DLLs"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:13 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+      Build started 12/08/2026 3:36:30 PM.
+      
+      Project "C:\\Users\\rishi\\Desktop\\RoboCup\\RobotFramework\\tests\\host\\build-final\\CMakeFiles\\4.1.2-msvc8\\CompilerIdCXX\\CompilerIdCXX.vcxproj" on node 1 (default targets).
+      PrepareForBuild:
+        Creating directory "Debug\\".
+        Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+        Creating directory "Debug\\CompilerIdCXX.tlog\\".
+      InitializeBuildStatus:
+        Creating "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+        Touching "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
+      VcpkgTripletSelection:
+        Using triplet "arm64-windows" from "C:\\vcpkg\\installed\\arm64-windows\\"
+        Using normalized configuration "Release"
+      ClCompile:
+        C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostArm64\\arm64\\CL.exe /c /I"C:\\vcpkg\\installed\\arm64-windows\\include" /nologo /W0 /WX- /diagnostics:column /Od /Oy- /D _ARM64_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE=1 /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc145.pdb" /external:W0 /Gd /TP /analyze- /FC /errorReport:queue CMakeCXXCompilerId.cpp
+        CMakeCXXCompilerId.cpp
+      Link:
+        C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostArm64\\arm64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdCXX.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:"C:\\vcpkg\\installed\\arm64-windows\\lib" /LIBPATH:"C:\\vcpkg\\installed\\arm64-windows\\lib\\manual-link" kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib "C:\\vcpkg\\installed\\arm64-windows\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdCXX.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdCXX.lib" /MACHINE:ARM64 Debug\\CMakeCXXCompilerId.obj
+        CompilerIdCXX.vcxproj -> C:\\Users\\rishi\\Desktop\\RoboCup\\RobotFramework\\tests\\host\\build-final\\CMakeFiles\\4.1.2-msvc8\\CompilerIdCXX\\CompilerIdCXX.exe
+      AppLocalFromInstalled:
+        pwsh.exe -ExecutionPolicy Bypass -noprofile -File "C:\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "C:\\Users\\rishi\\Desktop\\RoboCup\\RobotFramework\\tests\\host\\build-final\\CMakeFiles\\4.1.2-msvc8\\CompilerIdCXX\\CompilerIdCXX.exe" "C:\\vcpkg\\installed\\arm64-windows\\bin" "Debug\\CompilerIdCXX.tlog\\CompilerIdCXX.write.1u.tlog" "Debug\\vcpkg.applocal.log"
+        'pwsh.exe' is not recognized as an internal or external command,
+        operable program or batch file.
+        The command "pwsh.exe -ExecutionPolicy Bypass -noprofile -File "C:\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "C:\\Users\\rishi\\Desktop\\RoboCup\\RobotFramework\\tests\\host\\build-final\\CMakeFiles\\4.1.2-msvc8\\CompilerIdCXX\\CompilerIdCXX.exe" "C:\\vcpkg\\installed\\arm64-windows\\bin" "Debug\\CompilerIdCXX.tlog\\CompilerIdCXX.write.1u.tlog" "Debug\\vcpkg.applocal.log"" exited with code 9009.
+        "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -ExecutionPolicy Bypass -noprofile -File "C:\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "C:\\Users\\rishi\\Desktop\\RoboCup\\RobotFramework\\tests\\host\\build-final\\CMakeFiles\\4.1.2-msvc8\\CompilerIdCXX\\CompilerIdCXX.exe" "C:\\vcpkg\\installed\\arm64-windows\\bin" "Debug\\CompilerIdCXX.tlog\\CompilerIdCXX.write.1u.tlog" "Debug\\vcpkg.applocal.log"
+      PostBuildEvent:
+        for %%i in (cl.exe) do @echo CMAKE_CXX_COMPILER=%%~$PATH:i
+        :VCEnd
+        CMAKE_CXX_COMPILER=C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.50.35717\\bin\\Hostarm64\\arm64\\cl.exe
+      FinalizeBuildStatus:
+        Deleting file "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
+        Touching "Debug\\CompilerIdCXX.tlog\\CompilerIdCXX.lastbuildstate".
+      Done Building Project "C:\\Users\\rishi\\Desktop\\RoboCup\\RobotFramework\\tests\\host\\build-final\\CMakeFiles\\4.1.2-msvc8\\CompilerIdCXX\\CompilerIdCXX.vcxproj" (default targets).
+      
+      Build succeeded.
+          0 Warning(s)
+          0 Error(s)
+      
+      Time Elapsed 00:00:03.11
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.vcxproj"
+      
+      The CXX compiler identification is MSVC, found in:
+        C:/Users/rishi/Desktop/RoboCup/RobotFramework/tests/host/build-final/CMakeFiles/4.1.2-msvc8/CompilerIdCXX/CompilerIdCXX.exe
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:37 (find_program)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:65 (__resolve_tool_path)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:103 (__resolve_linker_path)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:13 (project)"
+    mode: "program"
+    variable: "_CMAKE_TOOL_WITH_PATH"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "link"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/"
+      - "C:/Users/rishi/.codex/tmp/arg0/codex-arg04kq5tc/"
+      - "C:/Users/rishi/AppData/Roaming/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-arm64/vendor/aarch64-pc-windows-msvc/codex-path/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/HP/1E.Performance.Assist/Extensibility/NomadBranch/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/Git/clangarm64/bin/"
+      - "C:/Program Files/Git/usr/bin/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Users/rishi/.kimi-code/bin/"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/Scripts/"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/"
+      - "C:/Users/rishi/.local/bin/"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/rishi/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/rishi/AppData/Local/Programs/Fiddler/"
+      - "C:/Users/rishi/.dotnet/tools/"
+      - "C:/Users/rishi/AppData/Local/Programs/cursor/resources/app/bin/"
+      - "C:/Users/rishi/AppData/Local/GitHubDesktop/bin/"
+      - "C:/Users/rishi/AppData/Roaming/npm/"
+      - "C:/Users/rishi/AppData/Local/Programs/Ollama/"
+      - "C:/Users/rishi/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/"
+      - "C:/Users/rishi/AppData/Roaming/Python/Python312/Scripts/"
+      - "C:/Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c/"
+      - "C:/Program Files/PsychoPy/DLLs/"
+    searched_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/link.com"
+    found: "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/link.exe"
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\rishi\\.codex\\tmp\\arg0\\codex-arg04kq5tc"
+        - "C:\\Users\\rishi\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\node_modules\\@openai\\codex-win32-arm64\\vendor\\aarch64-pc-windows-msvc\\codex-path"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\1E.Performance.Assist\\Extensibility\\NomadBranch"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\Git\\clangarm64\\bin"
+        - "C:\\Program Files\\Git\\usr\\bin"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Users\\rishi\\.kimi-code\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Python\\Python312\\Scripts\\"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Python\\Python312\\"
+        - "C:\\Users\\rishi\\.local\\bin\\"
+        - "C:\\Users\\rishi\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Fiddler"
+        - "C:\\Users\\rishi\\.dotnet\\tools"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\rishi\\AppData\\Roaming\\npm"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.1-full_build\\bin"
+        - "c:\\users\\rishi\\appdata\\roaming\\python\\python312\\scripts"
+        - "C:\\Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c"
+        - "C:\\Program Files\\PsychoPy\\DLLs"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:37 (find_program)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:65 (__resolve_tool_path)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:104 (__resolve_linker_path)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:13 (project)"
+    mode: "program"
+    variable: "_CMAKE_TOOL_WITH_PATH"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "lld-link"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/"
+      - "C:/Users/rishi/.codex/tmp/arg0/codex-arg04kq5tc/"
+      - "C:/Users/rishi/AppData/Roaming/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-arm64/vendor/aarch64-pc-windows-msvc/codex-path/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/HP/1E.Performance.Assist/Extensibility/NomadBranch/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/Git/clangarm64/bin/"
+      - "C:/Program Files/Git/usr/bin/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Users/rishi/.kimi-code/bin/"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/Scripts/"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/"
+      - "C:/Users/rishi/.local/bin/"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/rishi/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/rishi/AppData/Local/Programs/Fiddler/"
+      - "C:/Users/rishi/.dotnet/tools/"
+      - "C:/Users/rishi/AppData/Local/Programs/cursor/resources/app/bin/"
+      - "C:/Users/rishi/AppData/Local/GitHubDesktop/bin/"
+      - "C:/Users/rishi/AppData/Roaming/npm/"
+      - "C:/Users/rishi/AppData/Local/Programs/Ollama/"
+      - "C:/Users/rishi/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/"
+      - "C:/Users/rishi/AppData/Roaming/Python/Python312/Scripts/"
+      - "C:/Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c/"
+      - "C:/Program Files/PsychoPy/DLLs/"
+    searched_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/lld-link.com"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/lld-link.exe"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/lld-link"
+      - "C:/Users/rishi/.codex/tmp/arg0/codex-arg04kq5tc/lld-link.com"
+      - "C:/Users/rishi/.codex/tmp/arg0/codex-arg04kq5tc/lld-link.exe"
+      - "C:/Users/rishi/.codex/tmp/arg0/codex-arg04kq5tc/lld-link"
+      - "C:/Users/rishi/AppData/Roaming/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-arm64/vendor/aarch64-pc-windows-msvc/codex-path/lld-link.com"
+      - "C:/Users/rishi/AppData/Roaming/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-arm64/vendor/aarch64-pc-windows-msvc/codex-path/lld-link.exe"
+      - "C:/Users/rishi/AppData/Roaming/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-arm64/vendor/aarch64-pc-windows-msvc/codex-path/lld-link"
+      - "C:/Windows/System32/lld-link.com"
+      - "C:/Windows/System32/lld-link.exe"
+      - "C:/Windows/System32/lld-link"
+      - "C:/Windows/lld-link.com"
+      - "C:/Windows/lld-link.exe"
+      - "C:/Windows/lld-link"
+      - "C:/Windows/System32/wbem/lld-link.com"
+      - "C:/Windows/System32/wbem/lld-link.exe"
+      - "C:/Windows/System32/wbem/lld-link"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/lld-link"
+      - "C:/Windows/System32/OpenSSH/lld-link.com"
+      - "C:/Windows/System32/OpenSSH/lld-link.exe"
+      - "C:/Windows/System32/OpenSSH/lld-link"
+      - "C:/Program Files/HP/1E.Performance.Assist/Extensibility/NomadBranch/lld-link.com"
+      - "C:/Program Files/HP/1E.Performance.Assist/Extensibility/NomadBranch/lld-link.exe"
+      - "C:/Program Files/HP/1E.Performance.Assist/Extensibility/NomadBranch/lld-link"
+      - "C:/Program Files/Git/cmd/lld-link.com"
+      - "C:/Program Files/Git/cmd/lld-link.exe"
+      - "C:/Program Files/Git/cmd/lld-link"
+      - "C:/Program Files/Git/clangarm64/bin/lld-link.com"
+      - "C:/Program Files/Git/clangarm64/bin/lld-link.exe"
+      - "C:/Program Files/Git/clangarm64/bin/lld-link"
+      - "C:/Program Files/Git/usr/bin/lld-link.com"
+      - "C:/Program Files/Git/usr/bin/lld-link.exe"
+      - "C:/Program Files/Git/usr/bin/lld-link"
+      - "C:/Program Files/dotnet/lld-link.com"
+      - "C:/Program Files/dotnet/lld-link.exe"
+      - "C:/Program Files/dotnet/lld-link"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/lld-link"
+      - "C:/Program Files/nodejs/lld-link.com"
+      - "C:/Program Files/nodejs/lld-link.exe"
+      - "C:/Program Files/nodejs/lld-link"
+      - "C:/Users/rishi/.kimi-code/bin/lld-link.com"
+      - "C:/Users/rishi/.kimi-code/bin/lld-link.exe"
+      - "C:/Users/rishi/.kimi-code/bin/lld-link"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/Scripts/lld-link.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/Scripts/lld-link.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/Scripts/lld-link"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/lld-link.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/lld-link.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/lld-link"
+      - "C:/Users/rishi/.local/bin/lld-link.com"
+      - "C:/Users/rishi/.local/bin/lld-link.exe"
+      - "C:/Users/rishi/.local/bin/lld-link"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WindowsApps/lld-link.com"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WindowsApps/lld-link.exe"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WindowsApps/lld-link"
+      - "C:/Users/rishi/AppData/Local/Programs/Microsoft VS Code/bin/lld-link.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Microsoft VS Code/bin/lld-link.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Microsoft VS Code/bin/lld-link"
+      - "C:/Users/rishi/AppData/Local/Programs/Fiddler/lld-link.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Fiddler/lld-link.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Fiddler/lld-link"
+      - "C:/Users/rishi/.dotnet/tools/lld-link.com"
+      - "C:/Users/rishi/.dotnet/tools/lld-link.exe"
+      - "C:/Users/rishi/.dotnet/tools/lld-link"
+      - "C:/Users/rishi/AppData/Local/Programs/cursor/resources/app/bin/lld-link.com"
+      - "C:/Users/rishi/AppData/Local/Programs/cursor/resources/app/bin/lld-link.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/cursor/resources/app/bin/lld-link"
+      - "C:/Users/rishi/AppData/Local/GitHubDesktop/bin/lld-link.com"
+      - "C:/Users/rishi/AppData/Local/GitHubDesktop/bin/lld-link.exe"
+      - "C:/Users/rishi/AppData/Local/GitHubDesktop/bin/lld-link"
+      - "C:/Users/rishi/AppData/Roaming/npm/lld-link.com"
+      - "C:/Users/rishi/AppData/Roaming/npm/lld-link.exe"
+      - "C:/Users/rishi/AppData/Roaming/npm/lld-link"
+      - "C:/Users/rishi/AppData/Local/Programs/Ollama/lld-link.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Ollama/lld-link.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Ollama/lld-link"
+      - "C:/Users/rishi/AppData/Local/Programs/Antigravity/bin/lld-link.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Antigravity/bin/lld-link.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Antigravity/bin/lld-link"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/lld-link.com"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/lld-link.exe"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/lld-link"
+      - "C:/Users/rishi/AppData/Roaming/Python/Python312/Scripts/lld-link.com"
+      - "C:/Users/rishi/AppData/Roaming/Python/Python312/Scripts/lld-link.exe"
+      - "C:/Users/rishi/AppData/Roaming/Python/Python312/Scripts/lld-link"
+      - "C:/Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c/lld-link.com"
+      - "C:/Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c/lld-link.exe"
+      - "C:/Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c/lld-link"
+      - "C:/Program Files/PsychoPy/DLLs/lld-link.com"
+      - "C:/Program Files/PsychoPy/DLLs/lld-link.exe"
+      - "C:/Program Files/PsychoPy/DLLs/lld-link"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\rishi\\.codex\\tmp\\arg0\\codex-arg04kq5tc"
+        - "C:\\Users\\rishi\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\node_modules\\@openai\\codex-win32-arm64\\vendor\\aarch64-pc-windows-msvc\\codex-path"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\1E.Performance.Assist\\Extensibility\\NomadBranch"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\Git\\clangarm64\\bin"
+        - "C:\\Program Files\\Git\\usr\\bin"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Users\\rishi\\.kimi-code\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Python\\Python312\\Scripts\\"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Python\\Python312\\"
+        - "C:\\Users\\rishi\\.local\\bin\\"
+        - "C:\\Users\\rishi\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Fiddler"
+        - "C:\\Users\\rishi\\.dotnet\\tools"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\rishi\\AppData\\Roaming\\npm"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.1-full_build\\bin"
+        - "c:\\users\\rishi\\appdata\\roaming\\python\\python312\\scripts"
+        - "C:\\Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c"
+        - "C:\\Program Files\\PsychoPy\\DLLs"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:13 (project)"
+    mode: "program"
+    variable: "CMAKE_LINKER"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "link"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/"
+      - "C:/Users/rishi/.codex/tmp/arg0/codex-arg04kq5tc/"
+      - "C:/Users/rishi/AppData/Roaming/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-arm64/vendor/aarch64-pc-windows-msvc/codex-path/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/HP/1E.Performance.Assist/Extensibility/NomadBranch/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/Git/clangarm64/bin/"
+      - "C:/Program Files/Git/usr/bin/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Users/rishi/.kimi-code/bin/"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/Scripts/"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/"
+      - "C:/Users/rishi/.local/bin/"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/rishi/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/rishi/AppData/Local/Programs/Fiddler/"
+      - "C:/Users/rishi/.dotnet/tools/"
+      - "C:/Users/rishi/AppData/Local/Programs/cursor/resources/app/bin/"
+      - "C:/Users/rishi/AppData/Local/GitHubDesktop/bin/"
+      - "C:/Users/rishi/AppData/Roaming/npm/"
+      - "C:/Users/rishi/AppData/Local/Programs/Ollama/"
+      - "C:/Users/rishi/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/"
+      - "C:/Users/rishi/AppData/Roaming/Python/Python312/Scripts/"
+      - "C:/Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c/"
+      - "C:/Program Files/PsychoPy/DLLs/"
+    searched_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/link.com"
+    found: "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/link.exe"
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\rishi\\.codex\\tmp\\arg0\\codex-arg04kq5tc"
+        - "C:\\Users\\rishi\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\node_modules\\@openai\\codex-win32-arm64\\vendor\\aarch64-pc-windows-msvc\\codex-path"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\1E.Performance.Assist\\Extensibility\\NomadBranch"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\Git\\clangarm64\\bin"
+        - "C:\\Program Files\\Git\\usr\\bin"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Users\\rishi\\.kimi-code\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Python\\Python312\\Scripts\\"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Python\\Python312\\"
+        - "C:\\Users\\rishi\\.local\\bin\\"
+        - "C:\\Users\\rishi\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Fiddler"
+        - "C:\\Users\\rishi\\.dotnet\\tools"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\rishi\\AppData\\Roaming\\npm"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.1-full_build\\bin"
+        - "c:\\users\\rishi\\appdata\\roaming\\python\\python312\\scripts"
+        - "C:\\Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c"
+        - "C:\\Program Files\\PsychoPy\\DLLs"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:13 (project)"
+    mode: "program"
+    variable: "CMAKE_MT"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "mt"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/"
+      - "C:/Users/rishi/.codex/tmp/arg0/codex-arg04kq5tc/"
+      - "C:/Users/rishi/AppData/Roaming/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-arm64/vendor/aarch64-pc-windows-msvc/codex-path/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/HP/1E.Performance.Assist/Extensibility/NomadBranch/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/Git/clangarm64/bin/"
+      - "C:/Program Files/Git/usr/bin/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Users/rishi/.kimi-code/bin/"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/Scripts/"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/"
+      - "C:/Users/rishi/.local/bin/"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/rishi/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/rishi/AppData/Local/Programs/Fiddler/"
+      - "C:/Users/rishi/.dotnet/tools/"
+      - "C:/Users/rishi/AppData/Local/Programs/cursor/resources/app/bin/"
+      - "C:/Users/rishi/AppData/Local/GitHubDesktop/bin/"
+      - "C:/Users/rishi/AppData/Roaming/npm/"
+      - "C:/Users/rishi/AppData/Local/Programs/Ollama/"
+      - "C:/Users/rishi/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/"
+      - "C:/Users/rishi/AppData/Roaming/Python/Python312/Scripts/"
+      - "C:/Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c/"
+      - "C:/Program Files/PsychoPy/DLLs/"
+    searched_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/mt.com"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/mt.exe"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/mt"
+      - "C:/Users/rishi/.codex/tmp/arg0/codex-arg04kq5tc/mt.com"
+      - "C:/Users/rishi/.codex/tmp/arg0/codex-arg04kq5tc/mt.exe"
+      - "C:/Users/rishi/.codex/tmp/arg0/codex-arg04kq5tc/mt"
+      - "C:/Users/rishi/AppData/Roaming/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-arm64/vendor/aarch64-pc-windows-msvc/codex-path/mt.com"
+      - "C:/Users/rishi/AppData/Roaming/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-arm64/vendor/aarch64-pc-windows-msvc/codex-path/mt.exe"
+      - "C:/Users/rishi/AppData/Roaming/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-arm64/vendor/aarch64-pc-windows-msvc/codex-path/mt"
+      - "C:/Windows/System32/mt.com"
+      - "C:/Windows/System32/mt.exe"
+      - "C:/Windows/System32/mt"
+      - "C:/Windows/mt.com"
+      - "C:/Windows/mt.exe"
+      - "C:/Windows/mt"
+      - "C:/Windows/System32/wbem/mt.com"
+      - "C:/Windows/System32/wbem/mt.exe"
+      - "C:/Windows/System32/wbem/mt"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/mt"
+      - "C:/Windows/System32/OpenSSH/mt.com"
+      - "C:/Windows/System32/OpenSSH/mt.exe"
+      - "C:/Windows/System32/OpenSSH/mt"
+      - "C:/Program Files/HP/1E.Performance.Assist/Extensibility/NomadBranch/mt.com"
+      - "C:/Program Files/HP/1E.Performance.Assist/Extensibility/NomadBranch/mt.exe"
+      - "C:/Program Files/HP/1E.Performance.Assist/Extensibility/NomadBranch/mt"
+      - "C:/Program Files/Git/cmd/mt.com"
+      - "C:/Program Files/Git/cmd/mt.exe"
+      - "C:/Program Files/Git/cmd/mt"
+      - "C:/Program Files/Git/clangarm64/bin/mt.com"
+      - "C:/Program Files/Git/clangarm64/bin/mt.exe"
+      - "C:/Program Files/Git/clangarm64/bin/mt"
+      - "C:/Program Files/Git/usr/bin/mt.com"
+      - "C:/Program Files/Git/usr/bin/mt.exe"
+      - "C:/Program Files/Git/usr/bin/mt"
+      - "C:/Program Files/dotnet/mt.com"
+      - "C:/Program Files/dotnet/mt.exe"
+      - "C:/Program Files/dotnet/mt"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/mt.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/mt.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/mt"
+      - "C:/Program Files/nodejs/mt.com"
+      - "C:/Program Files/nodejs/mt.exe"
+      - "C:/Program Files/nodejs/mt"
+      - "C:/Users/rishi/.kimi-code/bin/mt.com"
+      - "C:/Users/rishi/.kimi-code/bin/mt.exe"
+      - "C:/Users/rishi/.kimi-code/bin/mt"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/Scripts/mt.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/Scripts/mt.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/Scripts/mt"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/mt.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/mt.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/mt"
+      - "C:/Users/rishi/.local/bin/mt.com"
+      - "C:/Users/rishi/.local/bin/mt.exe"
+      - "C:/Users/rishi/.local/bin/mt"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WindowsApps/mt.com"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WindowsApps/mt.exe"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WindowsApps/mt"
+      - "C:/Users/rishi/AppData/Local/Programs/Microsoft VS Code/bin/mt.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Microsoft VS Code/bin/mt.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Microsoft VS Code/bin/mt"
+      - "C:/Users/rishi/AppData/Local/Programs/Fiddler/mt.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Fiddler/mt.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Fiddler/mt"
+      - "C:/Users/rishi/.dotnet/tools/mt.com"
+      - "C:/Users/rishi/.dotnet/tools/mt.exe"
+      - "C:/Users/rishi/.dotnet/tools/mt"
+      - "C:/Users/rishi/AppData/Local/Programs/cursor/resources/app/bin/mt.com"
+      - "C:/Users/rishi/AppData/Local/Programs/cursor/resources/app/bin/mt.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/cursor/resources/app/bin/mt"
+      - "C:/Users/rishi/AppData/Local/GitHubDesktop/bin/mt.com"
+      - "C:/Users/rishi/AppData/Local/GitHubDesktop/bin/mt.exe"
+      - "C:/Users/rishi/AppData/Local/GitHubDesktop/bin/mt"
+      - "C:/Users/rishi/AppData/Roaming/npm/mt.com"
+      - "C:/Users/rishi/AppData/Roaming/npm/mt.exe"
+      - "C:/Users/rishi/AppData/Roaming/npm/mt"
+      - "C:/Users/rishi/AppData/Local/Programs/Ollama/mt.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Ollama/mt.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Ollama/mt"
+      - "C:/Users/rishi/AppData/Local/Programs/Antigravity/bin/mt.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Antigravity/bin/mt.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Antigravity/bin/mt"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/mt.com"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/mt.exe"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/mt"
+      - "C:/Users/rishi/AppData/Roaming/Python/Python312/Scripts/mt.com"
+      - "C:/Users/rishi/AppData/Roaming/Python/Python312/Scripts/mt.exe"
+      - "C:/Users/rishi/AppData/Roaming/Python/Python312/Scripts/mt"
+      - "C:/Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c/mt.com"
+      - "C:/Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c/mt.exe"
+      - "C:/Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c/mt"
+      - "C:/Program Files/PsychoPy/DLLs/mt.com"
+      - "C:/Program Files/PsychoPy/DLLs/mt.exe"
+      - "C:/Program Files/PsychoPy/DLLs/mt"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\rishi\\.codex\\tmp\\arg0\\codex-arg04kq5tc"
+        - "C:\\Users\\rishi\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\node_modules\\@openai\\codex-win32-arm64\\vendor\\aarch64-pc-windows-msvc\\codex-path"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\1E.Performance.Assist\\Extensibility\\NomadBranch"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\Git\\clangarm64\\bin"
+        - "C:\\Program Files\\Git\\usr\\bin"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Users\\rishi\\.kimi-code\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Python\\Python312\\Scripts\\"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Python\\Python312\\"
+        - "C:\\Users\\rishi\\.local\\bin\\"
+        - "C:\\Users\\rishi\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Fiddler"
+        - "C:\\Users\\rishi\\.dotnet\\tools"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\rishi\\AppData\\Roaming\\npm"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.1-full_build\\bin"
+        - "c:\\users\\rishi\\appdata\\roaming\\python\\python312\\scripts"
+        - "C:\\Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c"
+        - "C:\\Program Files\\PsychoPy\\DLLs"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeFindBinUtils.cmake:238 (find_program)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCXXCompiler.cmake:206 (include)"
+      - "CMakeLists.txt:13 (project)"
+    mode: "program"
+    variable: "CMAKE_AR"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "lib"
+    candidate_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/"
+      - "C:/Users/rishi/.codex/tmp/arg0/codex-arg04kq5tc/"
+      - "C:/Users/rishi/AppData/Roaming/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-arm64/vendor/aarch64-pc-windows-msvc/codex-path/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/HP/1E.Performance.Assist/Extensibility/NomadBranch/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/Git/clangarm64/bin/"
+      - "C:/Program Files/Git/usr/bin/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Users/rishi/.kimi-code/bin/"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/Scripts/"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/"
+      - "C:/Users/rishi/.local/bin/"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/rishi/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/rishi/AppData/Local/Programs/Fiddler/"
+      - "C:/Users/rishi/.dotnet/tools/"
+      - "C:/Users/rishi/AppData/Local/Programs/cursor/resources/app/bin/"
+      - "C:/Users/rishi/AppData/Local/GitHubDesktop/bin/"
+      - "C:/Users/rishi/AppData/Roaming/npm/"
+      - "C:/Users/rishi/AppData/Local/Programs/Ollama/"
+      - "C:/Users/rishi/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/"
+      - "C:/Users/rishi/AppData/Roaming/Python/Python312/Scripts/"
+      - "C:/Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c/"
+      - "C:/Program Files/PsychoPy/DLLs/"
+    searched_directories:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/lib.com"
+    found: "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostarm64/arm64/lib.exe"
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\rishi\\.codex\\tmp\\arg0\\codex-arg04kq5tc"
+        - "C:\\Users\\rishi\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\node_modules\\@openai\\codex-win32-arm64\\vendor\\aarch64-pc-windows-msvc\\codex-path"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\1E.Performance.Assist\\Extensibility\\NomadBranch"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\Git\\clangarm64\\bin"
+        - "C:\\Program Files\\Git\\usr\\bin"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Users\\rishi\\.kimi-code\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Python\\Python312\\Scripts\\"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Python\\Python312\\"
+        - "C:\\Users\\rishi\\.local\\bin\\"
+        - "C:\\Users\\rishi\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Fiddler"
+        - "C:\\Users\\rishi\\.dotnet\\tools"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\rishi\\AppData\\Roaming\\npm"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.1-full_build\\bin"
+        - "c:\\users\\rishi\\appdata\\roaming\\python\\python312\\scripts"
+        - "C:\\Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c"
+        - "C:\\Program Files\\PsychoPy\\DLLs"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineRCCompiler.cmake:40 (find_program)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/Platform/Windows-MSVC.cmake:581 (enable_language)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/Platform/Windows-MSVC.cmake:554 (__windows_compiler_msvc_enable_rc)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/Platform/Windows-MSVC-CXX.cmake:6 (__windows_compiler_msvc)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeCXXInformation.cmake:48 (include)"
+      - "CMakeLists.txt:13 (project)"
+    mode: "program"
+    variable: "CMAKE_RC_COMPILER"
+    description: "RC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "rc"
+    candidate_directories:
+      - "C:/Users/rishi/.codex/tmp/arg0/codex-arg04kq5tc/"
+      - "C:/Users/rishi/AppData/Roaming/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-arm64/vendor/aarch64-pc-windows-msvc/codex-path/"
+      - "C:/Windows/System32/"
+      - "C:/Windows/"
+      - "C:/Windows/System32/wbem/"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/"
+      - "C:/Windows/System32/OpenSSH/"
+      - "C:/Program Files/HP/1E.Performance.Assist/Extensibility/NomadBranch/"
+      - "C:/Program Files/Git/cmd/"
+      - "C:/Program Files/Git/clangarm64/bin/"
+      - "C:/Program Files/Git/usr/bin/"
+      - "C:/Program Files/dotnet/"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/"
+      - "C:/Program Files/nodejs/"
+      - "C:/Users/rishi/.kimi-code/bin/"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/Scripts/"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/"
+      - "C:/Users/rishi/.local/bin/"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WindowsApps/"
+      - "C:/Users/rishi/AppData/Local/Programs/Microsoft VS Code/bin/"
+      - "C:/Users/rishi/AppData/Local/Programs/Fiddler/"
+      - "C:/Users/rishi/.dotnet/tools/"
+      - "C:/Users/rishi/AppData/Local/Programs/cursor/resources/app/bin/"
+      - "C:/Users/rishi/AppData/Local/GitHubDesktop/bin/"
+      - "C:/Users/rishi/AppData/Roaming/npm/"
+      - "C:/Users/rishi/AppData/Local/Programs/Ollama/"
+      - "C:/Users/rishi/AppData/Local/Programs/Antigravity/bin/"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/"
+      - "C:/Users/rishi/AppData/Roaming/Python/Python312/Scripts/"
+      - "C:/Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c/"
+      - "C:/Program Files/PsychoPy/DLLs/"
+      - "C:/Program Files/bin/"
+      - "C:/Program Files/sbin/"
+      - "C:/Program Files/"
+      - "C:/Program Files (x86)/bin/"
+      - "C:/Program Files (x86)/sbin/"
+      - "C:/Program Files (x86)/"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/sbin/"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/"
+      - "C:/Program Files (x86)/RobotFrameworkHostTests/bin/"
+      - "C:/Program Files (x86)/RobotFrameworkHostTests/sbin/"
+      - "C:/Program Files (x86)/RobotFrameworkHostTests/"
+    searched_directories:
+      - "C:/Users/rishi/.codex/tmp/arg0/codex-arg04kq5tc/rc.com"
+      - "C:/Users/rishi/.codex/tmp/arg0/codex-arg04kq5tc/rc.exe"
+      - "C:/Users/rishi/.codex/tmp/arg0/codex-arg04kq5tc/rc"
+      - "C:/Users/rishi/AppData/Roaming/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-arm64/vendor/aarch64-pc-windows-msvc/codex-path/rc.com"
+      - "C:/Users/rishi/AppData/Roaming/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-arm64/vendor/aarch64-pc-windows-msvc/codex-path/rc.exe"
+      - "C:/Users/rishi/AppData/Roaming/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-arm64/vendor/aarch64-pc-windows-msvc/codex-path/rc"
+      - "C:/Windows/System32/rc.com"
+      - "C:/Windows/System32/rc.exe"
+      - "C:/Windows/System32/rc"
+      - "C:/Windows/rc.com"
+      - "C:/Windows/rc.exe"
+      - "C:/Windows/rc"
+      - "C:/Windows/System32/wbem/rc.com"
+      - "C:/Windows/System32/wbem/rc.exe"
+      - "C:/Windows/System32/wbem/rc"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/rc.com"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/rc.exe"
+      - "C:/Windows/System32/WindowsPowerShell/v1.0/rc"
+      - "C:/Windows/System32/OpenSSH/rc.com"
+      - "C:/Windows/System32/OpenSSH/rc.exe"
+      - "C:/Windows/System32/OpenSSH/rc"
+      - "C:/Program Files/HP/1E.Performance.Assist/Extensibility/NomadBranch/rc.com"
+      - "C:/Program Files/HP/1E.Performance.Assist/Extensibility/NomadBranch/rc.exe"
+      - "C:/Program Files/HP/1E.Performance.Assist/Extensibility/NomadBranch/rc"
+      - "C:/Program Files/Git/cmd/rc.com"
+      - "C:/Program Files/Git/cmd/rc.exe"
+      - "C:/Program Files/Git/cmd/rc"
+      - "C:/Program Files/Git/clangarm64/bin/rc.com"
+      - "C:/Program Files/Git/clangarm64/bin/rc.exe"
+      - "C:/Program Files/Git/clangarm64/bin/rc"
+      - "C:/Program Files/Git/usr/bin/rc.com"
+      - "C:/Program Files/Git/usr/bin/rc.exe"
+      - "C:/Program Files/Git/usr/bin/rc"
+      - "C:/Program Files/dotnet/rc.com"
+      - "C:/Program Files/dotnet/rc.exe"
+      - "C:/Program Files/dotnet/rc"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/rc.com"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/rc.exe"
+      - "C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/rc"
+      - "C:/Program Files/nodejs/rc.com"
+      - "C:/Program Files/nodejs/rc.exe"
+      - "C:/Program Files/nodejs/rc"
+      - "C:/Users/rishi/.kimi-code/bin/rc.com"
+      - "C:/Users/rishi/.kimi-code/bin/rc.exe"
+      - "C:/Users/rishi/.kimi-code/bin/rc"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/Scripts/rc.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/Scripts/rc.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/Scripts/rc"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/rc.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/rc.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Python/Python312/rc"
+      - "C:/Users/rishi/.local/bin/rc.com"
+      - "C:/Users/rishi/.local/bin/rc.exe"
+      - "C:/Users/rishi/.local/bin/rc"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WindowsApps/rc.com"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WindowsApps/rc.exe"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WindowsApps/rc"
+      - "C:/Users/rishi/AppData/Local/Programs/Microsoft VS Code/bin/rc.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Microsoft VS Code/bin/rc.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Microsoft VS Code/bin/rc"
+      - "C:/Users/rishi/AppData/Local/Programs/Fiddler/rc.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Fiddler/rc.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Fiddler/rc"
+      - "C:/Users/rishi/.dotnet/tools/rc.com"
+      - "C:/Users/rishi/.dotnet/tools/rc.exe"
+      - "C:/Users/rishi/.dotnet/tools/rc"
+      - "C:/Users/rishi/AppData/Local/Programs/cursor/resources/app/bin/rc.com"
+      - "C:/Users/rishi/AppData/Local/Programs/cursor/resources/app/bin/rc.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/cursor/resources/app/bin/rc"
+      - "C:/Users/rishi/AppData/Local/GitHubDesktop/bin/rc.com"
+      - "C:/Users/rishi/AppData/Local/GitHubDesktop/bin/rc.exe"
+      - "C:/Users/rishi/AppData/Local/GitHubDesktop/bin/rc"
+      - "C:/Users/rishi/AppData/Roaming/npm/rc.com"
+      - "C:/Users/rishi/AppData/Roaming/npm/rc.exe"
+      - "C:/Users/rishi/AppData/Roaming/npm/rc"
+      - "C:/Users/rishi/AppData/Local/Programs/Ollama/rc.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Ollama/rc.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Ollama/rc"
+      - "C:/Users/rishi/AppData/Local/Programs/Antigravity/bin/rc.com"
+      - "C:/Users/rishi/AppData/Local/Programs/Antigravity/bin/rc.exe"
+      - "C:/Users/rishi/AppData/Local/Programs/Antigravity/bin/rc"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/rc.com"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/rc.exe"
+      - "C:/Users/rishi/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/rc"
+      - "C:/Users/rishi/AppData/Roaming/Python/Python312/Scripts/rc.com"
+      - "C:/Users/rishi/AppData/Roaming/Python/Python312/Scripts/rc.exe"
+      - "C:/Users/rishi/AppData/Roaming/Python/Python312/Scripts/rc"
+      - "C:/Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c/rc.com"
+      - "C:/Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c/rc.exe"
+      - "C:/Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c/rc"
+      - "C:/Program Files/PsychoPy/DLLs/rc.com"
+      - "C:/Program Files/PsychoPy/DLLs/rc.exe"
+      - "C:/Program Files/PsychoPy/DLLs/rc"
+      - "C:/Program Files/bin/rc.com"
+      - "C:/Program Files/bin/rc.exe"
+      - "C:/Program Files/bin/rc"
+      - "C:/Program Files/sbin/rc.com"
+      - "C:/Program Files/sbin/rc.exe"
+      - "C:/Program Files/sbin/rc"
+      - "C:/Program Files/rc.com"
+      - "C:/Program Files/rc.exe"
+      - "C:/Program Files/rc"
+      - "C:/Program Files (x86)/bin/rc.com"
+      - "C:/Program Files (x86)/bin/rc.exe"
+      - "C:/Program Files (x86)/bin/rc"
+      - "C:/Program Files (x86)/sbin/rc.com"
+      - "C:/Program Files (x86)/sbin/rc.exe"
+      - "C:/Program Files (x86)/sbin/rc"
+      - "C:/Program Files (x86)/rc.com"
+      - "C:/Program Files (x86)/rc.exe"
+      - "C:/Program Files (x86)/rc"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/rc.com"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/rc.exe"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin/rc"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/sbin/rc.com"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/sbin/rc.exe"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/sbin/rc"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/rc.com"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/rc.exe"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/rc"
+      - "C:/Program Files (x86)/RobotFrameworkHostTests/bin/rc.com"
+      - "C:/Program Files (x86)/RobotFrameworkHostTests/bin/rc.exe"
+      - "C:/Program Files (x86)/RobotFrameworkHostTests/bin/rc"
+      - "C:/Program Files (x86)/RobotFrameworkHostTests/sbin/rc.com"
+      - "C:/Program Files (x86)/RobotFrameworkHostTests/sbin/rc.exe"
+      - "C:/Program Files (x86)/RobotFrameworkHostTests/sbin/rc"
+      - "C:/Program Files (x86)/RobotFrameworkHostTests/rc.com"
+      - "C:/Program Files (x86)/RobotFrameworkHostTests/rc.exe"
+      - "C:/Program Files (x86)/RobotFrameworkHostTests/rc"
+    found: false
+    search_context:
+      ENV{PATH}:
+        - "C:\\Users\\rishi\\.codex\\tmp\\arg0\\codex-arg04kq5tc"
+        - "C:\\Users\\rishi\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\node_modules\\@openai\\codex-win32-arm64\\vendor\\aarch64-pc-windows-msvc\\codex-path"
+        - "C:\\windows\\system32"
+        - "C:\\windows"
+        - "C:\\windows\\System32\\Wbem"
+        - "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\"
+        - "C:\\windows\\System32\\OpenSSH\\"
+        - "C:\\Program Files\\HP\\1E.Performance.Assist\\Extensibility\\NomadBranch"
+        - "C:\\Program Files\\Git\\cmd"
+        - "C:\\Program Files\\Git\\clangarm64\\bin"
+        - "C:\\Program Files\\Git\\usr\\bin"
+        - "C:\\Program Files\\dotnet\\"
+        - "C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\"
+        - "C:\\Program Files\\nodejs\\"
+        - "C:\\Users\\rishi\\.kimi-code\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Python\\Python312\\Scripts\\"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Python\\Python312\\"
+        - "C:\\Users\\rishi\\.local\\bin\\"
+        - "C:\\Users\\rishi\\AppData\\Local\\Microsoft\\WindowsApps"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Microsoft VS Code\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Fiddler"
+        - "C:\\Users\\rishi\\.dotnet\\tools"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\GitHubDesktop\\bin"
+        - "C:\\Users\\rishi\\AppData\\Roaming\\npm"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Ollama"
+        - "C:\\Users\\rishi\\AppData\\Local\\Programs\\Antigravity\\bin"
+        - "C:\\Users\\rishi\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.1-full_build\\bin"
+        - "c:\\users\\rishi\\appdata\\roaming\\python\\python312\\scripts"
+        - "C:\\Program \u8c46\u6698\u0e02\ub950\u0c0c\ub908\u0c0c"
+        - "C:\\Program Files\\PsychoPy\\DLLs"
+      CMAKE_INSTALL_PREFIX: "C:/Program Files (x86)/RobotFrameworkHostTests"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "C:/Program Files"
+        - "C:/Program Files (x86)"
+        - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake"
+        - "C:/Program Files (x86)/RobotFrameworkHostTests"
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:13 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "C:/Users/rishi/Desktop/RoboCup/RobotFramework/tests/host/build-final/CMakeFiles/CMakeScratch/TryCompile-wd8p4p"
+      binary: "C:/Users/rishi/Desktop/RoboCup/RobotFramework/tests/host/build-final/CMakeFiles/CMakeScratch/TryCompile-wd8p4p"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /GR /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:ARM64"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'C:/Users/rishi/Desktop/RoboCup/RobotFramework/tests/host/build-final/CMakeFiles/CMakeScratch/TryCompile-wd8p4p'
+        
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Current/Bin/arm64/MSBuild.exe" cmTC_37b33.vcxproj /p:Configuration=Debug /p:Platform=ARM64 /p:VisualStudioVersion=18.0 /v:n
+        MSBuild version 18.3.0-release-26070-10+3972042b7 for .NET Framework
+        Build started 12/08/2026 3:36:34 PM.
+        
+        Project "C:\\Users\\rishi\\Desktop\\RoboCup\\RobotFramework\\tests\\host\\build-final\\CMakeFiles\\CMakeScratch\\TryCompile-wd8p4p\\cmTC_37b33.vcxproj" on node 1 (default targets).
+        PrepareForBuild:
+          Creating directory "cmTC_37b33.dir\\Debug\\".
+          Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+          Creating directory "C:\\Users\\rishi\\Desktop\\RoboCup\\RobotFramework\\tests\\host\\build-final\\CMakeFiles\\CMakeScratch\\TryCompile-wd8p4p\\Debug\\".
+          Creating directory "cmTC_37b33.dir\\Debug\\cmTC_37b33.tlog\\".
+        InitializeBuildStatus:
+          Creating "cmTC_37b33.dir\\Debug\\cmTC_37b33.tlog\\unsuccessfulbuild" because "AlwaysCreate" was specified.
+          Touching "cmTC_37b33.dir\\Debug\\cmTC_37b33.tlog\\unsuccessfulbuild".
+        VcpkgTripletSelection:
+          Using triplet "arm64-windows" from "C:\\vcpkg\\installed\\arm64-windows\\"
+          Using normalized configuration "Debug"
+        ClCompile:
+          C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostArm64\\arm64\\CL.exe /c /I"C:\\vcpkg\\installed\\arm64-windows\\include" /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /Oy- /D _ARM64_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE=1 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GS /fp:precise /GR /Fo"cmTC_37b33.dir\\Debug\\\\" /Fd"cmTC_37b33.dir\\Debug\\vc145.pdb" /external:W1 /Gd /TP /analyze- /errorReport:queue "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\share\\cmake-4.1\\Modules\\CMakeCXXCompilerABI.cpp"
+          Microsoft (R) C/C++ Optimizing Compiler Version 19.50.35724 for ARM64
+          Copyright (C) Microsoft Corporation.  All rights reserved.
+          cl /c /I"C:\\vcpkg\\installed\\arm64-windows\\include" /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /Oy- /D _ARM64_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE=1 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GS /fp:precise /GR /Fo"cmTC_37b33.dir\\Debug\\\\" /Fd"cmTC_37b33.dir\\Debug\\vc145.pdb" /external:W1 /Gd /TP /analyze- /errorReport:queue "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\share\\cmake-4.1\\Modules\\CMakeCXXCompilerABI.cpp"
+          CMakeCXXCompilerABI.cpp
+        Link:
+          C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostArm64\\arm64\\link.exe /OUT:"C:\\Users\\rishi\\Desktop\\RoboCup\\RobotFramework\\tests\\host\\build-final\\CMakeFiles\\CMakeScratch\\TryCompile-wd8p4p\\Debug\\cmTC_37b33.exe" /INCREMENTAL /ILK:"cmTC_37b33.dir\\Debug\\cmTC_37b33.ilk" /NOLOGO /LIBPATH:"C:\\vcpkg\\installed\\arm64-windows\\debug\\lib" /LIBPATH:"C:\\vcpkg\\installed\\arm64-windows\\debug\\lib\\manual-link" kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib "C:\\vcpkg\\installed\\arm64-windows\\debug\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/rishi/Desktop/RoboCup/RobotFramework/tests/host/build-final/CMakeFiles/CMakeScratch/TryCompile-wd8p4p/Debug/cmTC_37b33.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"C:/Users/rishi/Desktop/RoboCup/RobotFramework/tests/host/build-final/CMakeFiles/CMakeScratch/TryCompile-wd8p4p/Debug/cmTC_37b33.lib" /MACHINE:ARM64  /machine:ARM64 cmTC_37b33.dir\\Debug\\CMakeCXXCompilerABI.obj
+          cmTC_37b33.vcxproj -> C:\\Users\\rishi\\Desktop\\RoboCup\\RobotFramework\\tests\\host\\build-final\\CMakeFiles\\CMakeScratch\\TryCompile-wd8p4p\\Debug\\cmTC_37b33.exe
+        AppLocalFromInstalled:
+          pwsh.exe -ExecutionPolicy Bypass -noprofile -File "C:\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "C:\\Users\\rishi\\Desktop\\RoboCup\\RobotFramework\\tests\\host\\build-final\\CMakeFiles\\CMakeScratch\\TryCompile-wd8p4p\\Debug\\cmTC_37b33.exe" "C:\\vcpkg\\installed\\arm64-windows\\debug\\bin" "cmTC_37b33.dir\\Debug\\cmTC_37b33.tlog\\cmTC_37b33.write.1u.tlog" "cmTC_37b33.dir\\Debug\\vcpkg.applocal.log"
+          'pwsh.exe' is not recognized as an internal or external command,
+          operable program or batch file.
+          The command "pwsh.exe -ExecutionPolicy Bypass -noprofile -File "C:\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "C:\\Users\\rishi\\Desktop\\RoboCup\\RobotFramework\\tests\\host\\build-final\\CMakeFiles\\CMakeScratch\\TryCompile-wd8p4p\\Debug\\cmTC_37b33.exe" "C:\\vcpkg\\installed\\arm64-windows\\debug\\bin" "cmTC_37b33.dir\\Debug\\cmTC_37b33.tlog\\cmTC_37b33.write.1u.tlog" "cmTC_37b33.dir\\Debug\\vcpkg.applocal.log"" exited with code 9009.
+          "C:\\windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -ExecutionPolicy Bypass -noprofile -File "C:\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "C:\\Users\\rishi\\Desktop\\RoboCup\\RobotFramework\\tests\\host\\build-final\\CMakeFiles\\CMakeScratch\\TryCompile-wd8p4p\\Debug\\cmTC_37b33.exe" "C:\\vcpkg\\installed\\arm64-windows\\debug\\bin" "cmTC_37b33.dir\\Debug\\cmTC_37b33.tlog\\cmTC_37b33.write.1u.tlog" "cmTC_37b33.dir\\Debug\\vcpkg.applocal.log"
+        FinalizeBuildStatus:
+          Deleting file "cmTC_37b33.dir\\Debug\\cmTC_37b33.tlog\\unsuccessfulbuild".
+          Touching "cmTC_37b33.dir\\Debug\\cmTC_37b33.tlog\\cmTC_37b33.lastbuildstate".
+        Done Building Project "C:\\Users\\rishi\\Desktop\\RoboCup\\RobotFramework\\tests\\host\\build-final\\CMakeFiles\\CMakeScratch\\TryCompile-wd8p4p\\cmTC_37b33.vcxproj" (default targets).
+        
+        Build succeeded.
+            0 Warning(s)
+            0 Error(s)
+        
+        Time Elapsed 00:00:02.30
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerABI.cmake:253 (message)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:13 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?))("|,| |$)]
+        linker tool for 'CXX': C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/HostArm64/arm64/link.exe
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: []
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/Internal/CMakeDetermineLinkerId.cmake:36 (message)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeDetermineCompilerABI.cmake:299 (cmake_determine_linker_id)"
+      - "C:/Program Files/Microsoft Visual Studio/18/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-4.1/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:13 (project)"
+    message: |
+      Running the CXX compiler's linker: "C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/HostArm64/arm64/link.exe" "-v"
+      Microsoft (R) Incremental Linker Version 14.50.35724.0
+      Copyright (C) Microsoft Corporation.  All rights reserved.
+...

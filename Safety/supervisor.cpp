@@ -72,8 +72,10 @@ std::vector<StopReason> Supervisor::observe(const std::vector<MotorObs>& motors,
         if (!m.replied) {
             continue;  // stale numbers; don't evaluate thresholds on them
         }
-        // Hard moteus fault code latched on the controller.
-        if (m.fault != 0) {
+        // Hard moteus fault code latched on the controller. Codes >= 96 are
+        // soft "limit engaged" indicators (current/power/velocity/thermal
+        // limiting while still tracking) and must not trip the latch.
+        if (m.fault != 0 && m.fault < 96) {
             uint32_t& c = fault_bad_[m.id];
             ++c;
             if (c >= g) latch(StopReason::motor_fault(m.id), newly);
@@ -113,7 +115,7 @@ std::vector<StopReason> Supervisor::observe(const std::vector<MotorObs>& motors,
         !motors.empty() &&
         std::all_of(motors.begin(), motors.end(),
                     [&](const MotorObs& m) {
-                        return m.replied && m.fault == 0 &&
+                        return m.replied && (m.fault == 0 || m.fault >= 96) &&
                                m.temperature < cfg_.trip_temp_c - 10.0 &&
                                std::abs(m.current) < cfg_.trip_current_a * 0.8;
                     }) &&

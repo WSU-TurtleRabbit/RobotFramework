@@ -28,6 +28,7 @@
 #include <string>
 
 #include "actuators.h"
+#include "adaptive.h"
 #include "controller.h"
 #include "estimator.h"
 #include "skills.h"
@@ -54,6 +55,7 @@ struct BridgeTick {
     TrajSample ref;           // current onboard trajectory reference
     ActuatorOutput act;       // kicker/dribbler decision
     EstimatorOutput est;      // estimator passthrough (feedback pose source)
+    AugmentationOutput augmentation; // ID/adaptive/RL/safety diagnostics
     bool emergency = false;   // running the onboard EMERGENCY (timeout/skill)
     bool motion_enabled = false;  // past the first-vision gate
     int skill_id = -1;        // active skill (-1 = none yet)
@@ -66,7 +68,8 @@ public:
                 const EstimatorConfig& est_cfg = {},
                 const TrajectoryConfig& traj_cfg = {},
                 const ControllerConfig& ctrl_cfg = {},
-                const ActuatorConfig& act_cfg = {});
+                const ActuatorConfig& act_cfg = {},
+                const AugmentationConfig& augmentation_cfg = {});
 
     // One received datagram. now_s must share the clock base with tick().
     MatchAccept accept(const std::string& datagram, double now_s);
@@ -74,7 +77,8 @@ public:
     // One control tick: estimator update, watchdog tiers, skill dispatch,
     // trajectory regeneration (pose skills), controller, actuators.
     BridgeTick tick(double now_s, double dt, const phx::Twist& odo_body,
-                    double gyro_yaw_radps, const BallContactObs& ball);
+                    double gyro_yaw_radps, const BallContactObs& ball,
+                    const RuntimeFeedback& feedback = {});
 
     // Operator STOP / estop: drop the command, disarm, coast immediately.
     void clear();
@@ -87,6 +91,8 @@ public:
     const FusionEstimator& estimator() const { return estimator_; }
     FusionEstimator& estimator() { return estimator_; }
     const Actuators& actuators() const { return actuators_; }
+    const MotionAugmentor& augmentor() const { return augmentor_; }
+    MotionAugmentor& augmentor() { return augmentor_; }
 
 private:
     void switch_kind(MotionSetpoint::Kind next, const EstimatorOutput& est);
@@ -96,6 +102,7 @@ private:
     TrajectoryFollower follower_;
     Controller controller_;
     Actuators actuators_;
+    MotionAugmentor augmentor_;
 
     MotionSetpoint sp_{};                 // active setpoint (Emergency at boot)
     bool active_ = false;                 // a frame has been accepted

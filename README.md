@@ -27,6 +27,10 @@ the first vision fix, plus the recoverable per-motor supervisor.
 * [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — the visual tour (start here)
 * [docs/MOTION.md](docs/MOTION.md) — the cascade, config knobs, commissioning
 * [docs/PROTOCOL.md](docs/PROTOCOL.md) — MatchCtrl/MatchFeedback wire formats
+* [docs/ADAPTIVE_MOTION_AUDIT.md](docs/ADAPTIVE_MOTION_AUDIT.md) — verified
+  repository/control-path audit and baseline state
+* [docs/ADAPTIVE_MOTION.md](docs/ADAPTIVE_MOTION.md) — RLS adaptation,
+  residual-policy ABI, telemetry, constraints and promotion design
 * `tests/host/` — Pi-free unit tests for all pure logic (wire, skills,
   estimator, trajectory, controller, bridge, feedback, kinematics, safety):
   `cmake -S tests/host -B tests/host/build && cmake --build tests/host/build && ./tests/host/build/host_tests`

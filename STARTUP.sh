@@ -93,7 +93,9 @@ read_config() {
     [ -n "$STATUS_HOST" ] || STATUS_HOST="255.255.255.255"
 
     [ -n "$WIFI_SSID" ] || die "wifi.ssid is empty in $STARTUP_CFG"
-    [ -n "$WIFI_PASS" ] || die "wifi.password is empty in $STARTUP_CFG"
+    if [ -z "$WIFI_PASS" ]; then
+        log "Warning: wifi.password is empty in $STARTUP_CFG; attempting open-network WiFi."
+    fi
     [ -n "$ROBOT_MODE" ] || ROBOT_MODE="safe"
 
     # Normalise mode — strip leading dash if user added one
@@ -252,8 +254,13 @@ connect_wifi() {
         nmcli con up "$ssid" "${iface_args[@]}" \
             || { log "Could not bring up $ssid."; return 1; }
     else
-        nmcli dev wifi connect "$ssid" password "$pass" "${iface_args[@]}" "${ip_args[@]}" \
-            || { log "Could not connect to $ssid on ${iface:-any interface}."; return 1; }
+        if [ -n "$pass" ]; then
+            nmcli dev wifi connect "$ssid" password "$pass" "${iface_args[@]}" "${ip_args[@]}" \
+                || { log "Could not connect to $ssid on ${iface:-any interface}."; return 1; }
+        else
+            nmcli dev wifi connect "$ssid" "${iface_args[@]}" "${ip_args[@]}" \
+                || { log "Could not connect to open network $ssid on ${iface:-any interface}."; return 1; }
+        fi
     fi
 
     # Wait up to 30 s for NetworkManager to report connected.

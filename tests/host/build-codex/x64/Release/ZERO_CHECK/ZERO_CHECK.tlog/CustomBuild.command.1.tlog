@@ -1,0 +1,10 @@
+^C:\USERS\JCOEUVHNIEUOVBUEIO2V\DOCUMENTS\GITHUB\ROBOCUP-RESEARCH\ROBOTFRAMEWORK\TESTS\HOST\BUILD-CODEX\CMAKEFILES\3BEED9C13F1876E2565BBB97BCC8ED67\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/jcoeuvhnieuovbueio2v/Documents/GitHub/RoboCup-Research/RobotFramework/tests/host -BC:/Users/jcoeuvhnieuovbueio2v/Documents/GitHub/RoboCup-Research/RobotFramework/tests/host/build-codex --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/jcoeuvhnieuovbueio2v/Documents/GitHub/RoboCup-Research/RobotFramework/tests/host/build-codex/RobotFrameworkHostTests.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

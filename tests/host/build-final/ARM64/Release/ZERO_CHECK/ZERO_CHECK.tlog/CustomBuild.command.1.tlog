@@ -1,0 +1,10 @@
+^C:\USERS\RISHI\DESKTOP\ROBOCUP\ROBOTFRAMEWORK\TESTS\HOST\BUILD-FINAL\CMAKEFILES\C93C62C7B3C85F8ABA7368B21A401F04\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\Microsoft Visual Studio\18\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SC:/Users/rishi/Desktop/RoboCup/RobotFramework/tests/host -BC:/Users/rishi/Desktop/RoboCup/RobotFramework/tests/host/build-final --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/rishi/Desktop/RoboCup/RobotFramework/tests/host/build-final/RobotFrameworkHostTests.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

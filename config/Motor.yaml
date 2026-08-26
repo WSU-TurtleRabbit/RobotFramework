@@ -29,8 +29,26 @@ motorCommandScale: [1.006, 1.008, 1.004, 1.004]
 
 # Residual sign-specific equalization from the final corrected-IMU 2 m/s
 # forward/reverse pair. These multiply the base factors above.
-motorCommandScalePositive: [1.001, 0.996, 1.000, 1.002]
-motorCommandScaleNegative: [1.001, 0.989, 1.001, 0.999]
+# High-load fixed-heading telemetry on 2026-08-12 isolated the NW yaw bias
+# to the dominant opposing pair: motor 4 positive overpowered motor 2
+# negative while all four velocity loops tracked. A symmetric 4% pair trim
+# supplies counter-yaw before the reactive heading loop has accumulated
+# error. The opposite-sign SE diagonal is unaffected by these two entries.
+motorCommandScalePositive: [1.001, 0.996, 1.000, 0.962]
+motorCommandScaleNegative: [1.001, 1.029, 1.001, 0.999]
+
+# Paired SSL-Vision identification on Robot A, 2026-07-31. Pure + / -
+# translation showed systematic yaw despite matched encoder velocities.
+# IK adds w = kx*vx + ky*vy; FK removes the same term from wheel odometry.
+bodyYawCouplingCompensation: [0.288, 0.361]
+# Conservative field-passing west trim. A later full nullspace load-transfer
+# candidate was rejected: it still left M1 at 13.77 A and introduced yaw.
+# This remains exactly 1.0 at NW/SW diagonals and throughout east.
+motorCommandScaleWest: [0.98, 1.00, 1.00, 1.013]
+# The first full-speed east return showed an initial clockwise launch bias
+# before the delayed heading controller unwound it. Motor 2 has current
+# margin; a symmetric 2% M2/M3 pair supplies early counter-yaw only in east.
+motorCommandScaleEast: [1.00, 1.02, 0.98, 1.00]
 
 # moteus-level per-command shaping (values proven on the Rust robot):
 # the controller bounds each velocity setpoint and its ramp itself, which

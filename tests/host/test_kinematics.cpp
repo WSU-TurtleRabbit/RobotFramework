@@ -120,6 +120,27 @@ PHX_TEST(kin_lateral_effectiveness_scale_is_symmetric_with_odometry) {
     CHECK_NEAR(recovered.w, lateral.w, 1e-9);
 }
 
+PHX_TEST(kin_translation_yaw_coupling_compensation_roundtrips) {
+    Kinematics k;
+    k.yaw_ff_from_vx = 0.288;
+    k.yaw_ff_from_vy = 0.361;
+
+    const BodyTwist translation{1.0, -0.4, 0.0};
+    const auto compensated_wheels = k.inverse(translation);
+    const auto uncompensated_wheels = Kinematics{}.inverse(translation);
+    bool changed = false;
+    for (int i = 0; i < 4; ++i) {
+        changed = changed
+            || std::abs(compensated_wheels[i] - uncompensated_wheels[i]) > 1e-6;
+    }
+    CHECK(changed);
+
+    const BodyTwist recovered = k.forward(compensated_wheels);
+    CHECK_NEAR(recovered.vx, translation.vx, 1e-9);
+    CHECK_NEAR(recovered.vy, translation.vy, 1e-9);
+    CHECK_NEAR(recovered.w, translation.w, 1e-9);
+}
+
 PHX_TEST(kin_wheel_command_scale_does_not_fabricate_forward_odometry) {
     Kinematics k;
     const BodyTwist t{0.4, -0.2, 0.3};
@@ -139,6 +160,43 @@ PHX_TEST(kin_wheel_command_scale_does_not_fabricate_forward_odometry) {
     CHECK_NEAR(measured.vx, t.vx, 1e-9);
     CHECK_NEAR(measured.vy, t.vy, 1e-9);
     CHECK_NEAR(measured.w, t.w, 1e-9);
+}
+
+PHX_TEST(kin_pure_west_command_trim_does_not_touch_diagonals) {
+    Kinematics tuned;
+    tuned.wheel_command_scale_west = {{0.98, 1.0, 1.0, 1.013}};
+    Kinematics nominal;
+
+    const BodyTwist west{-2.0, 0.0, 0.0};
+    const auto tuned_west = tuned.inverse(west);
+    const auto nominal_west = nominal.inverse(west);
+    CHECK_NEAR(tuned_west[0], nominal_west[0] * 0.98, 1e-9);
+    CHECK_NEAR(tuned_west[3], nominal_west[3] * 1.013, 1e-9);
+
+    const BodyTwist diagonal{-2.0, 2.0, 0.0};
+    const auto tuned_diagonal = tuned.inverse(diagonal);
+    const auto nominal_diagonal = nominal.inverse(diagonal);
+    for (int i = 0; i < 4; ++i) {
+        CHECK_NEAR(tuned_diagonal[i], nominal_diagonal[i], 1e-9);
+    }
+}
+
+PHX_TEST(kin_pure_east_command_trim_does_not_touch_diagonals_or_west) {
+    Kinematics tuned;
+    tuned.wheel_command_scale_east = {{1.0, 1.02, 0.98, 1.0}};
+    Kinematics nominal;
+
+    const auto tuned_east = tuned.inverse({2.0, 0.0, 0.0});
+    const auto nominal_east = nominal.inverse({2.0, 0.0, 0.0});
+    CHECK_NEAR(tuned_east[1], nominal_east[1] * 1.02, 1e-9);
+    CHECK_NEAR(tuned_east[2], nominal_east[2] * 0.98, 1e-9);
+
+    for (const BodyTwist untouched :
+         {BodyTwist{2.0, 2.0, 0.0}, BodyTwist{-2.0, 0.0, 0.0}}) {
+        const auto a = tuned.inverse(untouched);
+        const auto b = nominal.inverse(untouched);
+        for (int i = 0; i < 4; ++i) CHECK_NEAR(a[i], b[i], 1e-9);
+    }
 }
 
 PHX_TEST(kin_wheel_command_scale_can_equalize_positive_and_negative_directions) {

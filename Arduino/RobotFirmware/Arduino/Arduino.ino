@@ -27,12 +27,14 @@ const int kickerOutputPin = 5; // Digital pin connected to kicker
 const int dribblerPin = 3; 
 
 // === KICKER VERSION SELECT (the one value to change) ===
-const bool kickerActiveLevel = HIGH;               // HIGH = new kicker, LOW = old perf board
+const bool kickerActiveLevel = LOW;               // LOW = old perf board (ROBOT 5 HARDWARE)
 const bool kickerIdleLevel   = !kickerActiveLevel; // resting level is just the opposite of active
 
 int dribblerPower = 1600;
 int dribblerStopPin = 1500; // (note: this is a microseconds value, not a pin)
 int kickerPulseTime = 10;   // Default pulse duration for kicker (ms)
+const int kickerMinPulseMs = 150; // old perf board needs a long drive (BUG-ID-4);
+                                  // clamp so short framework pulses still fire
 
 unsigned long pervious_time = 0;
 int kicker_timeout = 5000;  // Minimum gap between kicks (ms) — capacitor recharge guard
@@ -52,6 +54,7 @@ char incomingByte; // Variable to store incoming serial data
 Servo esc; 
 
 void fireKick(int pulseMs) {
+  if (pulseMs < kickerMinPulseMs) pulseMs = kickerMinPulseMs;
   unsigned long current_time = millis();
   if (current_time - pervious_time < (unsigned long)kicker_timeout){
     // Reject kicks closer than the recharge guard (hardware protection).

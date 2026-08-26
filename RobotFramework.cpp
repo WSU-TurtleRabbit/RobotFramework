@@ -37,6 +37,7 @@
 #include <vector>
 #include <chrono>
 #include <thread>
+#include <future>
 #include <atomic>
 #include <csignal>
 #include "moteus.h"
@@ -50,10 +51,12 @@
 #include "match_bridge.h"
 #include "match_config_yaml.h"
 #include "match_feedback.h"
+#include "motion_logger.h"
 #include "supervisor.h"
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <limits>
 #include <yaml-cpp/yaml.h>
 #include "Logger/Logger.h"
 
@@ -240,10 +243,44 @@ int main(int argc, char **argv)
     // The MatchCtrl cascade: skills -> estimator -> trajectory -> controller
     // -> wheels, with the safety tiers (Motion/match_bridge.h).
     rf::MatchBridge bridge(motion.bridge, m.kinematics(), motion.estimator,
-                           motion.trajectory, motion.controller, motion.actuators);
+                           motion.trajectory, motion.controller, motion.actuators,
+                           motion.augmentation);
     rf::MatchFeedbackBuilder feedback;
     // Safety supervisor: envelope shaping, protective trips, auto-recovery.
     rf::Supervisor supervisor(safety_cfg);
+    rf::AsyncMotionLogger motion_logger;
+    rf::MotionLoggerLimits motion_log_limits;
+    motion_log_limits.max_file_bytes = static_cast<uint64_t>(
+        std::max(0.0, motion.motion_log_max_file_mb) * 1024.0 * 1024.0);
+    motion_log_limits.max_total_bytes = static_cast<uint64_t>(
+        std::max(0.0, motion.motion_log_max_total_mb) * 1024.0 * 1024.0);
+    if (motion.motion_log_enabled &&
+        !motion_logger.start(motion.motion_log_directory, robot_id,
+                             motion.motion_log_rate_hz,
+                             rf::ResidualPolicy::kControllerAbi,
+                             motion_log_limits))
+    {
+        logger.log("rframework", "Versioned motion logger failed to start",
+                   LogLevel::WARN);
+    }
+    else if (motion.motion_log_enabled)
+    {
+        logger.log("rframework", std::string("Versioned motion log: ") +
+            motion_logger.path(), LogLevel::INFO);
+    }
+    if (motion.surface_profile_load && motion.augmentation.estimator.enabled)
+    {
+        const bool loaded = bridge.augmentor().estimator().load_profile(
+            motion.surface_profile_path, robot_id, motion.surface_id);
+        logger.log("rframework",
+            loaded ? "Loaded compatible surface profile"
+                   : "No compatible surface profile; conservative defaults active",
+            loaded ? LogLevel::INFO : LogLevel::WARN);
+    }
+    std::future<bool> profile_save;
+    double last_profile_save_s = -1e9;
+    uint64_t last_profile_saved_samples = 0;
+    uint64_t motion_log_sequence = 0;
 
     std::string msg;                    // Incoming UDP datagram
     std::vector<double> wheel_velocity; // Calculated wheel velocities
@@ -259,6 +296,7 @@ int main(int argc, char **argv)
     // Monotonic ms of the last valid drive command (MatchCtrl or v1) for
     // the v1 staleness gate and the supervisor's auto-recovery.
     std::optional<uint64_t> last_valid_cmd_ms;
+    rf::RuntimeFeedback runtime_feedback;
 
     // Feedback health snapshot (filled per cycle).
     rf::FeedbackHealth health;
@@ -408,6 +446,7 @@ int main(int argc, char **argv)
         // --- Motor control tick: the MatchCtrl cascade ---
         if (current_time - last_motor_time >= MotorInterval)
         {
+            const auto motor_tick_started = std::chrono::steady_clock::now();
             // Measured wheel velocities (rev/s, motor id i -> index i-1) from
             // the PREVIOUS cycle's replies — the estimator's odometry input.
             static auto last_motor_tick_wall = current_time;
@@ -423,6 +462,32 @@ int main(int argc, char **argv)
             // Wheel odometry (FK) from the previous cycle's measured
             // velocities.
             const BodyTwist odo = m.kinematics().forward(measured_rev_s);
+            runtime_feedback.wheel_odo_body = phx::Twist{odo.vx, odo.vy, odo.w};
+            const std::array<double, 3> raw_accel = {
+                telemetry.imu_accel_x_mps2,
+                telemetry.imu_accel_y_mps2,
+                telemetry.imu_accel_z_mps2,
+            };
+            const bool accel_axes_valid =
+                motion.imu_accel_forward_axis >= 0 &&
+                motion.imu_accel_forward_axis < 3 &&
+                motion.imu_accel_lateral_axis >= 0 &&
+                motion.imu_accel_lateral_axis < 3 &&
+                telemetry.attitude_present;
+            runtime_feedback.imu_accel_available = accel_axes_valid;
+            if (accel_axes_valid)
+            {
+                runtime_feedback.imu_accel_body_mps2 = {
+                    raw_accel[motion.imu_accel_forward_axis] *
+                        motion.imu_accel_forward_sign,
+                    raw_accel[motion.imu_accel_lateral_axis] *
+                        motion.imu_accel_lateral_sign,
+                };
+                runtime_feedback.imu_accel_z_mps2 = telemetry.imu_accel_z_mps2;
+            }
+            runtime_feedback.collision = accel_axes_valid &&
+                runtime_feedback.imu_accel_body_mps2.norm() >
+                    motion.augmentation.estimator.disturbance_accel_mps2;
 
             bool energize = true;
 
@@ -452,7 +517,7 @@ int main(int argc, char **argv)
                     : 1e9;
 
                 bt = bridge.tick(now_s, motor_dt, phx::Twist{odo.vx, odo.vy, odo.w},
-                                 gyro_radps, ball);
+                                 gyro_radps, ball, runtime_feedback);
                 velocity_map = {
                     {1, bt.ctrl.wheel_rev_s[0]},
                     {2, bt.ctrl.wheel_rev_s[1]},
@@ -507,11 +572,28 @@ int main(int argc, char **argv)
 
             // Stash measured velocities for the next tick's odometry.
             measured_rev_s = {0.0, 0.0, 0.0, 0.0};
+            runtime_feedback.wheel_measured_rev_s.fill(0.0);
+            runtime_feedback.wheel_current_a.fill(0.0);
+            runtime_feedback.wheel_temperature_c.fill(0.0);
+            runtime_feedback.wheel_fault.fill(0);
+            runtime_feedback.wheel_replied.fill(false);
             for (const auto &pair : servo_status)
             {
                 const int id = pair.first;
                 if (id >= 1 && id <= 4 && std::isfinite(pair.second.velocity))
+                {
                     measured_rev_s[id - 1] = pair.second.velocity;
+                    runtime_feedback.wheel_measured_rev_s[id - 1] =
+                        pair.second.velocity;
+                }
+                if (id >= 1 && id <= 4)
+                {
+                    runtime_feedback.wheel_replied[id - 1] = true;
+                    runtime_feedback.wheel_current_a[id - 1] = pair.second.current;
+                    runtime_feedback.wheel_temperature_c[id - 1] =
+                        pair.second.temperature;
+                    runtime_feedback.wheel_fault[id - 1] = pair.second.fault;
+                }
             }
 
             // Bus voltage (average of replying motors) + sampled motor
@@ -571,6 +653,18 @@ int main(int argc, char **argv)
             }
             const double avg_voltage =
                 voltage_n > 0 ? static_cast<double>(voltage_sum) / voltage_n : 0.0;
+            runtime_feedback.bus_voltage_v = avg_voltage;
+            runtime_feedback.motor_saturated = false;
+            for (int i = 0; i < 4; ++i)
+            {
+                runtime_feedback.motor_saturated =
+                    runtime_feedback.motor_saturated ||
+                    std::fabs(bt.ctrl.wheel_rev_s[i]) >=
+                        0.98 * motion.controller.wheel_max_rev_s ||
+                    (runtime_feedback.wheel_fault[i] >= 96);
+            }
+            runtime_feedback.kick_active = bt.act.fire_pulse_ms.has_value();
+            runtime_feedback.dribbler_active = bt.act.dribbler_speed > 0.01;
 
             // --- Safety supervisor: per-motor trips with grace counts ---
             std::vector<rf::MotorObs> motor_obs;
@@ -611,6 +705,114 @@ int main(int argc, char **argv)
                     logger.log("rframework",
                         std::string("SAFETY RECOVERED: ") + r.word(), LogLevel::DONE);
                 }
+            }
+
+            const double control_elapsed_s = std::chrono::duration<double>(
+                std::chrono::steady_clock::now() - motor_tick_started).count();
+            runtime_feedback.control_elapsed_s = control_elapsed_s;
+            runtime_feedback.control_deadline_missed =
+                control_elapsed_s > std::chrono::duration<double>(MotorInterval).count();
+
+            if (motion_logger.due(now_s))
+            {
+                rf::MotionTelemetrySample sample;
+                sample.sequence = motion_log_sequence++;
+                sample.robot_id = robot_id;
+                sample.skill_id = bt.skill_id;
+                sample.mono_time_s = now_s;
+                sample.dt_s = motor_dt;
+                sample.control_elapsed_s = control_elapsed_s;
+                sample.command_age_s = bt.last_cmd_age_s;
+                sample.target_pose = bridge.setpoint().target;
+                sample.estimate_pose = bt.est.pose;
+                sample.estimate_velocity_global =
+                    phx::Twist{bt.est.vel_global, bt.est.omega};
+                sample.reference = bt.ref;
+                sample.model_body = bt.ctrl.model_body;
+                sample.adaptive_delta = bt.ctrl.adaptive_delta;
+                sample.rl_proposed = bt.ctrl.rl_proposed;
+                sample.rl_applied = bt.ctrl.rl_applied;
+                sample.safety_body = bt.ctrl.cmd_body;
+                sample.wheel_target_rev_s = bt.ctrl.wheel_rev_s;
+                sample.wheel_measured_rev_s = measured_rev_s;
+                const double unavailable = std::numeric_limits<double>::quiet_NaN();
+                sample.wheel_position_rev.fill(unavailable);
+                sample.motor_current_a.fill(unavailable);
+                sample.motor_voltage_v.fill(unavailable);
+                sample.motor_temperature_c.fill(unavailable);
+                for (const auto &pair : servo_status)
+                {
+                    const int index = pair.first - 1;
+                    if (index < 0 || index >= 4) continue;
+                    sample.motor_replied[index] = true;
+                    sample.wheel_position_rev[index] = pair.second.position;
+                    sample.motor_current_a[index] = pair.second.current;
+                    sample.motor_voltage_v[index] = pair.second.voltage;
+                    sample.motor_temperature_c[index] = pair.second.temperature;
+                    sample.motor_fault[index] = pair.second.fault;
+                    sample.motor_mode[index] = pair.second.mode;
+                }
+                sample.imu_rate_dps = {telemetry.imu_roll_dps,
+                                       telemetry.imu_pitch_dps,
+                                       telemetry.imu_yaw_dps};
+                sample.imu_accel_raw_mps2 = {telemetry.imu_accel_x_mps2,
+                                              telemetry.imu_accel_y_mps2,
+                                              telemetry.imu_accel_z_mps2};
+                sample.imu_accel_body_mps2 = runtime_feedback.imu_accel_body_mps2;
+                sample.imu_available = runtime_feedback.imu_accel_available;
+                sample.vision_age_s = bt.est.vision_age_s;
+                sample.vision_delay_s = bt.est.vision_delay_s;
+                sample.vision_innovation_m = bt.est.vision_innovation_m;
+                sample.vision_heading_innovation_rad =
+                    bt.est.vision_heading_innovation_rad;
+                sample.vision_alive = bt.est.vision_alive;
+                sample.vision_confidence_available =
+                    bt.est.vision_confidence_available;
+                sample.vision_confidence = bt.est.vision_confidence;
+                sample.surface = bt.augmentation.surface;
+                sample.rl_mode = bridge.augmentor().rl_mode();
+                sample.policy_version = bridge.augmentor().policy().version();
+                sample.safety_interventions = bt.ctrl.safety_interventions;
+                sample.estimator_applied = bt.augmentation.adaptive_applied;
+                sample.policy_evaluated = bt.augmentation.policy_evaluated;
+                sample.rl_healthy = bt.augmentation.rl_healthy;
+                sample.rl_auto_disabled = bt.augmentation.rl_auto_disabled;
+                sample.motor_saturated = runtime_feedback.motor_saturated;
+                sample.deadline_missed = runtime_feedback.control_deadline_missed;
+                sample.kick_active = runtime_feedback.kick_active;
+                sample.dribbler_active = runtime_feedback.dribbler_active;
+                sample.collision = runtime_feedback.collision;
+                motion_logger.push(sample);
+            }
+
+            // Save only a better-covered healthy surface profile, and do the
+            // disk operation asynchronously so the 250 Hz loop never waits.
+            const rf::SurfaceContext surface =
+                bridge.augmentor().estimator().context(now_s);
+            const bool save_due = motion.surface_profile_save &&
+                motion.augmentation.estimator.enabled &&
+                now_s - last_profile_save_s >=
+                    std::max(1.0, motion.surface_profile_save_interval_s) &&
+                surface.confidence >=
+                    motion.augmentation.estimator.confidence_threshold &&
+                surface.accepted_samples > last_profile_saved_samples;
+            const bool saver_ready = !profile_save.valid() ||
+                profile_save.wait_for(std::chrono::seconds(0)) ==
+                    std::future_status::ready;
+            if (save_due && saver_ready)
+            {
+                if (profile_save.valid()) profile_save.get();
+                const rf::SurfaceEstimator snapshot =
+                    bridge.augmentor().estimator();
+                const std::string profile_path = motion.surface_profile_path;
+                const std::string surface_id = motion.surface_id;
+                profile_save = std::async(std::launch::async,
+                    [snapshot, profile_path, robot_id, surface_id]() mutable {
+                        return snapshot.save_profile(profile_path, robot_id,
+                                                     surface_id);
+                    });
+                last_profile_save_s = now_s;
+                last_profile_saved_samples = surface.accepted_samples;
             }
 
             // Feedback health snapshot for the next send.
@@ -735,6 +937,8 @@ int main(int argc, char **argv)
         pair.second->SetStop();
     }
     a.disconnect();
+    motion_logger.stop();
+    if (profile_save.valid()) profile_save.get();
     logger.log("rframework", "Shutting down, motors stopped", LogLevel::HATE);
 
     // Stop camera thread and join

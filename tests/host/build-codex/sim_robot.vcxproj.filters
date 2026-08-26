@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\jcoeuvhnieuovbueio2v\Documents\GitHub\RoboCup-Research\RobotFramework\tests\host\sim_robot.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jcoeuvhnieuovbueio2v\Documents\GitHub\RoboCup-Research\RobotFramework\Networks\matchctrl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jcoeuvhnieuovbueio2v\Documents\GitHub\RoboCup-Research\RobotFramework\Math\kinematics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jcoeuvhnieuovbueio2v\Documents\GitHub\RoboCup-Research\RobotFramework\Motion\actuators.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jcoeuvhnieuovbueio2v\Documents\GitHub\RoboCup-Research\RobotFramework\Motion\controller.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jcoeuvhnieuovbueio2v\Documents\GitHub\RoboCup-Research\RobotFramework\Motion\estimator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jcoeuvhnieuovbueio2v\Documents\GitHub\RoboCup-Research\RobotFramework\Motion\match_bridge.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jcoeuvhnieuovbueio2v\Documents\GitHub\RoboCup-Research\RobotFramework\Motion\skills.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jcoeuvhnieuovbueio2v\Documents\GitHub\RoboCup-Research\RobotFramework\Motion\trajectory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jcoeuvhnieuovbueio2v\Documents\GitHub\RoboCup-Research\RobotFramework\Telemetry\match_feedback.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\jcoeuvhnieuovbueio2v\Documents\GitHub\RoboCup-Research\RobotFramework\tests\host\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{5BB38F3C-BF46-375E-AAD0-DB3544331B62}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

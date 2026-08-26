@@ -60,6 +60,22 @@ struct EstimatorConfig {
     double tracking_gain = 0.5;
     // Body-velocity complementary gain toward wheel odometry per tick (0..1].
     double odo_vel_gain = 0.5;
+    // Low-pass the chassis-yaw gyro before integrating heading. The same
+    // mounted IMU axis sees brief carpet/launch shocks; absolute heading is
+    // still anchored by delayed vision. Zero disables the filter.
+    double gyro_rate_filter_tau_s = 0.0;
+    // Online yaw-gyro bias estimation. The pi3hat AHRS cannot observe yaw
+    // bias (no absolute yaw reference), so a small constant rate offset leaks
+    // into integrated heading (measured ~-0.022 dps -> ~-1.3 deg/min on this
+    // robot). While the chassis is stationary (wheel odometry ~0 and the raw
+    // yaw rate small) the bias is slowly learned and subtracted before
+    // heading integration; it is frozen during motion and hard-clamped so a
+    // bad estimate can never dominate. Vision still anchors absolute heading.
+    bool gyro_bias_learn = true;
+    double gyro_bias_stationary_speed_mps = 0.03;  // odo speed below this = still
+    double gyro_bias_stationary_rate_radps = 0.02; // raw yaw rate below this = still
+    double gyro_bias_learn_tau_s = 15.0;           // learning low-pass time const
+    double gyro_bias_max_radps = 0.02;             // hard clamp on the estimate
     // Vision heading correction gain per fix (0..1].
     double theta_gain = 0.4;
     // Reject visual heading innovations larger than this while continuing
@@ -75,6 +91,12 @@ struct EstimatorConfig {
     double vision_heading_rate_max_rad_s = 12.0;
     double vision_heading_jump_tolerance_rad = 0.08;
     double vision_heading_estimator_tolerance_rad = 0.20;
+    // Re-lock after a real heading step that disagrees with both the last
+    // accepted visual angle and the gyro prediction. Two consecutive raw
+    // visual angles must agree tightly, and the innovation must remain well
+    // below the broad marker-flip gate.
+    double vision_heading_relock_tolerance_rad = 0.35;
+    double vision_heading_relock_stability_rad = 0.03;
     // Noise model for the steady-state Kalman gains: vision position
     // std-dev (m) and motion process accel std-dev (m/s^2).
     double meas_std_m = 0.005;
@@ -102,6 +124,14 @@ struct EstimatorOutput {
     bool has_fix = false;      // a vision pose has been accepted at least once
     bool vision_alive = false; // !dead-reckoning (vision within timeout)
     uint32_t rejected = 0;     // outlier-rejected vision fixes (stats)
+    double vision_age_s = 1e9; // monotonic age of last accepted pose
+    double vision_delay_s = 0.0; // posDelay used by the last attempted fix
+    double vision_innovation_m = 0.0;
+    double vision_heading_innovation_rad = 0.0;
+    // MatchCtrl does not carry detector confidence. Keep availability
+    // explicit so logs and policies cannot confuse an assumed 1.0 with data.
+    bool vision_confidence_available = false;
+    double vision_confidence = 0.0;
 };
 
 class FusionEstimator {
@@ -144,6 +174,9 @@ public:
     double k_pos() const { return k_pos_; }
     double k_vel() const { return k_vel_; }
 
+    // Current learned yaw-gyro bias (rad/s), subtracted before integration.
+    double gyro_bias_radps() const { return gyro_bias_radps_; }
+
 private:
     struct Slot {
         double t_s = 0.0;
@@ -176,6 +209,14 @@ private:
     std::optional<TimedState> last_meas_;
     std::optional<double> last_vision_heading_;
     double last_vision_heading_t_s_ = -1e9;
+    std::optional<double> last_raw_vision_heading_;
+    double last_raw_vision_heading_t_s_ = -1e9;
+    bool gyro_filter_initialized_ = false;
+    double filtered_gyro_w_ = 0.0;
+    double gyro_bias_radps_ = 0.0;  // learned yaw-gyro bias
+    double last_vision_delay_s_ = 0.0;
+    double last_vision_innovation_m_ = 0.0;
+    double last_vision_heading_innovation_rad_ = 0.0;
 };
 
 }  // namespace rf

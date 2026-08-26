@@ -225,6 +225,21 @@ PHX_TEST(estimator_heading_fuses_gyro_and_vision) {
     CHECK_NEAR(w.est.output().omega, 1.0, 1e-9);
 }
 
+PHX_TEST(estimator_gyro_filter_rejects_one_tick_heading_shock) {
+    EstimatorConfig cfg;
+    cfg.capture_delay_s = 0.0;
+    cfg.gyro_rate_filter_tau_s = 0.05;
+    FusionEstimator est{cfg};
+    est.tick(0.0, kDt, phx::Twist{}, 0.0);
+    est.on_vision(VisionPose{0.0, 0.0, 0.0}, 0.0);
+    est.tick(kDt, kDt, phx::Twist{}, 0.0);
+
+    est.tick(2.0 * kDt, kDt, phx::Twist{}, 10.0);
+    CHECK(est.output().omega > 0.0);
+    CHECK(est.output().omega < 1.0);
+    CHECK(est.output().pose.heading < 0.004);
+}
+
 PHX_TEST(estimator_heading_gate_rejects_marker_flip_but_keeps_position) {
     EstimatorConfig cfg;
     cfg.capture_delay_s = 0.0;
@@ -295,6 +310,37 @@ PHX_TEST(estimator_heading_rate_gate_allows_turn_consistent_with_gyro) {
     CHECK_NEAR(est.output().pose.heading, 0.30, 1e-6);
 }
 
+PHX_TEST(estimator_heading_relocks_after_two_stable_camera_frames) {
+    EstimatorConfig cfg;
+    cfg.capture_delay_s = 0.0;
+    cfg.theta_gain = 0.5;
+    cfg.tracking_gain = 1.0;
+    cfg.theta_gate_rad = 0.45;
+    cfg.vision_heading_rate_max_rad_s = 0.0;
+    cfg.vision_heading_jump_tolerance_rad = 0.01;
+    cfg.vision_heading_estimator_tolerance_rad = 0.12;
+    cfg.vision_heading_relock_tolerance_rad = 0.35;
+    cfg.vision_heading_relock_stability_rad = 0.03;
+    FusionEstimator est{cfg};
+    est.tick(0.0, kDt, phx::Twist{}, 0.0);
+    est.on_vision(VisionPose{0.0, 0.0, 0.0}, 0.0);
+
+    // A high-load gyro transient pulls the INS away while physical vision
+    // reports a small, abrupt real heading change. The first frame remains
+    // rejected; the matching second frame safely re-locks the estimate.
+    for (int i = 1; i <= 25; ++i) {
+        est.tick(i * kDt, kDt, phx::Twist{}, 3.0);
+    }
+    const double drifted = est.output().pose.heading;
+    CHECK(drifted > 0.25);
+    est.on_vision(VisionPose{0.0, 0.0, 0.05}, 0.0);
+    CHECK_NEAR(est.output().pose.heading, drifted, 1e-9);
+    est.tick(0.104, kDt, phx::Twist{}, 0.0);
+    est.on_vision(VisionPose{0.0, 0.0, 0.05}, 0.0);
+    CHECK(est.output().pose.heading < drifted - 0.05);
+    CHECK(est.output().pose.heading > 0.05);
+}
+
 PHX_TEST(estimator_gyro_loss_falls_back_to_odometry_yaw) {
     FusionEstimator est;
     est.tick(0.0, kDt, phx::Twist{}, 0.0);
@@ -332,4 +378,73 @@ PHX_TEST(estimator_field_gain_overrides_are_independent) {
     FusionEstimator est{cfg};
     CHECK_NEAR(est.k_pos(), 0.65, 1e-12);
     CHECK_NEAR(est.k_vel(), 1.50, 1e-12);
+}
+
+// --- online yaw-gyro bias estimation ---------------------------------------
+
+PHX_TEST(estimator_learns_and_subtracts_stationary_yaw_bias) {
+    // A stationary robot whose gyro reports a constant small bias must learn
+    // and remove it, so integrated heading stays put instead of drifting.
+    EstimatorConfig cfg;
+    cfg.gyro_bias_learn_tau_s = 0.5;  // fast for the test
+    FusionEstimator est{cfg};
+    const double bias = 0.01;  // rad/s (~0.57 dps)
+    double t = 0.0;
+    est.tick(t, kDt, phx::Twist{}, bias);
+    // 5 s stationary: wheels still, gyro = pure bias.
+    for (int i = 1; i <= 1250; ++i) {
+        t = i * kDt;
+        est.tick(t, kDt, phx::Twist{0.0, 0.0, 0.0}, bias);
+    }
+    CHECK_NEAR(est.gyro_bias_radps(), bias, 1e-3);
+    // Heading barely moved despite 5 s of biased gyro.
+    CHECK(std::fabs(est.output().pose.heading) < 0.01);
+    // And the reported yaw rate is debiased toward zero.
+    CHECK(std::fabs(est.output().omega) < 2e-3);
+}
+
+PHX_TEST(estimator_gyro_bias_frozen_during_motion_and_tracks_true_rate) {
+    // While genuinely rotating, the bias estimate must not chase the real
+    // rate, and heading must still integrate the true rotation.
+    EstimatorConfig cfg;
+    cfg.gyro_bias_learn_tau_s = 0.5;
+    FusionEstimator est{cfg};
+    const double w = 1.0;  // rad/s real rotation
+    est.tick(0.0, kDt, phx::Twist{}, w);
+    for (int i = 1; i <= 250; ++i) {
+        // odometry also reports the rotation -> not stationary.
+        est.tick(i * kDt, kDt, phx::Twist{0.0, 0.0, w}, w);
+    }
+    // Bias must stay tiny (never learned during motion).
+    CHECK(std::fabs(est.gyro_bias_radps()) < 1e-3);
+    // Heading integrated the true rate (1 rad/s * 1 s).
+    CHECK_NEAR(est.output().pose.heading, w * 250 * kDt, 0.02);
+}
+
+PHX_TEST(estimator_gyro_bias_is_hard_clamped) {
+    // A wild stationary offset must never be learned beyond the clamp.
+    EstimatorConfig cfg;
+    cfg.gyro_bias_learn_tau_s = 0.2;
+    cfg.gyro_bias_max_radps = 0.02;
+    // Allow the (bogus) large rate to count as "stationary" so we exercise the
+    // clamp rather than the stationary gate.
+    cfg.gyro_bias_stationary_rate_radps = 10.0;
+    FusionEstimator est{cfg};
+    est.tick(0.0, kDt, phx::Twist{}, 5.0);
+    for (int i = 1; i <= 1000; ++i) {
+        est.tick(i * kDt, kDt, phx::Twist{0.0, 0.0, 0.0}, 5.0);
+    }
+    CHECK(std::fabs(est.gyro_bias_radps()) <= cfg.gyro_bias_max_radps + 1e-9);
+}
+
+PHX_TEST(estimator_gyro_bias_not_learned_on_odometry_fallback) {
+    // With the gyro dead (NaN), the odometry-yaw fallback carries no gyro
+    // bias and must not train the estimator.
+    FusionEstimator est;
+    est.tick(0.0, kDt, phx::Twist{}, std::numeric_limits<double>::quiet_NaN());
+    for (int i = 1; i <= 500; ++i) {
+        est.tick(i * kDt, kDt, phx::Twist{0.0, 0.0, 0.0},
+                 std::numeric_limits<double>::quiet_NaN());
+    }
+    CHECK_NEAR(est.gyro_bias_radps(), 0.0, 1e-12);
 }

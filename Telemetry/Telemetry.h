@@ -19,6 +19,7 @@ struct MotorTelemetry
     double temperature;
     double voltage;
     double velocity;
+    double position;  // motor output revolutions (default query field)
     double current;   // q-phase current, A (requires q_current in the query format)
     // double position;
     int mode;
@@ -60,6 +61,9 @@ public:
     double imu_pitch_dps = std::numeric_limits<double>::quiet_NaN();
     double imu_yaw_dps = std::numeric_limits<double>::quiet_NaN();
     double imu_heading_deg = std::numeric_limits<double>::quiet_NaN();
+    double imu_accel_x_mps2 = std::numeric_limits<double>::quiet_NaN();
+    double imu_accel_y_mps2 = std::numeric_limits<double>::quiet_NaN();
+    double imu_accel_z_mps2 = std::numeric_limits<double>::quiet_NaN();
 
     // controllers keyed by CAN ID
     std::map<int, std::shared_ptr<mjbots::moteus::Controller>> controllers;

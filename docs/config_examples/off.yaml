@@ -1,0 +1,9 @@
+# Review overlay only: merge into the field-calibrated Motion.yaml.
+adaptive:
+  enabled: false
+rl:
+  mode: "off"
+  residual_limit_fraction: 0.05
+motion_logging:
+  enabled: true
+  rate_hz: 100.0

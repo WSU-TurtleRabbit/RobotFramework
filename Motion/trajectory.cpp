@@ -7,6 +7,19 @@
 
 namespace rf {
 
+namespace {
+
+double directional_ellipse_limit(double direction_body, double longitudinal,
+                                 double lateral) {
+    const double a = std::max(1e-6, longitudinal);
+    const double b = std::max(1e-6, lateral);
+    const double c = std::cos(direction_body);
+    const double s = std::sin(direction_body);
+    return 1.0 / std::sqrt((c * c) / (a * a) + (s * s) / (b * b));
+}
+
+}  // namespace
+
 void TrajectoryFollower::reset(const phx::Pose& pose, const phx::Vec2& vel_global,
                                double omega) {
     cur_ = TrajSample{};
@@ -61,14 +74,19 @@ TrajSample TrajectoryFollower::tick(double dt_in, const MotionSetpoint& sp) {
     }
 
     // --- effective limits ---
-    double acc_max_xy = sp.acc_max_xy;
+    const double direction_body = phx::angle_diff(drive_dir, cur_.pose.heading);
+    const double chassis_vel_cap = directional_ellipse_limit(
+        direction_body, cfg_.body_longitudinal_vel_max, cfg_.body_lateral_vel_max);
+    const double chassis_acc_cap = directional_ellipse_limit(
+        direction_body, cfg_.body_longitudinal_acc_max, cfg_.body_lateral_acc_max);
+    double acc_max_xy = std::min(sp.acc_max_xy, chassis_acc_cap);
     const double orient_error =
         std::fabs(phx::angle_diff(orient_target, cur_.pose.heading));
     if (sp.fast_pos && slave_to_drive &&
         orient_error < cfg_.fast_pos_align_rad) {
         acc_max_xy = std::max(acc_max_xy, sp.acc_max_xy_fast);
     }
-    double vel_max_xy = sp.vel_max_xy;
+    double vel_max_xy = std::min(sp.vel_max_xy, chassis_vel_cap);
     // Share traction between translation and rotation for every pose mode.
     // Previously FAST_POS/primaryDirection bypassed this gate, so they could
     // launch at full translation while still facing across the requested
@@ -100,7 +118,7 @@ TrajSample TrajectoryFollower::tick(double dt_in, const MotionSetpoint& sp) {
     const phx::BangBang2D tr =
         phx::BangBang2D::plan(cur_.pose.pos, cur_.vel, sp.target.pos,
                               vel_max_xy, acc_max_xy,
-                              acc_max_xy * std::clamp(cfg_.brake_scale, 0.1, 1.0));
+                              acc_max_xy * std::clamp(cfg_.brake_scale, 0.1, 2.0));
     // --- regenerate the orientation profile (wrapped short way) ---
     const double heading_target =
         cur_.pose.heading + phx::angle_diff(orient_target_filt_, cur_.pose.heading);
