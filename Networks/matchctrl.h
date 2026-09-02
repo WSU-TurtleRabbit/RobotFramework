@@ -36,6 +36,7 @@ inline constexpr uint8_t kWireMagic0 = 'P';
 inline constexpr uint8_t kWireMagic1 = 'X';
 inline constexpr uint8_t kCmdMatchCtrl = 0x05;      // TIGERs CMD_SYSTEM_MATCH_CTRL
 inline constexpr uint8_t kCmdMatchFeedback = 0x06;  // TIGERs CMD_SYSTEM_MATCH_FEEDBACK
+inline constexpr uint8_t kCmdMotionParams = 0x07;   // Phoenix: runtime motion parameters
 
 inline constexpr std::size_t kHeaderSize = 6;
 inline constexpr std::size_t kSkillDataSize = 16;
@@ -43,6 +44,10 @@ inline constexpr std::size_t kMatchCtrlBodySize = 10 + kSkillDataSize;  // 26
 inline constexpr std::size_t kMatchCtrlSize = kHeaderSize + kMatchCtrlBodySize;  // 32
 inline constexpr std::size_t kMatchFeedbackBodySize = 29;
 inline constexpr std::size_t kMatchFeedbackSize = kHeaderSize + kMatchFeedbackBodySize;  // 35
+inline constexpr std::size_t kMotionParamsBodySize = 24;
+inline constexpr std::size_t kMotionParamsSize = kHeaderSize + kMotionParamsBodySize;  // 30
+inline constexpr std::size_t kMotionParamsSlots = 4;
+inline constexpr uint8_t kRlModeKeep = 255;
 
 // Sentinels (wire.py: UNUSED_FIELD / POS_DELAY_NONE).
 inline constexpr int16_t kUnusedField = 0x7FFF;   // pose axis: "no fresh vision"
@@ -240,11 +245,65 @@ struct MatchFeedback {
     int hardware_id = 0;
     int ball_pos_age_ms = 255;  // 255 = no onboard ball estimate
     std::optional<std::pair<double, double>> ball_pos;  // m, nullopt if unused
+    // Trailing bytes 26..28 (TIGERs' unmeasured last-kick diagnostics),
+    // repurposed by Phoenix, both sides together (wire.py MatchFeedback):
+    //   b26..27  motion_profile_id u16 LE — Motion.yaml profile.id, 0 = not set
+    //   b28      bits 1-0 rl_mode (0 off, 1 collect, 2 shadow, 3 bounded),
+    //            bit 2 adaptive surface estimator enabled.
+    int motion_profile_id = 0;
+    int rl_mode = 0;
+    bool adaptive_enabled = false;
 };
 
 // Encode one MatchFeedback datagram (kMatchFeedbackSize bytes). Wire
 // quantization: mm/mrad int16 (clamped to +-32766, mirroring wire.py's _mm),
 // kicker volts u8, dribbler speed 0.25 m/s units, battery dV, percent 0..255.
 std::array<uint8_t, kMatchFeedbackSize> encode_match_feedback(const MatchFeedback& fb);
+
+// --------------------------------------------------------------------------
+// MotionParams (server -> robot) — Phoenix extension, wire.py MotionParams
+// --------------------------------------------------------------------------
+//
+// Pushes the onboard half of the fleet motion profile at runtime so the
+// console can switch every robot without SSH; the robot acknowledges by
+// reporting the new profile id in MatchFeedback b26..27.
+//
+//   u16 profile_id   the id to report from now on (0 = keep)
+//   u8  rl_mode      0 off, 1 collect, 2 shadow, 3 bounded, 255 = keep
+//   u8  flags        bit0 reload the policy file from rl.policy_path
+//   4 x { u8 key, f32 value }   parameter slots; key 0 = empty
+//
+// Keys are a WHITELIST of runtime-safe values. Controller gains are
+// deliberately absent. The bridge clamps every value to a sane range and
+// never raises the RL residual authority above the loaded policy's own.
+enum class MotionParamKey : uint8_t {
+    None = 0,
+    BodyLongitudinalVelMax = 1,   // m/s
+    BodyLateralVelMax = 2,        // m/s
+    BodyLongitudinalAccMax = 3,   // m/s^2
+    BodyLateralAccMax = 4,        // m/s^2
+    RlResidualLimitFraction = 5,  // 0..1
+    RlConfidenceThreshold = 6,    // 0..1
+};
+
+struct MotionParam {
+    MotionParamKey key = MotionParamKey::None;
+    float value = 0.0f;
+};
+
+struct MotionParams {
+    int robot_id = 0;
+    uint16_t seq = 0;
+    int profile_id = 0;
+    int rl_mode = kRlModeKeep;
+    bool reload_policy = false;
+    std::array<MotionParam, kMotionParamsSlots> params{};
+    std::size_t count = 0;  // populated slots (key != None)
+};
+
+// Strict decode: exactly kMotionParamsSize bytes, right magic/command, and
+// every populated slot carries a known key — else nullopt (never applied).
+std::optional<MotionParams> decode_motion_params(const uint8_t* data, std::size_t len);
+std::optional<MotionParams> decode_motion_params(const std::string& datagram);
 
 }  // namespace rf

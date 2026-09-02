@@ -21,6 +21,7 @@ add_executable(host_tests
     main.cpp
     test_actuators.cpp
     test_adaptive.cpp
+    test_beacon.cpp
     test_controller.cpp
     test_decode.cpp
     test_estimator.cpp
@@ -35,6 +36,7 @@ add_executable(host_tests
     test_trajectory.cpp
     ${RF_ROOT}/Networks/decode.cpp
     ${RF_ROOT}/Networks/matchctrl.cpp
+    ${RF_ROOT}/Networks/beacon.cpp
     ${RF_ROOT}/Math/kinematics.cpp
     ${RF_ROOT}/Motion/actuators.cpp
     ${RF_ROOT}/Motion/controller.cpp

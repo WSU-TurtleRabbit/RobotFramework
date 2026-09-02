@@ -8,6 +8,7 @@
 #pragma once
 
 #include <array>
+#include <optional>
 #include <cstdint>
 #include <string>
 
@@ -252,6 +253,14 @@ public:
     RlMode rl_mode() const { return cfg_.rl.mode; }
     bool reload_policy();
     void disable_rl();
+    // Runtime pushes from the server (MotionParams). A mode change clears
+    // the auto-disable latch and the intervention streak; the residual
+    // limit can only be LOWERED below the configured/loaded authority, never
+    // raised. Both clamp to sane ranges.
+    void set_rl_mode(RlMode mode);
+    void set_rl_limits(std::optional<double> residual_limit_fraction,
+                       std::optional<double> confidence_threshold);
+    const ResidualPolicyConfig& rl_config() const { return cfg_.rl; }
 
 private:
     std::array<double, ResidualPolicy::kObservationDim> observation(

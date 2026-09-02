@@ -16,6 +16,12 @@ namespace rf {
 
 // Everything config/Motion.yaml controls for the MatchCtrl cascade.
 struct MatchSettings {
+    // Which Phoenix motion profile this Motion.yaml was rendered from
+    // (configs/motion/<name>.toml [onboard] profile_id). Reported back in
+    // MatchFeedback b26..27; 0 = not set (server shows "not reported").
+    int profile_id = 0;
+    std::string profile_name;
+
     bool enabled = true;            // false = ignore MatchCtrl frames
     int imu_yaw_rate_axis = 2;      // 0=x/roll, 1=y/pitch, 2=z/yaw
     double imu_yaw_rate_sign = 1.0; // gyro polarity: +1 when the pi3hat gyro

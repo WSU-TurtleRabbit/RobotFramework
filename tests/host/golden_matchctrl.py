@@ -122,3 +122,24 @@ fb_none = MatchFeedback(
     ball_pos_age_ms=255, ball_pos=None,
 )
 show("feedback_noball", wire.encode_match_feedback(fb_none))
+
+
+# --- MotionParams (0x07) + the feedback profile bytes ---------------------
+show(
+    "motion_params_full",
+    wire.encode_motion_params(wire.MotionParams(
+        robot_id=7, seq=42, profile_id=1011, rl_mode=3, reload_policy=True,
+        params=((wire.MotionParamKey.BODY_LONGITUDINAL_VEL_MAX, 4.0),
+                (wire.MotionParamKey.RL_CONFIDENCE_THRESHOLD, 0.3)),
+    )),
+)
+show("motion_params_min", wire.encode_motion_params(wire.MotionParams(robot_id=5, seq=1, profile_id=1001)))
+fb_profile = MatchFeedback(
+    robot_id=3, seq=9, pos=Vec2(0.5, -0.25), heading=1.0, vel=Vec2(0.1, 0.0), ang_vel=0.0,
+    kicker_level_v=0.0, kicker_max_v=200.0, dribbler_speed=0.0,
+    dribble_traction=DribbleTraction.OFF, battery_v=15.2, battery_percent=76.5,
+    barrier_interrupted=False, dribbler_temp_class=0, kick_counter=False, ball_state=0,
+    features=0x0B, hardware_id=11, ball_pos_age_ms=255, ball_pos=None,
+    motion_profile_id=1011, rl_mode=3, adaptive_enabled=True,
+)
+show("feedback_profile", wire.encode_match_feedback(fb_profile))

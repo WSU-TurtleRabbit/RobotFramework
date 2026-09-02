@@ -17,6 +17,10 @@ MatchSettings loadMatchSettings(const std::string& path) {
     try {
         const YAML::Node root = YAML::LoadFile(path);
 
+        if (root["profile"]) {
+            opt(root["profile"], "id", s.profile_id);
+            opt(root["profile"], "name", s.profile_name);
+        }
         if (root["imu"]) {
             opt(root["imu"], "yaw_rate_axis", s.imu_yaw_rate_axis);
             opt(root["imu"], "yaw_rate_sign", s.imu_yaw_rate_sign);

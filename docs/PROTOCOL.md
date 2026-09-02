@@ -110,6 +110,56 @@ traction estimate are what make go-to-ball reliable.
 
 ![MatchFeedback frame layout](images/matchfeedback-frame.svg)
 
+### Bytes 26–28: onboard motion profile (Phoenix extension)
+
+TIGERs reserve the last three feedback bytes for last-kick diagnostics our
+hardware never measured (always 0). Phoenix uses them, both sides together:
+
+| Byte | Field | Meaning |
+|------|-------|---------|
+| 26–27 | `motion_profile_id` u16 LE | `config/Motion.yaml` `profile.id` (the Phoenix `configs/motion/<name>.toml` onboard id), or the last MotionParams push; 0 = not set |
+| 28 | bits 1–0 `rl_mode`, bit 2 adaptive | 0 off, 1 collect, 2 shadow, 3 bounded; bit 2 = surface estimator enabled |
+
+The server compares every robot's id with its active profile and shows the
+fleet as consistent or not.
+
+## MotionParams (server → robot, 30 bytes = header + 24, command 0x07)
+
+The server pushing the onboard half of the fleet motion profile at runtime,
+so the console can switch every robot without SSH. Applied live by
+`MatchBridge::apply_motion_params`; acknowledged by the new `profile_id` in
+the next feedback. Strict decode: exact length, known keys only, finite
+values, else the frame is dropped whole.
+
+| Offset | Field | Notes |
+|--------|-------|-------|
+| 0–1 | `profile_id` u16 LE | id to report from now on; 0 = keep |
+| 2 | `rl_mode` u8 | 0 off, 1 collect, 2 shadow, 3 bounded, 255 = keep |
+| 3 | `flags` u8 | bit 0: reload the policy file from `rl.policy_path` |
+| 4–23 | 4 × { `key` u8, `value` f32 LE } | key 0 = empty slot |
+
+Keys (whitelist): 1 `body_longitudinal_vel_max`, 2 `body_lateral_vel_max`,
+3 `body_longitudinal_acc_max`, 4 `body_lateral_acc_max` (each clamped to
+0.1–10), 5 `rl.residual_limit_fraction` (only ever LOWERED), 6
+`rl.confidence_threshold` (0–1). Controller gains are deliberately not
+pushable: they change by editing Motion.yaml and restarting, with a human
+reading the diff.
+
+## Discovery beacon (robot → broadcast, UDP 50515, 1 Hz)
+
+One JSON line, `config/Network.yaml` `beacon.*`, sent to
+`255.255.255.255:50515` by `Networks/beacon.cpp`:
+
+```
+{"phoenix_beacon":1,"robot_id":5,"hardware_id":0,"rid":"A","hostname":"raspberrypi",
+ "fw":"2026.09-phoenix2","features":11,"battery_v":23.94,"profile_id":1001,
+ "rl_mode":0,"adaptive":false,"uptime_s":812.5,"command_port":50514}
+```
+
+Phoenix lists beacons under **Discovered**; an operator adopts the robot
+into the roster (never automatically). The server trusts the datagram's
+source IP for the address, not the payload.
+
 ## Legacy text channel (bench fallback)
 
 Plain-text UDP, same ports. Strict decode (`Networks/decode.{h,cpp}`): a

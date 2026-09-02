@@ -27,6 +27,8 @@
 // Pure and deterministic: no clocks, no sockets.
 #pragma once
 
+#include <optional>
+
 #include "phx/bang_bang_1d.h"
 #include "phx/bang_bang_2d.h"
 #include "phx/pose.h"
@@ -96,6 +98,19 @@ public:
     TrajSample tick(double dt, const MotionSetpoint& sp);
 
     const TrajSample& current() const { return cur_; }
+    const TrajectoryConfig& config() const { return cfg_; }
+    // Runtime push of the chassis-frame ceilings (MotionParams). Each value
+    // is clamped to [0.1, 10]; an absent optional leaves the field alone.
+    void set_body_limits(std::optional<double> long_vel, std::optional<double> lat_vel,
+                         std::optional<double> long_acc, std::optional<double> lat_acc) {
+        auto put = [](std::optional<double> v, double& field) {
+            if (v && v == v) field = v.value() < 0.1 ? 0.1 : (v.value() > 10.0 ? 10.0 : v.value());
+        };
+        put(long_vel, cfg_.body_longitudinal_vel_max);
+        put(lat_vel, cfg_.body_lateral_vel_max);
+        put(long_acc, cfg_.body_longitudinal_acc_max);
+        put(lat_acc, cfg_.body_lateral_acc_max);
+    }
 
 private:
     TrajectoryConfig cfg_;

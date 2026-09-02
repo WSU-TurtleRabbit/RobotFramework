@@ -6,6 +6,14 @@
 # The exact provenance, validated operating envelopes, Phoenix UI fast-brake
 # refinements, and rollback values live in config/motion_calibrations.json.
 
+# Which Phoenix motion profile this file was rendered from
+# (Phoenix-Server configs/motion/<name>.toml [onboard] profile_id). Reported
+# in MatchFeedback so the console can check fleet consistency; a MotionParams
+# push from the server updates the reported id at runtime.
+profile:
+  id: 1001
+  name: "baseline-validated"
+
 imu:
   # Robot A hardware identification 2026-07-31: live spin-out diagnosis
   # showed physical yaw on the Pi3Hat Y/pitch rate. During commanded yaw,

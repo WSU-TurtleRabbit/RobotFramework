@@ -721,6 +721,28 @@ void MotionAugmentor::disable_rl() {
     previous_residual_ = {};
 }
 
+void MotionAugmentor::set_rl_mode(RlMode mode) {
+    if (mode == cfg_.rl.mode) return;
+    cfg_.rl.mode = mode;
+    rl_auto_disabled_ = false;
+    consecutive_interventions_ = 0;
+    previous_residual_ = {};
+}
+
+void MotionAugmentor::set_rl_limits(std::optional<double> residual_limit_fraction,
+                                    std::optional<double> confidence_threshold) {
+    if (residual_limit_fraction && std::isfinite(*residual_limit_fraction)) {
+        // Only ever tighten: the loaded policy's declared authority and the
+        // Motion.yaml value are ceilings, not suggestions.
+        const double ceiling = cfg_.rl.residual_limit_fraction;
+        cfg_.rl.residual_limit_fraction =
+            std::clamp(*residual_limit_fraction, 0.0, std::max(0.0, ceiling));
+    }
+    if (confidence_threshold && std::isfinite(*confidence_threshold)) {
+        cfg_.rl.confidence_threshold = std::clamp(*confidence_threshold, 0.0, 1.0);
+    }
+}
+
 bool MotionAugmentor::telemetry_healthy(const RuntimeFeedback& feedback) const {
     if (!std::isfinite(feedback.bus_voltage_v)) return false;
     if (feedback.bus_voltage_v < cfg_.safety.min_bus_voltage_v) return false;

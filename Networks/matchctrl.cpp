@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 
 namespace rf {
 namespace {
@@ -204,10 +205,56 @@ std::array<uint8_t, kMatchFeedbackSize> encode_match_feedback(const MatchFeedbac
     const double by = fb.ball_pos ? fb.ball_pos->second : 0.0;
     wr_i16(b + 22, wire_mm(bx));
     wr_i16(b + 24, wire_mm(by));
-    b[26] = 0;  // lastKickDuration — not measured yet
-    b[27] = 0;  // lastKickDribbleVelDev
-    b[28] = 0;  // lastKickDribbleForce
+    // b26..28: Phoenix onboard-profile report (wire.py MatchFeedback).
+    const uint16_t profile = static_cast<uint16_t>(std::clamp(fb.motion_profile_id, 0, 0xFFFF));
+    b[26] = static_cast<uint8_t>(profile & 0xFF);
+    b[27] = static_cast<uint8_t>((profile >> 8) & 0xFF);
+    b[28] = static_cast<uint8_t>((fb.rl_mode & 0x3) | (fb.adaptive_enabled ? 0x04 : 0));
     return out;
+}
+
+namespace {
+float rd_f32(const uint8_t* p) {
+    uint32_t bits = static_cast<uint32_t>(p[0]) | (static_cast<uint32_t>(p[1]) << 8) |
+                    (static_cast<uint32_t>(p[2]) << 16) | (static_cast<uint32_t>(p[3]) << 24);
+    float f = 0.0f;
+    std::memcpy(&f, &bits, sizeof(f));
+    return f;
+}
+}  // namespace
+
+std::optional<MotionParams> decode_motion_params(const uint8_t* data, std::size_t len) {
+    if (len != kMotionParamsSize) return std::nullopt;
+    if (data[0] != kWireMagic0 || data[1] != kWireMagic1) return std::nullopt;
+    if (data[2] != kCmdMotionParams) return std::nullopt;
+    MotionParams mp;
+    mp.robot_id = data[3];
+    mp.seq = rd_u16(data + 4);
+    const uint8_t* body = data + kHeaderSize;
+    mp.profile_id = rd_u16(body + 0);
+    mp.rl_mode = body[2];
+    mp.reload_policy = (body[3] & 0x01) != 0;
+    if (mp.rl_mode != kRlModeKeep && mp.rl_mode > 3) return std::nullopt;
+    mp.count = 0;
+    for (std::size_t i = 0; i < kMotionParamsSlots; ++i) {
+        const uint8_t* slot = body + 4 + i * 5;
+        const uint8_t key = slot[0];
+        if (key == 0) continue;
+        if (key > static_cast<uint8_t>(MotionParamKey::RlConfidenceThreshold)) {
+            return std::nullopt;  // unknown key: reject the whole frame
+        }
+        const float value = rd_f32(slot + 1);
+        if (!std::isfinite(value)) return std::nullopt;
+        mp.params[mp.count].key = static_cast<MotionParamKey>(key);
+        mp.params[mp.count].value = value;
+        mp.count++;
+    }
+    return mp;
+}
+
+std::optional<MotionParams> decode_motion_params(const std::string& datagram) {
+    return decode_motion_params(reinterpret_cast<const uint8_t*>(datagram.data()),
+                                datagram.size());
 }
 
 }  // namespace rf

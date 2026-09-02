@@ -83,6 +83,12 @@ public:
     // Operator STOP / estop: drop the command, disarm, coast immediately.
     void clear();
 
+    // A MotionParams frame (server push of the onboard profile half):
+    // trajectory ceilings, RL mode / limits, optional policy reload. Returns
+    // the profile id to report from now on (mp.profile_id, or `current` when
+    // the frame says keep). Never touches controller gains.
+    int apply_motion_params(const MotionParams& mp, int current_profile_id);
+
     bool active() const { return active_; }
     // Robot id of the last accepted frame (-1 = none); feedback identity
     // when the bridge accepts any id (bench mode).

@@ -2,3 +2,11 @@ network:
   bufferSize: 1024
   receiver_port: 50514
   sender_port: 50513
+
+# Discovery beacon: one JSON datagram per interval, broadcast to
+# 255.255.255.255:<port>. Phoenix Server lists beacons under "Discovered";
+# an operator adopts the robot into the roster (never automatic).
+beacon:
+  enabled: true
+  port: 50515
+  interval_s: 1.0

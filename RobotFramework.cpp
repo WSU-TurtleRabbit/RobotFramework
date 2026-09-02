@@ -51,6 +51,7 @@
 #include "match_bridge.h"
 #include "match_config_yaml.h"
 #include "match_feedback.h"
+#include "beacon.h"
 #include "motion_logger.h"
 #include "supervisor.h"
 #include <array>
@@ -118,6 +119,7 @@ int main(int argc, char **argv)
 
     // This robot's command-channel id (config Robot_id; -1 = accept any).
     int robot_id = -1;
+    std::string robot_rid;  // asset letter (Main.yaml Robot_rid), beacon only
 
     // --- Logger ---
     Logger logger("logs");
@@ -199,6 +201,9 @@ int main(int argc, char **argv)
         // Optional: which command-channel id this robot answers to.
         if (config["Robot_id"])
             robot_id = config["Robot_id"].as<int>();
+        // Physical asset letter, announced in the discovery beacon.
+        if (config["Robot_rid"])
+            robot_rid = config["Robot_rid"].as<std::string>();
 
         logger.log("rframework", "Successfully loaded configs!", LogLevel::INFO);
     }
@@ -306,6 +311,52 @@ int main(int argc, char **argv)
     health.battery_full_v = motion.battery_full_v;
     health.kicker_max_v = motion.kicker_max_v;
     health.kicker_recharge_s = motion.kicker_recharge_s;
+    health.motion_profile_id = motion.profile_id;
+    health.adaptive_enabled = motion.augmentation.estimator.enabled;
+    logger.log("rframework", std::string("Motion profile: ") +
+        (motion.profile_name.empty() ? "(unnamed)" : motion.profile_name) +
+        " id " + std::to_string(motion.profile_id) +
+        ", rl " + rf::rl_mode_name(motion.augmentation.rl.mode), LogLevel::INFO);
+
+    // --- Discovery beacon (config/Network.yaml beacon.*) ---
+    bool beacon_enabled = true;
+    int beacon_port = rf::kBeaconPort;
+    double beacon_interval_s = rf::kBeaconIntervalS;
+    try
+    {
+        YAML::Node net = YAML::LoadFile("../config/Network.yaml");
+        if (net["beacon"])
+        {
+            if (net["beacon"]["enabled"]) beacon_enabled = net["beacon"]["enabled"].as<bool>();
+            if (net["beacon"]["port"]) beacon_port = net["beacon"]["port"].as<int>();
+            if (net["beacon"]["interval_s"]) beacon_interval_s = net["beacon"]["interval_s"].as<double>();
+        }
+    }
+    catch (const std::exception &)
+    {
+        // Network.yaml absent/unreadable: UDP already fell back to defaults.
+    }
+    rf::BeaconSender beacon(beacon_port);
+    rf::BeaconInfo beacon_info;
+    beacon_info.robot_id = robot_id;
+    beacon_info.hardware_id = motion.hardware_id;
+    beacon_info.rid = robot_rid;
+    {
+        char host[256] = {0};
+        if (gethostname(host, sizeof(host) - 1) == 0) beacon_info.hostname = host;
+    }
+    beacon_info.command_port = UDP.getRecieverPort();
+    beacon_info.adaptive = motion.augmentation.estimator.enabled;
+    const auto beacon_interval = std::chrono::milliseconds(
+        static_cast<int>(std::max(0.2, beacon_interval_s) * 1000.0));
+    const auto process_start = std::chrono::steady_clock::now();
+    uint16_t last_feedback_features = 0;
+    if (beacon_enabled)
+    {
+        logger.log("rframework", std::string("Discovery beacon on UDP ") +
+            std::to_string(beacon_port) + (beacon.ok() ? "" : " (socket unavailable)"),
+            beacon.ok() ? LogLevel::INFO : LogLevel::WARN);
+    }
 
     // --- Initialize Arduino ---
     logger.log("rframework", "arduino", "Searching for Arduino...", LogLevel::INFO);
@@ -351,6 +402,7 @@ int main(int argc, char **argv)
         static auto last_feedback_time = current_time;
         static auto last_motor_log_time = current_time;
         static auto last_arduino_time = current_time;
+        static auto last_beacon_time = current_time - beacon_interval;
 
         // --- UDP receive (every superloop iteration): MatchCtrl binary
         // first, legacy v1 text as the bench fallback. The socket drain
@@ -362,7 +414,33 @@ int main(int argc, char **argv)
             const double now_s = std::chrono::duration<double>(
                 current_time.time_since_epoch()).count();
             rf::MatchAccept acc = rf::MatchAccept::Malformed;
-            if (motion.enabled)
+            // Phoenix MotionParams (0x07): the server pushing the onboard
+            // half of the fleet motion profile. Applied live through the
+            // bridge; acknowledged by the profile id in the next feedback.
+            if (const auto mp = rf::decode_motion_params(msg))
+            {
+                if (motion.bridge.expected_robot_id >= 0 &&
+                    mp->robot_id != motion.bridge.expected_robot_id)
+                {
+                    logger.log("rframework", "reciever", "MotionParams for another robot ignored", LogLevel::WARN);
+                }
+                else
+                {
+                    motion.profile_id = bridge.apply_motion_params(*mp, motion.profile_id);
+                    health.motion_profile_id = motion.profile_id;
+                    logger.log("rframework", "reciever",
+                        std::string("MotionParams applied: profile ") +
+                        std::to_string(motion.profile_id) + ", rl " +
+                        rf::rl_mode_name(bridge.augmentor().rl_mode()) +
+                        (mp->reload_policy ? ", policy reloaded" : "") +
+                        ", " + std::to_string(mp->count) + " params",
+                        LogLevel::INFO);
+                }
+                // Handled here; StaleSeq is the switch's silent no-op so the
+                // rest of the superloop iteration (motor tick, feedback) runs.
+                acc = rf::MatchAccept::StaleSeq;
+            }
+            else if (motion.enabled)
             {
                 acc = bridge.accept(msg, now_s);
             }
@@ -826,6 +904,19 @@ int main(int argc, char **argv)
             last_motor_time = current_time;
         }
 
+        // --- Discovery beacon (1 Hz default): who we are, for the server's
+        // "Discovered" list. Broadcast, no peer needed.
+        if (beacon_enabled && current_time - last_beacon_time >= beacon_interval)
+        {
+            last_beacon_time = current_time;
+            beacon_info.features = last_feedback_features;
+            beacon_info.battery_v = health.battery_v;
+            beacon_info.profile_id = health.motion_profile_id;
+            beacon_info.rl_mode = static_cast<int>(bridge.augmentor().rl_mode()) & 0x3;
+            beacon_info.uptime_s = std::chrono::duration<double>(current_time - process_start).count();
+            beacon.send(rf::beacon_json(beacon_info));
+        }
+
         // --- MatchFeedback to the server (50 Hz default) ---
         if (current_time - last_feedback_time >= Feedback_interval)
         {
@@ -845,6 +936,7 @@ int main(int argc, char **argv)
                 : 1e9;
 
             const rf::MatchFeedback fb = feedback.build(bridge, bt, health, ball, now_s);
+            last_feedback_features = fb.features;
             const auto bytes = rf::encode_match_feedback(fb);
             UDP.send(std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size()));
             // Compact 50 Hz motion-identification record: commanded and

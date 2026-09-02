@@ -57,6 +57,31 @@ MatchAccept MatchBridge::accept(const std::string& datagram, double now_s) {
     return MatchAccept::Accepted;
 }
 
+int MatchBridge::apply_motion_params(const MotionParams& mp, int current_profile_id) {
+    std::optional<double> long_v, lat_v, long_a, lat_a, rl_limit, rl_conf;
+    for (std::size_t i = 0; i < mp.count; ++i) {
+        const double v = static_cast<double>(mp.params[i].value);
+        switch (mp.params[i].key) {
+            case MotionParamKey::BodyLongitudinalVelMax: long_v = v; break;
+            case MotionParamKey::BodyLateralVelMax: lat_v = v; break;
+            case MotionParamKey::BodyLongitudinalAccMax: long_a = v; break;
+            case MotionParamKey::BodyLateralAccMax: lat_a = v; break;
+            case MotionParamKey::RlResidualLimitFraction: rl_limit = v; break;
+            case MotionParamKey::RlConfidenceThreshold: rl_conf = v; break;
+            case MotionParamKey::None: break;
+        }
+    }
+    follower_.set_body_limits(long_v, lat_v, long_a, lat_a);
+    augmentor_.set_rl_limits(rl_limit, rl_conf);
+    if (mp.rl_mode != kRlModeKeep) {
+        augmentor_.set_rl_mode(static_cast<RlMode>(mp.rl_mode & 0x3));
+    }
+    if (mp.reload_policy) {
+        augmentor_.reload_policy();
+    }
+    return mp.profile_id != 0 ? mp.profile_id : current_profile_id;
+}
+
 BridgeTick MatchBridge::tick(double now_s, double dt, const phx::Twist& odo_body,
                              double gyro_yaw_radps, const BallContactObs& ball,
                              const RuntimeFeedback& feedback) {

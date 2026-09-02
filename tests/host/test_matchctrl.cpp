@@ -317,3 +317,68 @@ PHX_TEST(kd_field_layout_matches_wirepy_bit_positions) {
     CHECK_NEAR(mx.dribbler_speed, 63 * kDribblerSpeedScale, 1e-12);
     CHECK_NEAR(mx.dribbler_force, 63 * kDribblerForceScale, 1e-12);
 }
+
+
+// --- MotionParams (0x07) + feedback profile bytes ------------------------
+// Goldens from phoenix-server tests/test_motion_params.py (wire.py encoder).
+
+PHX_TEST(motion_params_golden_full_decodes) {
+    // robot 7, seq 42, profile 1011, rl bounded, reload policy,
+    // slots: BodyLongitudinalVelMax 4.0, RlConfidenceThreshold 0.3.
+    const auto mp = decode_motion_params(from_hex(
+        "505807072a00f30303010100008040069a99993e00000000000000000000"));
+    REQUIRE(mp.has_value());
+    CHECK(mp->robot_id == 7);
+    CHECK(mp->seq == 42);
+    CHECK(mp->profile_id == 1011);
+    CHECK(mp->rl_mode == 3);
+    CHECK(mp->reload_policy);
+    REQUIRE(mp->count == 2);
+    CHECK(mp->params[0].key == MotionParamKey::BodyLongitudinalVelMax);
+    CHECK_NEAR(mp->params[0].value, 4.0, 1e-6);
+    CHECK(mp->params[1].key == MotionParamKey::RlConfidenceThreshold);
+    CHECK_NEAR(mp->params[1].value, 0.3, 1e-6);
+}
+
+PHX_TEST(motion_params_golden_minimal_and_rejections) {
+    const auto mp = decode_motion_params(from_hex(
+        "505807050100e903ff000000000000000000000000000000000000000000"));
+    REQUIRE(mp.has_value());
+    CHECK(mp->robot_id == 5 && mp->seq == 1 && mp->profile_id == 1001);
+    CHECK(mp->rl_mode == kRlModeKeep);
+    CHECK(!mp->reload_policy);
+    CHECK(mp->count == 0);
+    // wrong length / wrong command / unknown key / MatchCtrl decoder refuses it
+    CHECK(!decode_motion_params(from_hex("505807050100e903ff00")).has_value());
+    CHECK(!decode_motion_params(from_hex(
+        "505805050100e903ff000000000000000000000000000000000000000000")).has_value());
+    CHECK(!decode_motion_params(from_hex(
+        "505807050100e903ff00c8000000000000000000000000000000000000")).has_value());
+    CHECK(!decode_match_ctrl(from_hex(
+        "505807050100e903ff000000000000000000000000000000000000000000")).has_value());
+}
+
+PHX_TEST(matchfeedback_trailing_bytes_carry_profile_and_rl_mode) {
+    MatchFeedback fb;
+    fb.robot_id = 3;
+    fb.seq = 9;
+    fb.pos_x = 0.5;
+    fb.pos_y = -0.25;
+    fb.heading = 1.0;
+    fb.vel_x = 0.1;
+    fb.kicker_level_v = 0.0;
+    fb.kicker_max_v = 200.0;
+    fb.battery_v = 15.2;
+    fb.battery_percent = 76.5;
+    fb.features = 0x0B;
+    fb.hardware_id = 11;
+    fb.motion_profile_id = 1011;
+    fb.rl_mode = 3;
+    fb.adaptive_enabled = true;
+    check_hex(encode_match_feedback(fb),
+              "505806030900f40106ffe80364000000000000c80098c3000b000bff00000000f30307");
+    // defaults keep the historical zero tail
+    MatchFeedback plain;
+    const auto bytes = encode_match_feedback(plain);
+    CHECK(bytes[6 + 26] == 0 && bytes[6 + 27] == 0 && bytes[6 + 28] == 0);
+}

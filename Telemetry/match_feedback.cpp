@@ -60,6 +60,12 @@ MatchFeedback MatchFeedbackBuilder::build(const MatchBridge& bridge,
     // No onboard ball-position estimate yet (needs camera calibration).
     fb.ball_pos_age_ms = 255;
     fb.ball_pos = std::nullopt;
+
+    // b26..28: which motion profile / RL mode this robot is actually on, so
+    // the server can show the fleet as consistent (or not).
+    fb.motion_profile_id = health.motion_profile_id;
+    fb.rl_mode = static_cast<int>(bridge.augmentor().rl_mode()) & 0x3;
+    fb.adaptive_enabled = health.adaptive_enabled;
     return fb;
 }
 

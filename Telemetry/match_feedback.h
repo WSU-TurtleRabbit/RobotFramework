@@ -44,6 +44,11 @@ struct FeedbackHealth {
     // Arduino's own 5 s guard).
     double kicker_max_v = 200.0;
     double kicker_recharge_s = 5.0;
+    // Onboard motion profile identity (Motion.yaml profile.id, or the last
+    // MotionParams push) and whether the adaptive surface estimator runs.
+    // The RL mode is read live from the bridge's augmentor.
+    int motion_profile_id = 0;
+    bool adaptive_enabled = false;
 };
 
 class MatchFeedbackBuilder {
