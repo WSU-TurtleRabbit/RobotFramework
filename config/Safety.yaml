@@ -38,7 +38,12 @@ minBusVoltage: 19.0 # V — 6S LiPo under-voltage cutoff (3.17 V/cell)
 # Auto-recovery hold-off: a latched trip clears itself after everything has
 # been healthy (with hysteresis) for this long while the operator commands
 # zero. 0 disables auto-recovery (latch until STOP or restart).
-recoveryS: 3.0 # seconds
+# 2026-09-03: 3.0 -> 0.5. The trip itself already needs 300 ms of sustained
+# over-current (currentGraceMs) and recovery needs the current back under 80%
+# of the limit, so a half-second hold is enough for a transient; three seconds
+# of standing still per trip made a marginal wheel unusable in play (145 trips
+# in one session on motor 2, 0.6 s of motion each).
+recoveryS: 0.5 # seconds
 
 # moteus per-command hardware watchdog, seconds: if the Pi control loop
 # stalls or the process dies, each motor stops itself this long after the
