@@ -17,9 +17,15 @@ envelope:
 commandTimeoutMs: 250 # milliseconds
 
 # --- Per-motor protective trips (latched; recoverable) ---
-# Field-verified against moteus: controller max_current_A=15 A, while normal
-# 1 m/s holonomic acceleration reaches ~8 A on wheel 1. Keep a 33% hardware
-# margin and the 300 ms sustained-current qualification below.
+# 2026-09-04: the controller ceiling was lowered to servo.max_current_A=5 A
+# (config/moteus_velocity.cfg), so the CONTROLLER now bounds current before
+# this trip can ever see it. Two consequences, both deliberate:
+#   * A motor can no longer reach 10 A, so this trip is currently
+#     UNREACHABLE. It is kept as a backstop for the case where the
+#     controller config is missing, reverted, or a board was reflashed.
+#   * Normal 1 m/s holonomic acceleration was measured at ~8 A on wheel 1,
+#     which is ABOVE the new 5 A ceiling. Expect moteus to report limit
+#     code 99 and cap torque during ordinary driving.
 currentLimit: 10.0 # Amps — sustained per-motor overcurrent
 
 # Sustained over-current window: q-current legitimately spikes past the trip

@@ -47,7 +47,7 @@ struct SafetyConfig {
     // Bus voltage below which we protective-stop (sagging battery).
     double min_bus_voltage = 10.0;
     // Sustained per-motor current that trips a stop, A.
-    double trip_current_a = 14.0;
+    double trip_current_a = 10.0;
     // Consecutive bad observations before a threshold trip latches.
     uint32_t fault_grace_ticks = 5;
     // Consecutive over-current observations before the trip latches. Kept

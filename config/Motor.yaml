@@ -50,9 +50,14 @@ motorCommandScaleWest: [0.98, 1.00, 1.00, 1.013]
 # margin; a symmetric 2% M2/M3 pair supplies early counter-yaw only in east.
 motorCommandScaleEast: [1.00, 1.02, 0.98, 1.00]
 
-# moteus-level per-command shaping (values proven on the Rust robot):
-# the controller bounds each velocity setpoint and its ramp itself, which
-# smooths steps between our 100 Hz updates and backstops a runaway command.
+# moteus-level per-command shaping: the controller bounds each velocity
+# setpoint and its ramp itself, which smooths steps between our updates.
 # Comment out to use the controller's own defaults.
-velocityLimit: 45 # output rev/s
-accelLimit: 120 # output rev/s^2
+# 2026-09-04: tightened from the Rust robot values (45 / 120) to 10 / 15.
+# At metersPerMotorRev 0.2171 that is ~2.17 m/s of wheel surface speed and
+# ~3.26 m/s^2 of body acceleration, so these now BIND BELOW the 3.5 m/s
+# Safety.yaml envelope instead of sitting above it as a runaway backstop:
+# moteus, not the envelope, is now the speed limit. Raise both together
+# with the envelope if the robot needs its full speed back.
+velocityLimit: 10 # output rev/s
+accelLimit: 15 # output rev/s^2
