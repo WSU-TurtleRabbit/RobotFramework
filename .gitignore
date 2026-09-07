@@ -44,3 +44,8 @@ __pycache__/
 *.log
 
 build
+
+# Local build outputs, recordings and configuration backups
+/build-*/
+/logs/
+*.bak-*

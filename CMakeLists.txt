@@ -57,4 +57,13 @@ build_executable(RobotFramework RobotFramework.cpp)
 build_executable(Motor_test tests/MultiMotor.cpp)
 build_executable(pi3hat_tool mjbots/pi3hat/pi3hat_tool.cc)
 build_executable(SingleMotorTest tests/Motor.cpp)
+build_executable(RemoteControl tools/RemoteControl.cpp)
 build_executable(Arduino_test tests/legacy/ArduinoTest.cpp)
+
+add_executable(debugger
+    tools/debugger/main.cpp
+    tools/debugger/decode.cpp
+    tools/debugger/term.cpp
+    tools/debugger/commission.cpp
+    tools/debugger/commission_core.cpp)
+target_link_libraries(debugger PRIVATE COMMON_LIBS)

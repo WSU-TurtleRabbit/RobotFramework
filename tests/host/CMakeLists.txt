@@ -22,7 +22,9 @@ add_executable(host_tests
     test_actuators.cpp
     test_adaptive.cpp
     test_beacon.cpp
+    test_commission.cpp
     test_controller.cpp
+    test_debugger_decode.cpp
     test_decode.cpp
     test_estimator.cpp
     test_kinematics.cpp
@@ -48,6 +50,8 @@ add_executable(host_tests
     ${RF_ROOT}/Safety/supervisor.cpp
     ${RF_ROOT}/Telemetry/match_feedback.cpp
     ${RF_ROOT}/Telemetry/motion_logger.cpp
+    ${RF_ROOT}/tools/debugger/decode.cpp
+    ${RF_ROOT}/tools/debugger/commission_core.cpp
 )
 
 # mjbots/moteus is on the include path for moteus_protocol.h only — it is

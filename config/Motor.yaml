@@ -54,5 +54,5 @@ motorCommandScaleEast: [1.00, 1.02, 0.98, 1.00]
 # the controller bounds each velocity setpoint and its ramp itself, which
 # smooths steps between our 100 Hz updates and backstops a runaway command.
 # Comment out to use the controller's own defaults.
-velocityLimit: 45 # output rev/s
-accelLimit: 120 # output rev/s^2
+velocityLimit: 15 # output rev/s
+accelLimit: 20 # output rev/s^2
