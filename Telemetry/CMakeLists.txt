@@ -1,4 +1,4 @@
-add_library(Telemetry Telemetry.cpp match_feedback.cpp motion_logger.cpp)
+add_library(Telemetry Telemetry.cpp match_feedback.cpp motion_logger.cpp diagnostics.cpp)
 
 target_include_directories(Telemetry
     INTERFACE 

@@ -53,6 +53,8 @@
 #include "match_feedback.h"
 #include "beacon.h"
 #include "motion_logger.h"
+#include "diagnostics.h"
+#include <cstdlib>
 #include "supervisor.h"
 #include <array>
 #include <cstdint>
@@ -254,6 +256,9 @@ int main(int argc, char **argv)
     // Safety supervisor: envelope shaping, protective trips, auto-recovery.
     rf::Supervisor supervisor(safety_cfg);
     rf::AsyncMotionLogger motion_logger;
+    rf::diagnostics::SnapshotSender diagnostics_sender(std::getenv("PHOENIX_TELEMETRY_SOCKET"));
+    uint64_t diagnostics_cycle = 0;
+    uint64_t diagnostics_kick_requested = 0, diagnostics_kick_sent = 0;
     rf::MotionLoggerLimits motion_log_limits;
     motion_log_limits.max_file_bytes = static_cast<uint64_t>(
         std::max(0.0, motion.motion_log_max_file_mb) * 1024.0 * 1024.0);
@@ -525,6 +530,7 @@ int main(int argc, char **argv)
         if (current_time - last_motor_time >= MotorInterval)
         {
             const auto motor_tick_started = std::chrono::steady_clock::now();
+            ++diagnostics_cycle;
             // Measured wheel velocities (rev/s, motor id i -> index i-1) from
             // the PREVIOUS cycle's replies — the estimator's odometry input.
             static auto last_motor_tick_wall = current_time;
@@ -605,6 +611,7 @@ int main(int argc, char **argv)
 
                 // Kicker fire edge: send IMMEDIATELY (never on the slow
                 // Arduino timer), and consume it so it fires exactly once.
+                if (bt.act.fire_pulse_ms.has_value()) ++diagnostics_kick_requested;
                 if (bt.act.fire_pulse_ms.has_value() && a.isConnected())
                 {
                     const int pulse = static_cast<int>(
@@ -612,6 +619,7 @@ int main(int argc, char **argv)
                     const char cmd_bytes[2] = {'k', static_cast<char>(pulse)};
                     if (a.sendBytes(cmd_bytes, 2))
                     {
+                        ++diagnostics_kick_sent;
                         logger.log("rframework", "arduino",
                             std::string("KICK fired, pulse ") + std::to_string(pulse) + " ms",
                             LogLevel::HATE);
@@ -647,6 +655,8 @@ int main(int argc, char **argv)
             }
 
             auto servo_status = telemetry.cycle(velocity_map, energize, ff_ptr);
+            const uint64_t diagnostics_acquired_us = diagnostics_sender.enabled()
+                ? rf::diagnostics::monotonic_us() : 0;
 
             // Stash measured velocities for the next tick's odometry.
             measured_rev_s = {0.0, 0.0, 0.0, 0.0};
@@ -790,6 +800,62 @@ int main(int argc, char **argv)
             runtime_feedback.control_elapsed_s = control_elapsed_s;
             runtime_feedback.control_deadline_missed =
                 control_elapsed_s > std::chrono::duration<double>(MotorInterval).count();
+
+            // Independent of disk logger health. Fixed-size stack snapshot, one
+            // nonblocking local datagram; receiver absence only drops diagnostics.
+            if (diagnostics_sender.due(diagnostics_acquired_us))
+            {
+                rf::diagnostics::Snapshot snapshot;
+                snapshot.robot_id = robot_id;
+                snapshot.cycle = diagnostics_cycle;
+                snapshot.acquired_us = diagnostics_acquired_us;
+                for (int index = 0; index < 4; ++index)
+                {
+                    auto& motor = snapshot.motors[index];
+                    motor.requested = bridge.active() ? bt.ctrl.wheel_rev_s[index]
+                                                     : rf::diagnostics::kMissing;
+                    const auto command = velocity_map.find(index + 1);
+                    motor.energized = energize;
+                    if (energize && command != velocity_map.end()) motor.sent = command->second;
+                    const auto reply = servo_status.find(index + 1);
+                    if (reply == servo_status.end()) continue;
+                    motor.replied = true;
+                    motor.velocity = reply->second.velocity;
+                    motor.position = reply->second.position;
+                    motor.current = reply->second.current;
+                    motor.voltage = reply->second.voltage;
+                    motor.temperature = reply->second.temperature;
+                    motor.mode = reply->second.mode;
+                    motor.fault = reply->second.fault;
+                }
+                snapshot.motion = {
+                    bridge.setpoint().target.pos.x, bridge.setpoint().target.pos.y,
+                    bridge.setpoint().target.heading,
+                    bt.est.pose.pos.x, bt.est.pose.pos.y, bt.est.pose.heading,
+                    bt.est.vel_global.x, bt.est.vel_global.y, bt.est.omega,
+                    bt.ref.pose.pos.x, bt.ref.pose.pos.y, bt.ref.pose.heading,
+                    bt.ref.vel.x, bt.ref.vel.y, bt.ref.omega,
+                    bt.ctrl.cmd_body.lin.x, bt.ctrl.cmd_body.lin.y, bt.ctrl.cmd_body.ang,
+                    telemetry.imu_roll_dps, telemetry.imu_pitch_dps, telemetry.imu_yaw_dps,
+                    telemetry.imu_accel_x_mps2, telemetry.imu_accel_y_mps2,
+                    telemetry.imu_accel_z_mps2,
+                    bt.last_cmd_age_s, control_elapsed_s, motor_dt,
+                    bt.est.vision_age_s, bt.est.vision_delay_s, bt.est.vision_innovation_m,
+                    bt.est.vision_heading_innovation_rad, bt.est.vision_confidence,
+                    static_cast<double>(diagnostics_acquired_us) / 1e6 - now_s,
+                };
+                snapshot.flags = (telemetry.attitude_present ? 1u : 0u)
+                    | (bt.est.vision_alive ? 2u : 0u)
+                    | (bt.est.vision_confidence_available ? 4u : 0u)
+                    | (supervisor.estop() ? 8u : 0u)
+                    | (runtime_feedback.control_deadline_missed ? 16u : 0u)
+                    | (a.isConnected() ? 32u : 0u)
+                    | (runtime_feedback.dribbler_active ? 64u : 0u)
+                    | (bridge.active() ? 128u : 0u);
+                snapshot.kick_requested = diagnostics_kick_requested;
+                snapshot.kick_sent = diagnostics_kick_sent;
+                diagnostics_sender.offer(snapshot);
+            }
 
             if (motion_logger.due(now_s))
             {
