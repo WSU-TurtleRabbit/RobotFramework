@@ -331,7 +331,7 @@ build_pi3hat_cfg() {
         else
             bus_map[$bus_id]="${bus_map[$bus_id]},$motor_id"
         fi
-    done < <(grep -v '^#' config/Motor.yaml | grep ':')
+    done < <(awk '/^motorMap:/{f=1; next} /^[^[:space:]]/{f=0} f' config/Motor.yaml | grep -v '^#' | grep ':')
 
     for bus in $(printf '%s\n' "${!bus_map[@]}" | sort -n); do
         if [ -z "$cfg_string" ]; then
@@ -350,7 +350,7 @@ get_motor_ids() {
         return 1
     fi
 
-    grep -v '^#' config/Motor.yaml | grep ':' | grep -v 'motorMap' | awk '{print $1}' | tr -d ':' | tr '\n' ',' | sed 's/,$//'
+    awk '/^motorMap:/{f=1; next} /^[^[:space:]]/{f=0} f' config/Motor.yaml | grep -v '^#' | grep ':' | awk '{print $1}' | tr -d ':' | tr '\n' ',' | sed 's/,$//'
 }
 
 calibrate_wheels() {
