@@ -53,6 +53,35 @@ provenance, simulation, held-out and field metrics, and rollback profile are sto
 motion values without editing YAML manually. See `docs/MOTION.md` for the
 required staged field procedure.
 
+## This robot has no id
+
+`config/Main.yaml` ships with `Robot_id: -1`, and that is the setting to
+leave alone. It means the chassis has no id of its own: it accepts MatchCtrl
+frames addressed to any id, and its discovery beacon announces no id.
+
+Phoenix Server adopts the robot by its **address**, then runs the vision
+rotation test to work out which shell it is wearing, and commands it as that
+id from then on. So nothing has to be configured per chassis, and moving
+electronics between shells needs no edit at all — the thing that used to go
+wrong (three chassis claiming id 6 on 2026-08-26, and a chassis left on the
+`-1` default being ignored entirely on 2026-09-09) cannot happen when no
+chassis carries an id in the first place.
+
+At startup the log says which mode you are in:
+
+```
+Discovery beacon on UDP 50515 announcing no id - Phoenix adopts this
+chassis by address and vision names its shell
+```
+
+Set a number 0-15 only to pin one chassis to one id for bench work, where
+you want it to ignore commands addressed to anything else. The startup line
+then names the id instead.
+
+`Robot_rid` is a different thing and is still per chassis: it is the asset
+letter ("A", "B") reported in telemetry, an inventory tag that follows the
+electronics, not a command-channel id.
+
 ## Building on the Pi
 
 To use this repository, you will need several dependencies.  

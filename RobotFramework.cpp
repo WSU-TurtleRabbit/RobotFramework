@@ -359,7 +359,11 @@ int main(int argc, char **argv)
     if (beacon_enabled)
     {
         logger.log("rframework", std::string("Discovery beacon on UDP ") +
-            std::to_string(beacon_port) + (beacon.ok() ? "" : " (socket unavailable)"),
+            std::to_string(beacon_port) +
+            (robot_id < 0 ? " announcing no id - Phoenix adopts this chassis by address "
+                            "and vision names its shell"
+                          : std::string(" announcing id ") + std::to_string(robot_id)) +
+            (beacon.ok() ? "" : " (socket unavailable)"),
             beacon.ok() ? LogLevel::INFO : LogLevel::WARN);
     }
 

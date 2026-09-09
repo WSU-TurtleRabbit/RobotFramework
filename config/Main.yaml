@@ -7,10 +7,17 @@ intervals:
   Arduino_interval: 100
   Camera_interval: 200
 
-# This robot's id on the command channel. Commands addressed to another id
-# are ignored (the robot must not drive on a teammate's command).
-# -1 = accept any id (historical behavior, useful on the bench).
-Robot_id: 2
+# This robot's id on the command channel.
+#
+# -1 is the normal setting and the shipped default: the chassis has no id of
+# its own, answers to whatever Phoenix addresses it as, and announces itself
+# with no id in its beacon. The server adopts it on its address alone and
+# vision's rotation test tells it which shell it wears. Nothing to edit per
+# chassis, and no id to get wrong when electronics move between shells.
+#
+# Set a number 0..15 only to pin a chassis to one id for bench work; commands
+# addressed to any other id are then ignored.
+Robot_id: -1
 
 # Physical robot identity letter reported as rid= in telemetry (asset tag,
 # not the command id — swapping electronics between shells keeps this).
