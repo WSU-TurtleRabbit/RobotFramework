@@ -88,3 +88,66 @@ bash ./SETUP.sh
 ```
 
 That script covers system dependencies, the shared Python virtual environment, moteus package installation, Motor.yaml-based calibration, and project builds. The older helper scripts still exist as wrappers and forward into `SETUP.sh`.
+
+## Driving and diagnosing a robot by hand
+
+These are operator tools, not part of the build, so they are documented here
+rather than wired into `SETUP.sh`. They talk to the moteus controllers
+directly, so **stop the autonomous control process first** — it holds the CAN
+bus and an exclusive `/dev/mem` mmap:
+
+```bash
+sudo bash ./STARTUP.sh --stop      # or: sudo systemctl stop robotframework.service
+```
+
+Both binaries below are built with the tree and live in `build/`. Run them from
+`build/` so the relative `../config/Motor.yaml` resolves, exactly like the main
+binary. When you are done, hand control back:
+
+```bash
+sudo systemctl start robotframework.service
+```
+
+### RemoteControl — hand-drive, straight to the motors
+
+Bypasses vision and the MOVE gate, so it works when SSL-Vision is down or the
+supervisor is latched. It has **no field awareness and no envelope** — the
+robot goes exactly where you point it and will happily drive off the carpet.
+Put it on blocks or keep the area clear. A hard speed cap, `SetStop()` on every
+exit path, and the moteus watchdog are the only guards.
+
+```bash
+cd ~/RobotFramework/build && sudo ./RemoteControl
+#   W/S fwd-back   A/D strafe   Q/E rotate   SPACE stop
+#   [ ] speed      K kick       F dribbler   X quit
+sudo ./RemoteControl --listen 50600     # headless: drive over UDP, deadman stop
+```
+
+### debugger — drivetrain diagnostics (motors stay dead)
+
+```bash
+cd ~/RobotFramework/build && ./debugger            # live per-wheel dashboard
+./debugger scan          # which CAN id answers on which bus
+./debugger selftest      # pre-drive gate (exits non-zero on any fault)
+./debugger help
+```
+
+Full reference: [`docs/DEBUGGER.md`](docs/DEBUGGER.md).
+
+### debugger commission — supervised remote drive with logging
+
+Drive by keyboard under a safety ceiling derived from the controllers' own
+backstops, logging every control cycle and optionally streaming to your laptop:
+
+```bash
+sudo bash ./STARTUP.sh --stop
+cd ~/RobotFramework
+sudo ./build/debugger commission --config-dir config --stream-to <laptop ip>:50600
+sudo systemctl start robotframework.service
+```
+
+On the laptop (standard-library Python 3, Windows is fine):
+
+```bash
+python tools/telemetry_receiver.py --port 50600 --out session.ndjson
+```

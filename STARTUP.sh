@@ -447,11 +447,53 @@ action_run_service() {
     exec "./RobotFramework" "-${ROBOT_MODE}"
 }
 
+action_stop() {
+    # Stop the RobotFramework control process, however it is running: the
+    # systemd service (normal case) or a hand-started binary. This frees the
+    # CAN bus and the exclusive /dev/mem mmap, so the manual-drive tools
+    # (tools/RemoteControl, `build/debugger commission`) can take over.
+    # Motors stay safe regardless: the moteus per-command watchdog stops the
+    # wheels ~100 ms after the last frame. Stopping the service also runs its
+    # ExecStopPost=--restore, so the other WiFi interface (and SSH) is kept.
+    require_root --stop
+
+    if systemctl is-active --quiet robotframework.service; then
+        log "Stopping robotframework.service..."
+        systemctl stop robotframework.service \
+            && log "✓ service stopped." \
+            || die "could not stop robotframework.service."
+    else
+        log "robotframework.service is not active."
+    fi
+
+    # Catch a binary started by hand (sudo ./RobotFramework) too.
+    if pgrep -x RobotFramework &>/dev/null; then
+        log "Stopping hand-started RobotFramework (SIGTERM)..."
+        pkill -TERM -x RobotFramework || true
+        local n=0
+        while [ $n -lt 10 ] && pgrep -x RobotFramework &>/dev/null; do
+            sleep 1
+            n=$((n + 1))
+        done
+        if pgrep -x RobotFramework &>/dev/null; then
+            log "Still running after 10 s — sending SIGKILL."
+            pkill -9 -x RobotFramework || true
+            sleep 1
+        fi
+    fi
+
+    if pgrep -x RobotFramework &>/dev/null; then
+        die "a RobotFramework process is still running."
+    fi
+    log "✓ no RobotFramework process running — safe to run RemoteControl or 'debugger commission'."
+}
+
 print_usage() {
     cat <<'EOF'
 Usage:
   sudo bash ./STARTUP.sh --enable    # install service + enable autostart on boot
   sudo bash ./STARTUP.sh --disable   # disable autostart
+  sudo bash ./STARTUP.sh --stop      # stop RobotFramework (before RemoteControl / debugger commission)
        bash ./STARTUP.sh --status    # show service status and recent logs
        bash ./STARTUP.sh --logs      # tail the live log file
        bash ./STARTUP.sh --now       # connect + launch right now (no install)
@@ -471,6 +513,7 @@ case "${1:-}" in
     --status)       action_status ;;
     --logs)         action_logs ;;
     --now)          action_now ;;
+    --stop)         action_stop ;;           # stop control before manual drive / debugger
     --restore)      action_restore ;;        # internal — called by ExecStopPost
     --run-service)  action_run_service ;;   # internal — called by systemd
     *)              print_usage ;;
