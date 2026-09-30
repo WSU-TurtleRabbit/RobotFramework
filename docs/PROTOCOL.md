@@ -18,8 +18,18 @@ Every datagram = a **6-byte header** + a body:
 |--------|---------|--------|--------------------------------------------|
 | 0–1    | magic   | `PX`   | frame marker                               |
 | 2      | command | u8     | `0x05` MatchCtrl · `0x06` MatchFeedback    |
-| 3      | robot   | u8     | robot id                                   |
+| 3      | robot   | u8     | robot id (see below)                       |
 | 4–5    | seq     | u16 LE | rolling counter (reordered frames dropped) |
+
+**Robot id.** In MatchCtrl it is the id the server addresses (the roster
+entry's wire id). A robot with `Robot_id: -1` accepts any id; a pinned robot
+drops frames for other ids. In MatchFeedback it is the id the robot answers
+to: its pinned `Robot_id`, or with `-1` the id of the **most recent**
+accepted MatchCtrl (255 before the first one). Until 2026-09-30 the `-1`
+case latched the first id ever accepted, so after a server restart or a
+re-adoption the robot answered to a stale id and Phoenix rejected every
+frame. Phoenix now also re-points its wire id to whatever id a robot's own
+address consistently answers to, so older firmware converges too.
 
 ## MatchCtrl (server → robot, 32 bytes = header + 26)
 
@@ -156,9 +166,11 @@ One JSON line, `config/Network.yaml` `beacon.*`, sent to
  "rl_mode":0,"adaptive":false,"uptime_s":812.5,"command_port":50514}
 ```
 
-Phoenix lists beacons under **Discovered**; an operator adopts the robot
-into the roster (never automatically). The server trusts the datagram's
-source IP for the address, not the payload.
+Phoenix lists beacons under **Discovered** and, by default (`main.py`
+without `--no-auto-adopt`), adopts a beaconing robot into the roster by
+itself: a robot with no id gets a placeholder id marked unmapped, and
+vision's identify wiggle then names the shell it wears. The server trusts
+the datagram's source IP for the address, not the payload.
 
 ## Legacy text channel (bench fallback)
 

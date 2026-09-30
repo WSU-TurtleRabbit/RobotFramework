@@ -968,7 +968,12 @@ int main(int argc, char **argv)
             health.estop = supervisor.estop();
             health.arduino_connected = a.isConnected();
             health.camera_running = camera_thread.joinable();
-            if (health.robot_id < 0)
+            // Robot_id -1: answer to whatever Phoenix addresses us as NOW.
+            // Latching the first id ever accepted made a chassis answer to a
+            // stale id after a server restart or re-adoption, and the server
+            // rejected every feedback frame (Phoenix field log 2026-09-28,
+            // 192.168.210.102). A pinned Robot_id keeps answering to its pin.
+            if (robot_id < 0 && bridge.last_robot_id() >= 0)
                 health.robot_id = bridge.last_robot_id();
 
             last_motor_time = current_time;
